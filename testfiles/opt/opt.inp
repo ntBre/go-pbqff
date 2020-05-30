@@ -1,0 +1,24 @@
+memory,312,m
+
+gthresh,energy=1.d-12,zero=1.d-22,oneint=1.d-22,twoint=1.d-22;
+gthresh,optgrad=1.d-8,optstep=1.d-8;
+nocompress;
+
+geometry={
+X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 XXO  3 90.0
+O  1 OX  2 XXO  4 90.0
+}
+AlX = 0.85 Ang
+OX = 1.1 Ang
+XXO = 80.0 Deg
+
+basis=CC-PVTZ-F12
+set,charge=0
+set,spin=0
+hf,accuracy=16,energy=1.0d-10
+CCSD(T)-F12,thrden=1.0d-8,thrvar=1.0d-10
+optg,grms=1.d-8,srms=1.d-8
