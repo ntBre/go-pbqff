@@ -22,3 +22,4 @@ molpro -t 1 opt.inp
 date
 
 rm -rf $TMPDIR
+ssh -t maple pkill -35 pbqff

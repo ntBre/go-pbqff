@@ -2,18 +2,37 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"math"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"text/template"
+	"time"
 )
 
 var (
-	Input     [NumKeys]string
-	overwrite bool
-	dirs      = []string{"opt", "freq", "pts", "freqs"}
+	Input            [NumKeys]string
+	overwrite        bool
+	dirs             = []string{"opt", "freq", "pts", "freqs"}
+	brokenFloat      = math.NaN()
+	energyLine       = "energy="
+	molproTerminated = "Molpro calculation terminated"
+)
+
+var (
+	ErrEnergyNotFound      = errors.New("Energy not found in Molpro output")
+	ErrFileNotFound        = errors.New("Molpro output file not found")
+	ErrEnergyNotParsed     = errors.New("Energy not parsed in Molpro output")
+	ErrFinishedButNoEnergy = errors.New("Molpro output finished but no energy found")
+	ErrFileContainsError   = errors.New("Molpro output file contains an error")
+	ErrBlankOutput         = errors.New("Molpro output file exists but is blank")
+	ErrInputGeomNotFound   = errors.New("Geometry not found in input file")
+	ErrTimeout             = errors.New("Timeout waiting for signal")
 )
 
 func LoadTemplate(filename string) *template.Template {
@@ -84,6 +103,20 @@ func ParseFlags() []string {
 	return flag.Args()
 }
 
+func HandleSignal(sig int, timeout time.Duration) error {
+	sigChan := make(chan os.Signal, 1)
+	sig1Want := os.Signal(syscall.Signal(sig))
+	signal.Notify(sigChan, sig1Want)
+	select {
+	// either receive signal
+	case <-sigChan:
+		return nil
+	// or timeout after and retry
+	case <-time.After(timeout):
+		return ErrTimeout
+	}
+}
+
 func main() {
 	MakeDirs(".")
 	Args := ParseFlags()
@@ -103,12 +136,30 @@ func main() {
 		Spin:     Input[Spin],
 		Method:   Input[Method],
 	}
+
 	// need to figure out how to handle template stuff
 	// maybe bundle the defaults with the executable?
 	// otherwise weird handling path
-	prog.WriteInput("opt/opt.inp", "molpro.in")
+	prog.WriteInput("opt/opt.inp", "templates/molpro.in")
+	WritePBS("opt/mp.pbs", "templates/pbs.in",
+		&Job{MakeName(Input[Geometry]), "opt/opt.inp", 35})
 	// submit opt, wait for it to finish in main goroutine - block
-	// - report any errors and warnings
+	Submit("opt/mp.pbs")
+	outfile := "opt/opt.out"
+	energy, err := prog.ReadOut(outfile)
+	for err != nil {
+		HandleSignal(35, time.Minute)
+		energy, err = prog.ReadOut(outfile)
+		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
+			err == ErrFileContainsError || err == ErrBlankOutput) ||
+			err == ErrFileNotFound {
+
+			fmt.Println("resubmitting for", err)
+			Submit("opt/mp.pbs")
+		}
+	}
+	fmt.Println(energy)
+	// - report any errors and warnings from molpro
 	// write freq.inp and that mp.pbs
 	// submit freq, wait in separate goroutine
 	// set up pts using opt.log geometry and given intder.in file
