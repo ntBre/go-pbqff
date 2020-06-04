@@ -25,13 +25,13 @@ XXO = 80.0 Deg`
 
 func TestWriteInputMolpro(t *testing.T) {
 	mp := Molpro{FormatZmat(Input[Geometry]), Input[Basis],
-		Input[Charge], Input[Spin], Input[Method]}
+		Input[Charge], Input[Spin], Input[Method], defaultOpt}
 	mp.WriteInput("testfiles/opt/opt.inp", "templates/molpro.in")
 }
 
 func TestReadOut(t *testing.T) {
 	mp := Molpro{FormatZmat(Input[Geometry]), Input[Basis],
-		Input[Charge], Input[Spin], Input[Method]}
+		Input[Charge], Input[Spin], Input[Method], defaultOpt}
 
 	t.Run("Successful reading", func(t *testing.T) {
 		got, err := mp.ReadOut("testfiles/good.out")
@@ -91,23 +91,44 @@ func TestReadOut(t *testing.T) {
 
 func TestHandleOutput(t *testing.T) {
 	mp := Molpro{FormatZmat(Input[Geometry]), Input[Basis],
-		Input[Charge], Input[Spin], Input[Method]}
+		Input[Charge], Input[Spin], Input[Method], defaultOpt}
 	t.Run("warning in outfile", func(t *testing.T) {
-		got := mp.HandleOutput("testfiles/opt")
-		if got != nil {
+		_, _, err := mp.HandleOutput("testfiles/opt")
+		if err != nil {
 			t.Error("got an error, didn't want one")
 		}
 	})
 	t.Run("no warning, normal case", func(t *testing.T) {
-		got := mp.HandleOutput("testfiles/nowarn")
-		if got != nil {
+		_, _, err := mp.HandleOutput("testfiles/nowarn")
+		if err != nil {
 			t.Error("got an error, didn't want one")
 		}
 	})
 	t.Run("Error in output", func(t *testing.T) {
-		err := mp.HandleOutput("testfiles/error")
+		_, _, err := mp.HandleOutput("testfiles/error")
 		if err != ErrFileContainsError {
 			t.Errorf("got %q, wanted %q", err, ErrFileContainsError)
 		}
 	})
+}
+
+func TestReadLog(t *testing.T) {
+	cart, zmat := ReadLog("testfiles/coords.log")
+	wantCart := `O 1.000000000 0.118481857 -2.183553663
+H 0.000000000 -1.563325812 -2.884671935
+C 0.000000000 -0.014536611 0.273763522
+N 0.000000000 -0.010373662 2.467030139
+`
+	wantZmat := `OH=                  0.96421314 ANG
+OC=                  1.30226003 ANG
+HOC=               109.53197453 DEG
+CN=                  1.16062880 ANG
+OCN=               176.79276221 DEG
+`
+	if cart != wantCart {
+		t.Errorf("got %v, wanted %v\n", cart, wantCart)
+	}
+	if zmat != wantZmat {
+		t.Errorf("got %v, wanted %v\n", zmat, wantZmat)
+	}
 }

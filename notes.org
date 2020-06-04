@@ -1,0 +1,5 @@
+* TODO figure out a better way to handle templates
+  - maybe just use templates and have them in the current directory
+    - include path in input file, can also have central template dir then
+  - want to have a default, I guess put that in a templates.go file
+    - coded as string literals

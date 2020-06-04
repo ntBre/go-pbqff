@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"os"
@@ -11,11 +12,12 @@ import (
 )
 
 type Molpro struct {
-	Geometry string
-	Basis    string
-	Charge   string
-	Spin     string
-	Method   string
+	Geometry  string
+	Basis     string
+	Charge    string
+	Spin      string
+	Method    string
+	Procedure string
 }
 
 // Takes an input filename and template filename
@@ -94,7 +96,8 @@ func (m Molpro) ReadOut(filename string) (result float64, err error) {
 }
 
 // Handle .out and .log files for filename, assumes no extension
-func (m Molpro) HandleOutput(filename string) error {
+// Return optimized Cartesian geometry (in Bohr) and zmat
+func (m Molpro) HandleOutput(filename string) (string, string, error) {
 	outfile := filename + ".out"
 	logfile := filename + ".log"
 	lines := ReadFile(outfile)
@@ -114,16 +117,37 @@ func (m Molpro) HandleOutput(filename string) error {
 			fmt.Fprintf(os.Stderr,
 				"HandleOutput: error %q, found in %s, aborting\n",
 				line, outfile)
-			return ErrFileContainsError
+			return "", "", ErrFileContainsError
 		}
 	}
+	// ReadLog(logfile)
 	// looking for optimized geometry in bohr
-	lines = ReadFile(logfile)
-	for _, line := range lines {
-		if strings.Contains(line, "ATOMIC COORDINATES") {
-			// inGeom = true
+	cart, zmat := ReadLog(logfile)
+	return cart, zmat, nil
+}
+
+// Read the log file and return the Cartesian geometry
+// (in Bohr) and the zmat variables
+func ReadLog(filename string) (string, string) {
+	lines := ReadFile(filename)
+	var cart, zmat bytes.Buffer
+	for i := 0; i < len(lines); i++ {
+		if strings.Contains(lines[i], "ATOMIC COORDINATES") {
+			cart.Reset() // only want the last of these
+			for ; !strings.Contains(lines[i], "Bond lengths in Bohr"); i++ {
+				if !strings.Contains(lines[i], "ATOM") {
+					fields := strings.Fields(strings.TrimSpace(lines[i]))
+					fmt.Fprintf(&cart, "%s %s %s %s\n",
+						fields[1], fields[3], fields[4], fields[5])
+				}
+			}
+		} else if strings.Contains(lines[i], "Current variables") {
+			zmat.Reset()
+			i++
+			for ; !strings.Contains(lines[i], "***"); i++ {
+				fmt.Fprintf(&zmat, "%s\n", lines[i])
+			}
 		}
-		// TODO this is the important part
 	}
-	return nil
+	return cart.String(), zmat.String()
 }

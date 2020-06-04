@@ -34,7 +34,7 @@ func TestReadFile(t *testing.T) {
 func TestLoadTemplate(t *testing.T) {
 	temp := LoadTemplate("templates/molpro.in")
 	mp := Molpro{"this is a geom", "cc-pvtz-f12",
-		"charge", "spin", "ccsd(t)-f12"}
+		"charge", "spin", "ccsd(t)-f12", defaultOpt}
 	var buf bytes.Buffer
 	temp.Execute(&buf, mp)
 	got := buf.String()
@@ -46,7 +46,6 @@ nocompress;
 
 geometry={
 this is a geom
-
 basis=cc-pvtz-f12
 set,charge=charge
 set,spin=spin
@@ -94,3 +93,37 @@ func TestHandleSignal(t *testing.T) {
 	})
 }
 
+func TestGetNames(t *testing.T) {
+	prog := Molpro{
+		Geometry: Input[Geometry],
+		Basis:    Input[Basis],
+		Charge:   Input[Charge],
+		Spin:     Input[Spin],
+		Method:   Input[Method],
+	}
+	cart, _, _ := prog.HandleOutput("testfiles/opt")
+	got := GetNames(cart)
+	want := []string{"N", "H", "H", "H"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+}
+
+func TestLoadAnpass(t *testing.T) {
+	got := LoadAnpass("testfiles/anpass.small")
+	want := Anpass{Fmt1: "%12.8f", Fmt2: "%20.12f"}
+	if got.Fmt1 != want.Fmt1 {
+		t.Errorf("got %#v, wanted %#v\n", got.Fmt1, want.Fmt1)
+	}
+	if got.Fmt2 != want.Fmt2 {
+		t.Errorf("got %#v, wanted %#v\n", got.Fmt2, want.Fmt2)
+	}
+}
+
+func TestWriteAnpass(t *testing.T) {
+	a := LoadAnpass("testfiles/anpass.small")
+	a.WriteAnpass("testfiles/anpass.test", []float64{0, 0, 0, 0, 0, 0})
+	// if got != want {
+	// 	t.Errorf("got %v, wanted %v\n", got, want)
+	// }
+}

@@ -2,13 +2,17 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math"
 	"os"
 	"os/signal"
+	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"text/template"
@@ -18,10 +22,11 @@ import (
 var (
 	Input            [NumKeys]string
 	overwrite        bool
-	dirs             = []string{"opt", "freq", "pts", "freqs"}
+	dirs             = []string{"opt", "freq", "pts", "freqs", "pts/inp"}
 	brokenFloat      = math.NaN()
 	energyLine       = "energy="
 	molproTerminated = "Molpro calculation terminated"
+	defaultOpt       = "optg,grms=1.d-8,srms=1.d-8"
 )
 
 var (
@@ -117,6 +122,87 @@ func HandleSignal(sig int, timeout time.Duration) error {
 	}
 }
 
+// Take a cartesian geometry and extract the atom names
+func GetNames(cart string) (names []string) {
+	lines := strings.Split(cart, "\n")
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) == 4 {
+			names = append(names, fields[0])
+		}
+	}
+	return
+}
+
+type Anpass struct {
+	Head string
+	Fmt1 string
+	Fmt2 string
+	Body string
+	Tail string
+}
+
+func (a *Anpass) WriteAnpass(filename string, energies []float64) {
+	var buf bytes.Buffer
+	buf.WriteString(a.Head)
+	for i, line := range strings.Split(a.Body, "\n") {
+		if line != "" {
+			for _, field := range strings.Fields(line) {
+				f, _ := strconv.ParseFloat(field, 64)
+				fmt.Fprintf(&buf, a.Fmt1, f)
+			}
+			fmt.Fprintf(&buf, a.Fmt2+"\n", energies[i])
+		}
+	}
+	buf.WriteString(a.Tail)
+	ioutil.WriteFile(filename, []byte(buf.String()), 0755)
+}
+
+func LoadAnpass(filename string) *Anpass {
+	file, _ := ioutil.ReadFile(filename)
+	lines := strings.Split(string(file), "\n")
+	var (
+		a          Anpass
+		buf        bytes.Buffer
+		body, tail bool
+	)
+	head := true
+	for _, line := range lines {
+		if head && string(line[0]) == "(" {
+			head = false
+			buf.WriteString(line + "\n")
+			a.Head = buf.String()
+			buf.Reset()
+			// assume leading and trailing parentheses
+			s := strings.Split(strings.ToUpper(line[1:len(line)-1]), "F")
+			// assume trailing comma
+			a.Fmt1 = "%" + string(s[1][:len(s[1])-1]) + "f"
+			a.Fmt2 = "%" + string(s[2]) + "f"
+			body = true
+			continue
+		}
+		if body && strings.Contains(line, "UNKNOWNS") {
+			body = false
+			tail = true
+		} else if body {
+			f := strings.Fields(line)
+			for i := 0; i < len(f)-1; i++ {
+				val, _ := strconv.ParseFloat(f[i], 64)
+				fmt.Fprintf(&buf, a.Fmt1, val)
+			}
+			buf.WriteString("\n")
+			a.Body += buf.String()
+			buf.Reset()
+			continue
+		}
+		if tail {
+			a.Tail += line + "\n"
+		}
+		buf.WriteString(line + "\n")
+	}
+	return &a
+}
+
 func main() {
 	MakeDirs(".")
 	Args := ParseFlags()
@@ -126,9 +212,6 @@ func main() {
 	// might want a LoadDefaults function or something
 	// and then overwrite parts with ParseInfile
 	ParseInfile(Args[0])
-	// check for local templates and then use main one
-	// - add template name to infile
-	// write opt.inp and mp.pbs
 	prog := Molpro{
 		Geometry: Input[Geometry],
 		Basis:    Input[Basis],
@@ -136,20 +219,22 @@ func main() {
 		Spin:     Input[Spin],
 		Method:   Input[Method],
 	}
-
+	// check for local templates and then use main one
+	// - add template name to infile
+	// write opt.inp and mp.pbs
 	// need to figure out how to handle template stuff
 	// maybe bundle the defaults with the executable?
 	// otherwise weird handling path
 	prog.WriteInput("opt/opt.inp", "templates/molpro.in")
 	WritePBS("opt/mp.pbs", "templates/pbs.in",
-		&Job{MakeName(Input[Geometry]), "opt/opt.inp", 35})
+		&Job{MakeName(Input[Geometry]) + "/opt", "opt/opt.inp", 35})
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit("opt/mp.pbs")
 	outfile := "opt/opt.out"
-	energy, err := prog.ReadOut(outfile)
+	_, err := prog.ReadOut(outfile)
 	for err != nil {
 		HandleSignal(35, time.Minute)
-		energy, err = prog.ReadOut(outfile)
+		_, err = prog.ReadOut(outfile)
 		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 			err == ErrFileContainsError || err == ErrBlankOutput) ||
 			err == ErrFileNotFound {
@@ -158,17 +243,98 @@ func main() {
 			Submit("opt/mp.pbs")
 		}
 	}
-	fmt.Println(energy)
-	// - report any errors and warnings from molpro
+	cart, zmat, err := prog.HandleOutput("opt/opt")
+	if err != nil {
+		// actually want to try to recover here probably
+		panic(err)
+	}
 	// write freq.inp and that mp.pbs
+	prog.Geometry = zmat
+	prog.WriteInput("freq/freq.inp", "templates/molpro.in")
+	WritePBS("freq/mp.pbs", "templates/pbs.in",
+		&Job{MakeName(Input[Geometry]) + "/freq", "freq/freq.inp", 35})
 	// submit freq, wait in separate goroutine
+	// TODO make this a closure - actually make it a function
+	// since I use it twice
+	Submit("freq/mp.pbs")
+	outfile = "freq/freq.out"
+	_, err = prog.ReadOut(outfile)
+	for err != nil {
+		HandleSignal(35, time.Minute)
+		_, err = prog.ReadOut(outfile)
+		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
+			err == ErrFileContainsError || err == ErrBlankOutput) ||
+			err == ErrFileNotFound {
+
+			fmt.Println("resubmitting freq for", err)
+			Submit("freq/mp.pbs")
+		}
+	}
 	// set up pts using opt.log geometry and given intder.in file
+	intder := NewIntder(cart)
+	intder.WritePtsIntder("pts/intder.in", "templates/intder.pts")
+	// run intder
+	RunIntder("pts/intder")
+	// build points and the list of pts to submit
+	pts := BuildPoints("pts/file07", GetNames(cart))
 	// submit points, wait for them to finish
+	for _, job := range pts {
+		Submit(job + ".pbs")
+	}
+
 	// - check for failed jobs, probably just loop at some interval
 	//   doesnt need to be fast (and resource intensive) like gocart
+	ptsInit := len(pts)
+	for len(pts) > 0 {
+		shortenBy := 0
+		for i, job := range pts {
+			_, err := prog.ReadOut(job + ".out")
+			if err == nil {
+				pts[i], pts[len(pts)-1] = pts[len(pts)-1], pts[i]
+				shortenBy++
+			} else if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
+				err == ErrFileContainsError || err == ErrBlankOutput) ||
+				(err == ErrFileNotFound && len(pts) < ptsInit/2) {
+
+				fmt.Printf("resubmitting %s for %s", job, err)
+				Submit(job + ".pbs")
+			}
+		}
+		pts = pts[:len(pts)-shortenBy]
+		// if the list is shortened by less than 10%,
+		// sleep. could play with both of these values
+		if float64(shortenBy/ptsInit) < 0.1 {
+			time.Sleep(time.Second)
+		}
+	}
+
 	// gather energies, convert to relative
-	// write anpass1.in, run anpass
-	// write anpass2.in, run anpass
+	// - this should probably be part of the checking
+	//   for finished jobs, but a little weird with rotating them to end
+	energies := make([]float64, len(pts))
+	for i, job := range pts {
+		// disregard error because we checked them all above
+		energy, _ := prog.ReadOut(job + ".out")
+		energies[i] = energy
+	}
+	toSort := make([]float64, len(pts))
+	copy(toSort, energies)
+	sort.Float64s(toSort)
+	min := toSort[0]
+	// convert to relative energies
+	for i, _ := range energies {
+		energies[i] -= min
+	}
+	// Should generate anpass files from intder file to ensure
+	// proper ordering
+	// for now just use an anpass.in file as template
+	// write anpass1.in
+	anpass := LoadAnpass("anpass.in")
+	anpass.WriteAnpass("freqs/anpass1.in", energies)
+	// run anpass1.in
+	RunAnpass("freqs/anpass1")
+	// Read anpass1.out
+	// - write anpass2.in, run anpass
 	// write intder_geom.in, run intder_geom
 	// write freqs/intder.in, run intder
 	// move files (tennis)
@@ -176,4 +342,6 @@ func main() {
 	// handle resonances
 	// run spectro
 	// extract output
+	// MolproFreq    HARM  FUND CORR
+	// later rotational constants, geometry
 }
