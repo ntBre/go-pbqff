@@ -22,7 +22,7 @@ func TestWritePtsIntder(t *testing.T) {
 	cart, _ := ReadLog("testfiles/coords.log")
 	i := LoadIntder("testfiles/intder.in")
 	i.ConvertCart(cart)
-	i.WritePts("testfiles/pts/intder.in", "templates/intder.pts")
+	i.WritePts("testfiles/pts/intder.in")
 }
 
 func TestRunIntder(t *testing.T) {
@@ -60,4 +60,48 @@ func TestWriteIntderGeom(t *testing.T) {
 	i.ConvertCart(cart)
 	longLine, _ := GetLongLine("testfiles/anpass1.out")
 	i.WriteGeom("testfiles/freqs/intder_geom.in", longLine)
+}
+
+func TestReadGeom(t *testing.T) {
+	cart, _ := ReadLog("testfiles/coords.log")
+	i := LoadIntder("testfiles/intder.in")
+	i.ConvertCart(cart)
+	i.ReadGeom("testfiles/intder_geom.out")
+	want := `        0.0000000000       -0.0115666469        2.4598228639
+        0.0000000000       -0.0139207809        0.2726915161
+        0.0000000000        0.1184234620       -2.1785371074
+        0.0000000000       -1.5591967852       -2.8818447886`
+	if i.Geometry != want {
+		t.Errorf("got %v, wanted %v", i.Geometry, want)
+	}
+}
+
+func TestReadIntderOut(t *testing.T) {
+	cart, _ := ReadLog("testfiles/coords.log")
+	i := LoadIntder("testfiles/intder.in")
+	i.ConvertCart(cart)
+	i.ReadGeom("testfiles/intder_geom.out")
+	got := i.ReadOut("testfiles/fintder.out")
+	want := []float64{437.8, 496.8, 1086.4,
+		1267.6, 2337.7, 3811.4}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, wanted %v", got, want)
+	}
+}
+
+func TestRead9903(t *testing.T) {
+	cart, _ := ReadLog("testfiles/coords.log")
+	i := LoadIntder("testfiles/intder.in")
+	i.ConvertCart(cart)
+	i.ReadGeom("testfiles/intder_geom.out")
+	i.Read9903("testfiles/fort.9903")
+}
+
+func TestWriteIntderFreqs(t *testing.T) {
+	cart, _ := ReadLog("testfiles/coords.log")
+	i := LoadIntder("testfiles/intder.in")
+	i.ConvertCart(cart)
+	i.ReadGeom("testfiles/intder_geom.out")
+	i.Read9903("testfiles/fort.9903")
+	i.WriteFreqs("testfiles/freqs/intder.in", GetNames(cart))
 }

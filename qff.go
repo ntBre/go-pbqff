@@ -4,18 +4,30 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
-	"io/ioutil"
 )
 
 const (
 	intderCmd = "/home/brent/Projects/pbqff/intder"
 	anpassCmd = "anpass"
+)
+
+var (
+	ptable = map[string]string{
+		"H": "1", "He": "4", "Li": "7",
+		"Be": "9", "B": "11", "C": "12",
+		"N": "14", "O": "16", "F": "19",
+		"Ne": "20", "Na": "23", "Mg": "24",
+		"Al": "27", "Si": "28", "P": "31",
+		"S": "32", "Cl": "35", "Ar": "40",
+	}
 )
 
 type Intder struct {
@@ -72,16 +84,11 @@ func (i *Intder) ConvertCart(cart string) {
 	i.Geometry = buf.String()
 }
 
-// Takes the target intder filename, cartesian geometry
-// and an intder template file and writes an intder input file
-// for use in pts
-func (i *Intder) WritePts(filename, tfile string) {
-	f, err := os.Create(filename)
-	if err != nil {
-		panic(err)
-	}
-	t := LoadTemplate(tfile)
-	t.Execute(f, i)
+// Write an intder.in file for points to filename
+func (i *Intder) WritePts(filename string) {
+	var buf bytes.Buffer
+	buf.WriteString(i.Head + i.Geometry + "\n" + i.Tail)
+	ioutil.WriteFile(filename, buf.Bytes(), 0755)
 }
 
 // Write an intder_geom.in file to filename, using
@@ -99,11 +106,127 @@ func (i *Intder) WriteGeom(filename, longLine string) {
 		}
 	}
 	fmt.Fprintf(&buf, "%5d\n", 0)
-	ioutil.WriteFile(filename, []byte(buf.String()), 0755)
+	ioutil.WriteFile(filename, buf.Bytes(), 0755)
+}
+
+// Write an intder.in file for freqs to filename
+// TODO might need updating for many atoms - multiline mass format?
+func (i *Intder) WriteFreqs(filename string, names []string) {
+	var buf bytes.Buffer
+	buf.WriteString(i.Head + i.Geometry + "\n")
+	for i, name := range names {
+		num, ok := ptable[name]
+		if !ok {
+			fmt.Errorf("WriteFreqs: element %q not found in ptable\n", name)
+		}
+		switch i {
+		case 0:
+			fmt.Fprintf(&buf, "%11s", name+num)
+		case 1:
+			fmt.Fprintf(&buf, "%13s", name+num)
+		default:
+			fmt.Fprintf(&buf, "%12s", name+num)
+		}
+	}
+	fmt.Fprint(&buf, "\n")
+	buf.WriteString(i.Tail)
+	ioutil.WriteFile(filename, buf.Bytes(), 0755)
 }
 
 // Update i.Geometry with the results of intder_geom
 func (i *Intder) ReadGeom(filename string) {
+	const target = "NEW CARTESIAN GEOMETRY (BOHR)"
+	f, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	var (
+		line string
+		geom bool
+		buf  bytes.Buffer
+	)
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line = scanner.Text()
+		if strings.Contains(line, target) {
+			geom = true
+			continue
+		}
+		if geom && line != "" {
+			buf.WriteString(line + "\n")
+		}
+	}
+	// skip last newline
+	buf.Truncate(buf.Len() - 1)
+	i.Geometry = buf.String()
+}
+
+// Read a freqs/intder.out and return the harmonic
+// frequencies found therein
+func (i *Intder) ReadOut(filename string) (freqs []float64) {
+	f, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	mode := regexp.MustCompile(`^\s+MODE`)
+	var (
+		line  string
+		modes bool
+	)
+	for scanner.Scan() {
+		line = scanner.Text()
+		switch {
+		case mode.MatchString(line):
+			modes = true
+		case modes:
+			if strings.Contains(line, "NORMAL") {
+				return
+			}
+			if line != "" {
+				fields := strings.Fields(line)
+				val, _ := strconv.ParseFloat(fields[1], 64)
+				freqs = append(freqs, val)
+			}
+		}
+	}
+	return
+}
+
+// Set i.Tail to ouput from anpass for freqs/intder
+func (i *Intder) Read9903(filename string) {
+	var buf bytes.Buffer
+	f, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	var (
+		line          string
+		third, fourth bool
+	)
+	for scanner.Scan() {
+		line = scanner.Text()
+		fields := strings.Fields(line)
+		if len(fields) == 5 {
+			if !third && fields[2] != "0" {
+				fmt.Fprintf(&buf, "%5d\n", 0)
+				third = true
+			}
+			if !fourth && fields[3] != "0" {
+				fmt.Fprintf(&buf, "%5d\n", 0)
+				fourth = true
+			}
+			if fields[0] != "0" && fields[1] != "0" {
+				fmt.Fprintln(&buf, line)
+			}
+		}
+	}
+	fmt.Fprintf(&buf, "%5d\n", 0)
+	i.Tail = buf.String()
 }
 
 // Run a program, redirecting STDIN from filename.in

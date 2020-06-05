@@ -1,4 +1,4 @@
-/* 
+/*
 Push-button QFF
 ---------------
 The goal of this program is to streamline the generation
@@ -333,11 +333,12 @@ func main() {
 	}
 	// set up pts using opt.log geometry and given intder.in file
 	intder := LoadIntder("intder.in")
-	intder.WritePts("pts/intder.in", "templates/intder.pts")
+	intder.WritePts("pts/intder.in")
 	// run intder
 	RunIntder("pts/intder")
 	// build points and the list of pts to submit
-	pts := BuildPoints("pts/file07", GetNames(cart))
+	atomNames := GetNames(cart)
+	pts := BuildPoints("pts/file07", atomNames)
 	// submit points, wait for them to finish
 	for _, job := range pts {
 		Submit(job + ".pbs")
@@ -403,14 +404,36 @@ func main() {
 	// write intder_geom.in, run intder_geom
 	intder.WriteGeom("freqs/intder_geom.in", longLine)
 	RunIntder("freqs/intder_geom")
-	// update intder geometry - TODO
+	// update intder geometry
 	intder.ReadGeom("freqs/intder_geom.out")
+	// read freqs/intder.in bottom from fort.9903
+	intder.Read9903("freqs/fort.9903")
 	// write freqs/intder.in, run intder
+	intder.WriteFreqs("freqs/intder.in", atomNames)
+	// read harmonics from intder.out
+	intderHarms := intder.ReadOut("freqs/intder.out")
+	fmt.Println(intderHarms)
 	// move files (tennis)
+	Tennis()
 	// run spectro
 	// handle resonances
 	// run spectro
 	// extract output
-	// MolproFreq    HARM  FUND CORR
+	// MolproFreq    IntderFreq    HARM  FUND CORR
 	// later rotational constants, geometry
+}
+
+// Move intder output files to the
+// filenames expected by spectro
+func Tennis() {
+	err := os.Rename("freqs/file15", "freqs/fort.15")
+	if err == nil {
+		err = os.Rename("freqs/file20", "freqs/fort.30")
+	}
+	if err == nil {
+		err = os.Rename("freqs/file24", "freqs/fort.40")
+	}
+	if err != nil {
+		panic(err)
+	}
 }
