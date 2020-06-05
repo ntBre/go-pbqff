@@ -3,3 +3,7 @@
     - include path in input file, can also have central template dir then
   - want to have a default, I guess put that in a templates.go file
     - coded as string literals
+
+* TODO use taylor.py internals to write anpass and intder files
+
+* TODO automate internal coordinate generation                         :HARD:

@@ -123,7 +123,18 @@ func TestLoadAnpass(t *testing.T) {
 func TestWriteAnpass(t *testing.T) {
 	a := LoadAnpass("testfiles/anpass.small")
 	a.WriteAnpass("testfiles/anpass.test", []float64{0, 0, 0, 0, 0, 0})
-	// if got != want {
-	// 	t.Errorf("got %v, wanted %v\n", got, want)
-	// }
+}
+
+func TestGetLongLine(t *testing.T) {
+	got, _ := GetLongLine("testfiles/anpass1.out")
+	want := `     -0.000879072913     -0.000974769219     -0.000489284859     -0.000744291296      0.000772915057      0.000000000000     -0.000002937018`
+	if got != want {
+		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+}
+
+func TestWriteAnpass2(t *testing.T) {
+	a := LoadAnpass("testfiles/anpass.small")
+	ll, _ := GetLongLine("testfiles/anpass1.out")
+	a.WriteAnpass2("testfiles/anpass2.test", ll, []float64{0, 0, 0, 0, 0, 0})
 }

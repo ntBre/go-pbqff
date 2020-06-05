@@ -7,20 +7,22 @@ import (
 
 func TestNewIntder(t *testing.T) {
 	cart, _ := ReadLog("testfiles/coords.log")
-	got := NewIntder(cart)
-	want := &Intder{`      1.000000000        0.118481857       -2.183553663
+	got := LoadIntder("testfiles/intder.in")
+	got.ConvertCart(cart)
+	want := &Intder{Geometry: `      1.000000000        0.118481857       -2.183553663
       0.000000000       -1.563325812       -2.884671935
       0.000000000       -0.014536611        0.273763522
       0.000000000       -0.010373662        2.467030139`}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %v, wanted %v\n", got, want)
+	if got.Geometry != want.Geometry {
+		t.Errorf("got %v, wanted %v\n", got.Geometry, want.Geometry)
 	}
 }
 
 func TestWritePtsIntder(t *testing.T) {
 	cart, _ := ReadLog("testfiles/coords.log")
-	i := NewIntder(cart)
-	i.WritePtsIntder("testfiles/pts/intder.in", "templates/intder.pts")
+	i := LoadIntder("testfiles/intder.in")
+	i.ConvertCart(cart)
+	i.WritePts("testfiles/pts/intder.in", "templates/intder.pts")
 }
 
 func TestRunIntder(t *testing.T) {
@@ -46,4 +48,16 @@ func TestBuildPoints(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, wanted %v", got, want)
 	}
+}
+
+func TestLoadIntder(t *testing.T) {
+	LoadIntder("testfiles/intder.in")
+}
+
+func TestWriteIntderGeom(t *testing.T) {
+	cart, _ := ReadLog("testfiles/coords.log")
+	i := LoadIntder("testfiles/intder.in")
+	i.ConvertCart(cart)
+	longLine, _ := GetLongLine("testfiles/anpass1.out")
+	i.WriteGeom("testfiles/freqs/intder_geom.in", longLine)
 }

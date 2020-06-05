@@ -1,3 +1,13 @@
+/* 
+Push-button QFF
+---------------
+The goal of this program is to streamline the generation
+of quartic force fields, automating as many pieces as possible.
+Requirements:
+- intder, anpass, and spectro executables
+- template intder.in, anpass.in and spectro.in files
+*/
+
 package main
 
 import (
@@ -17,6 +27,10 @@ import (
 	"syscall"
 	"text/template"
 	"time"
+)
+
+const (
+	resBound = 1e-16
 )
 
 var (
@@ -142,19 +156,40 @@ type Anpass struct {
 	Tail string
 }
 
-func (a *Anpass) WriteAnpass(filename string, energies []float64) {
-	var buf bytes.Buffer
-	buf.WriteString(a.Head)
+// Helper for building anpass file body
+func (a *Anpass) BuildBody(buf *bytes.Buffer, energies []float64) {
 	for i, line := range strings.Split(a.Body, "\n") {
 		if line != "" {
 			for _, field := range strings.Fields(line) {
 				f, _ := strconv.ParseFloat(field, 64)
-				fmt.Fprintf(&buf, a.Fmt1, f)
+				fmt.Fprintf(buf, a.Fmt1, f)
 			}
-			fmt.Fprintf(&buf, a.Fmt2+"\n", energies[i])
+			fmt.Fprintf(buf, a.Fmt2+"\n", energies[i])
 		}
 	}
+}
+
+func (a *Anpass) WriteAnpass(filename string, energies []float64) {
+	var buf bytes.Buffer
+	buf.WriteString(a.Head)
+	a.BuildBody(&buf, energies)
 	buf.WriteString(a.Tail)
+	ioutil.WriteFile(filename, []byte(buf.String()), 0755)
+}
+
+func (a *Anpass) WriteAnpass2(filename, longLine string, energies []float64) {
+	var buf bytes.Buffer
+	buf.WriteString(a.Head)
+	a.BuildBody(&buf, energies)
+	for _, line := range strings.Split(a.Tail, "\n") {
+		if strings.Contains(line, "END OF DATA") {
+			buf.WriteString("STATIONARY POINT\n" +
+				longLine + "\n")
+		} else if strings.Contains(line, "!STATIONARY POINT") {
+			continue
+		}
+		buf.WriteString(line + "\n")
+	}
 	ioutil.WriteFile(filename, []byte(buf.String()), 0755)
 }
 
@@ -201,6 +236,32 @@ func LoadAnpass(filename string) *Anpass {
 		buf.WriteString(line + "\n")
 	}
 	return &a
+}
+
+// Scan an anpass output file and return the "long line"
+func GetLongLine(filename string) (string, bool) {
+	f, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	var line, lastLine string
+	for scanner.Scan() {
+		line = scanner.Text()
+		if strings.Contains(line, "0EIGENVALUE") {
+			return lastLine, true
+		} else if strings.Contains(line, "RESIDUALS") {
+			fields := strings.Fields(line)
+			if res, _ := strconv.
+				ParseFloat(fields[len(fields)-1], 64); res > resBound {
+				fmt.Fprintf(os.Stderr, "GetLongLine: warning: sum of squared"+
+					" residuals %e greater than %e\n", res, resBound)
+			}
+		}
+		lastLine = line
+	}
+	return "", false
 }
 
 func main() {
@@ -271,8 +332,8 @@ func main() {
 		}
 	}
 	// set up pts using opt.log geometry and given intder.in file
-	intder := NewIntder(cart)
-	intder.WritePtsIntder("pts/intder.in", "templates/intder.pts")
+	intder := LoadIntder("intder.in")
+	intder.WritePts("pts/intder.in", "templates/intder.pts")
 	// run intder
 	RunIntder("pts/intder")
 	// build points and the list of pts to submit
@@ -325,17 +386,25 @@ func main() {
 	for i, _ := range energies {
 		energies[i] -= min
 	}
-	// Should generate anpass files from intder file to ensure
-	// proper ordering
-	// for now just use an anpass.in file as template
 	// write anpass1.in
 	anpass := LoadAnpass("anpass.in")
 	anpass.WriteAnpass("freqs/anpass1.in", energies)
 	// run anpass1.in
 	RunAnpass("freqs/anpass1")
 	// Read anpass1.out
+	longLine, ok := GetLongLine("freqs/anpass1.out")
+	if !ok {
+		panic("Problem getting long line from anpass1.out")
+	}
 	// - write anpass2.in, run anpass
+	anpass.WriteAnpass2("freqs/anpass2.in", longLine, energies)
+	// run anpass2.in
+	RunAnpass("freqs/anpass2")
 	// write intder_geom.in, run intder_geom
+	intder.WriteGeom("freqs/intder_geom.in", longLine)
+	RunIntder("freqs/intder_geom")
+	// update intder geometry - TODO
+	intder.ReadGeom("freqs/intder_geom.out")
 	// write freqs/intder.in, run intder
 	// move files (tennis)
 	// run spectro

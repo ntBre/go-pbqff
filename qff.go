@@ -1,13 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path"
 	"strconv"
 	"strings"
+	"io/ioutil"
 )
 
 const (
@@ -16,39 +19,91 @@ const (
 )
 
 type Intder struct {
+	Head     string
 	Geometry string
+	Tail     string
 }
 
-func NewIntder(cart string) *Intder {
+// Loads an intder input file with the geometry lines
+// stripped out
+func LoadIntder(filename string) *Intder {
+	f, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	var (
+		buf  bytes.Buffer
+		line string
+		i    Intder
+	)
+	for scanner.Scan() {
+		line = scanner.Text()
+		if strings.Contains(line, "DISP") {
+			i.Head = buf.String()
+			buf.Reset()
+		}
+		fmt.Fprintln(&buf, line)
+	}
+	i.Tail = buf.String()
+	return &i
+}
+
+// Takes a cartesian geometry as a single string
+// and formats it as needed by intder, saving the
+// result in the passed in Intder
+func (i *Intder) ConvertCart(cart string) {
 	lines := strings.Split(cart, "\n")
 	// slice off last newline
 	lines = lines[:len(lines)-1]
 	var buf bytes.Buffer
-	for i, line := range lines {
+	for _, line := range lines {
 		if len(line) > 3 {
 			fields := strings.Fields(line)
 			x, _ := strconv.ParseFloat(fields[1], 64)
 			y, _ := strconv.ParseFloat(fields[2], 64)
 			z, _ := strconv.ParseFloat(fields[3], 64)
-			fmt.Fprintf(&buf, "%17.9f%19.9f%19.9f", x, y, z)
-			if i < len(lines)-1 {
-				fmt.Fprint(&buf, "\n")
-			}
+			fmt.Fprintf(&buf, "%17.9f%19.9f%19.9f\n", x, y, z)
 		}
 	}
-	return &Intder{buf.String()}
+	// remove last newline
+	buf.Truncate(buf.Len() - 1)
+	i.Geometry = buf.String()
 }
 
 // Takes the target intder filename, cartesian geometry
 // and an intder template file and writes an intder input file
 // for use in pts
-func (i *Intder) WritePtsIntder(filename, tfile string) {
+func (i *Intder) WritePts(filename, tfile string) {
 	f, err := os.Create(filename)
 	if err != nil {
 		panic(err)
 	}
 	t := LoadTemplate(tfile)
 	t.Execute(f, i)
+}
+
+// Write an intder_geom.in file to filename, using
+// longLine as the displacement
+func (i *Intder) WriteGeom(filename, longLine string) {
+	var buf bytes.Buffer
+	buf.WriteString(i.Head + i.Geometry + "\n")
+	fmt.Fprintf(&buf, "DISP%4d\n", 1)
+	fields := strings.Fields(longLine)
+	for i, val := range fields[:len(fields)-1] {
+		val, _ := strconv.ParseFloat(val, 64)
+		// skip values that are zero to the precision of the printing
+		if math.Abs(val) > 1e-10 {
+			fmt.Fprintf(&buf, "%5d%20.10f\n", i+1, val)
+		}
+	}
+	fmt.Fprintf(&buf, "%5d\n", 0)
+	ioutil.WriteFile(filename, []byte(buf.String()), 0755)
+}
+
+// Update i.Geometry with the results of intder_geom
+func (i *Intder) ReadGeom(filename string) {
 }
 
 // Run a program, redirecting STDIN from filename.in
