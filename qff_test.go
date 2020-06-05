@@ -105,3 +105,17 @@ func TestWriteIntderFreqs(t *testing.T) {
 	i.Read9903("testfiles/fort.9903")
 	i.WriteFreqs("testfiles/freqs/intder.in", GetNames(cart))
 }
+
+func TestLoadSpectro(t *testing.T) {
+	LoadSpectro("testfiles/spectro.in")
+}
+
+func TestWriteSpectroInput(t *testing.T) {
+	spec := LoadSpectro("testfiles/spectro.in")
+	spec.WriteInput("testfiles/freqs/spectro.in")
+}
+
+func TestReadSpectroOutput(t *testing.T) {
+	spec := LoadSpectro("testfiles/spectro.in")
+	spec.ReadOutput("testfiles/spectro.out")
+}

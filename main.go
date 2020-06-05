@@ -415,10 +415,19 @@ func main() {
 	fmt.Println(intderHarms)
 	// move files (tennis)
 	Tennis()
+	// load spectro template
+	spectro := LoadSpectro("spectro.in")
+	// write spectro input file
+	spectro.WriteInput("freqs/spectro.in")
 	// run spectro
-	// handle resonances
+	RunSpectro("freqs/spectro")
+	// read spectro output, handle resonances
+	// TODO polyad
+	// TODO section headers and printing
+	spectro.ReadOutput("freqs/spectro.out")
 	// run spectro
 	// extract output
+	// print in summary table:
 	// MolproFreq    IntderFreq    HARM  FUND CORR
 	// later rotational constants, geometry
 }
