@@ -138,3 +138,25 @@ func TestWriteAnpass2(t *testing.T) {
 	ll, _ := GetLongLine("testfiles/anpass1.out")
 	a.WriteAnpass2("testfiles/anpass2.test", ll, []float64{0, 0, 0, 0, 0, 0})
 }
+
+func TestSummarize(t *testing.T) {
+	zpt := 100.0
+	mph := []float64{1, 2, 3}
+	idh := []float64{4, 5, 6}
+	sph := []float64{7, 8, 9}
+	spf := []float64{10, 11, 12}
+	spc := []float64{13, 14, 15}
+	t.Run("dimension mismatch", func(t *testing.T) {
+		spc := []float64{13, 14, 15, 16}
+		err := Summarize(zpt, mph, idh, sph, spf, spc)
+		if err == nil {
+			t.Errorf("wanted an error, didn't get one")
+		}
+	})
+	t.Run("success", func(t *testing.T) {
+		err := Summarize(zpt, mph, idh, sph, spf, spc)
+		if err != nil {
+			t.Errorf("didn't want an error, got one")
+		}
+	})
+}

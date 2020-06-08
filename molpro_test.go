@@ -132,3 +132,13 @@ OCN=               176.79276221 DEG
 		t.Errorf("got %v, wanted %v\n", zmat, wantZmat)
 	}
 }
+
+func TestReadFreqs(t *testing.T) {
+	mp := Molpro{FormatZmat(Input[Geometry]), Input[Basis],
+		Input[Charge], Input[Spin], Input[Method], defaultOpt}
+	got := mp.ReadFreqs("testfiles/freq.out")
+	want := []float64{805.31, 774.77, 679.79, 647.70, 524.26, 301.99}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+}

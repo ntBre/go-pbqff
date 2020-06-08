@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"math"
 	"os"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -150,4 +152,31 @@ func ReadLog(filename string) (string, string) {
 		}
 	}
 	return cart.String(), zmat.String()
+}
+
+// Read a Molpro frequency calculation output file
+// and return a slice of the harmonic frequencies
+func (m Molpro) ReadFreqs(filename string) (freqs []float64) {
+	f, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	var line string
+	for scanner.Scan() {
+		line = scanner.Text()
+		if strings.Contains(line, "Wavenumbers") {
+			fields := strings.Fields(line)[2:]
+			for _, val := range fields {
+				val, _ := strconv.ParseFloat(val, 64)
+				freqs = append(freqs, val)
+			}
+		}
+		if strings.Contains(line, "low/zero") {
+			break
+		}
+	}
+	sort.Sort(sort.Reverse(sort.Float64Slice(freqs)))
+	return
 }

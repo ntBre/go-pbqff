@@ -6,6 +6,8 @@ of quartic force fields, automating as many pieces as possible.
 Requirements:
 - intder, anpass, and spectro executables
 - template intder.in, anpass.in and spectro.in files
+  - intder.in should be a pts intder input and have the geometry removed
+  - spectro.in should not have any resonance information
 */
 
 package main
@@ -27,6 +29,13 @@ import (
 	"syscall"
 	"text/template"
 	"time"
+)
+
+const (
+	intderCmd = "/home/brent/Projects/pbqff/intder"
+	// intderCmd  = "intder"
+	anpassCmd  = "anpass"
+	spectroCmd = "spectro"
 )
 
 const (
@@ -264,6 +273,44 @@ func GetLongLine(filename string) (string, bool) {
 	return "", false
 }
 
+// Move intder output files to the
+// filenames expected by spectro
+func Tennis() {
+	err := os.Rename("freqs/file15", "freqs/fort.15")
+	if err == nil {
+		err = os.Rename("freqs/file20", "freqs/fort.30")
+	}
+	if err == nil {
+		err = os.Rename("freqs/file24", "freqs/fort.40")
+	}
+	if err != nil {
+		panic(err)
+	}
+}
+
+func Summarize(zpt float64, mpHarm, idHarm, spHarm, spFund, spCorr []float64) error {
+	if len(mpHarm) != len(idHarm) ||
+		len(mpHarm) != len(spHarm) ||
+		len(mpHarm) != len(spFund) ||
+		len(mpHarm) != len(spCorr) {
+		return fmt.Errorf("Summarize: dimension mismatch\n")
+	}
+	fmt.Printf("ZPT = %.1f\n", zpt)
+	fmt.Printf("+%8s-+%8s-+%8s-+%8s-+%8s-+\n",
+		"--------", "--------", "--------", "--------", "--------")
+	fmt.Printf("|%8s |%8s |%8s |%8s |%8s |\n",
+		"Mp Harm", "Id Harm", "Sp Harm", "Sp Fund", "Sp Corr")
+	fmt.Printf("+%8s-+%8s-+%8s-+%8s-+%8s-+\n",
+		"--------", "--------", "--------", "--------", "--------")
+	for i := range mpHarm {
+		fmt.Printf("|%8.1f |%8.1f |%8.1f |%8.1f |%8.1f |\n",
+			mpHarm[i], idHarm[i], spHarm[i], spFund[i], spCorr[i])
+	}
+	fmt.Printf("+%8s-+%8s-+%8s-+%8s-+%8s-+\n",
+		"--------", "--------", "--------", "--------", "--------")
+	return nil
+}
+
 func main() {
 	MakeDirs(".")
 	Args := ParseFlags()
@@ -315,22 +362,29 @@ func main() {
 	WritePBS("freq/mp.pbs", "templates/pbs.in",
 		&Job{MakeName(Input[Geometry]) + "/freq", "freq/freq.inp", 35})
 	// submit freq, wait in separate goroutine
-	// TODO make this a closure - actually make it a function
-	// since I use it twice
+	// doesn't matter if this finishes
 	Submit("freq/mp.pbs")
 	outfile = "freq/freq.out"
-	_, err = prog.ReadOut(outfile)
-	for err != nil {
-		HandleSignal(35, time.Minute)
+	var (
+		mpHarm   []float64
+		finished bool
+	)
+	go func() {
 		_, err = prog.ReadOut(outfile)
-		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
-			err == ErrFileContainsError || err == ErrBlankOutput) ||
-			err == ErrFileNotFound {
+		for err != nil {
+			HandleSignal(35, time.Minute)
+			_, err = prog.ReadOut(outfile)
+			if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
+				err == ErrFileContainsError || err == ErrBlankOutput) ||
+				err == ErrFileNotFound {
 
-			fmt.Println("resubmitting freq for", err)
-			Submit("freq/mp.pbs")
+				fmt.Println("resubmitting freq for", err)
+				Submit("freq/mp.pbs")
+			}
 		}
-	}
+		mpHarm = prog.ReadFreqs(outfile)
+		finished = true
+	}()
 	// set up pts using opt.log geometry and given intder.in file
 	intder := LoadIntder("intder.in")
 	intder.WritePts("pts/intder.in")
@@ -412,37 +466,28 @@ func main() {
 	intder.WriteFreqs("freqs/intder.in", atomNames)
 	// read harmonics from intder.out
 	intderHarms := intder.ReadOut("freqs/intder.out")
-	fmt.Println(intderHarms)
 	// move files (tennis)
 	Tennis()
 	// load spectro template
 	spectro := LoadSpectro("spectro.in")
+	spectro.Nfreqs = len(intderHarms)
 	// write spectro input file
 	spectro.WriteInput("freqs/spectro.in")
 	// run spectro
 	RunSpectro("freqs/spectro")
 	// read spectro output, handle resonances
-	// TODO polyad
-	// TODO section headers and printing
 	spectro.ReadOutput("freqs/spectro.out")
+	// write the new input
+	spectro.WriteInput("freqs/spectro2.in")
 	// run spectro
+	RunSpectro("freqs/spectro2")
 	// extract output
-	// print in summary table:
-	// MolproFreq    IntderFreq    HARM  FUND CORR
-	// later rotational constants, geometry
-}
-
-// Move intder output files to the
-// filenames expected by spectro
-func Tennis() {
-	err := os.Rename("freqs/file15", "freqs/fort.15")
-	if err == nil {
-		err = os.Rename("freqs/file20", "freqs/fort.30")
+	zpt, spHarm, spFund, spCorr := spectro.FreqReport("freqs/spectro2.out")
+	if !finished {
+		mpHarm = make([]float64, spectro.Nfreqs)
 	}
-	if err == nil {
-		err = os.Rename("freqs/file24", "freqs/fort.40")
-	}
-	if err != nil {
-		panic(err)
-	}
+	// print summary table
+	Summarize(zpt, mpHarm, intderHarms, spHarm, spFund, spCorr)
+	// TODO summarize rotational constants, geometry parameters,
+	//      maybe assignments too
 }
