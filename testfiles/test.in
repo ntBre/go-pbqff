@@ -14,8 +14,6 @@ OX = 1.1 Ang
 XXO = 80.0 Deg
 }
 # comment followed by blank line
-
-method=ccsd(t)-f12
-basis=cc-pvtz-f12
-charge=0
-spin=0
+intder=/home/brent/Projects/pbqff/intder
+anpass=
+spectro=

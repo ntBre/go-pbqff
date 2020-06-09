@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"os"
 	"regexp"
@@ -13,24 +14,63 @@ import (
 	"strings"
 )
 
+const (
+	opt Procedure = iota
+	freq
+	none
+)
+
+type Procedure int
+
 type Molpro struct {
-	Geometry  string
-	Basis     string
-	Charge    string
-	Spin      string
-	Method    string
-	Procedure string
+	Head     string
+	Geometry string
+	Tail     string
+	Opt      string
 }
 
-// Takes an input filename and template filename
-// and writes an input file
-func (m *Molpro) WriteInput(infile, tfile string) {
-	f, err := os.Create(infile)
+// Load a template molpro input file
+func LoadMolpro(filename string) *Molpro {
+	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
 	}
-	t := LoadTemplate(tfile)
-	t.Execute(f, m)
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	var (
+		buf  bytes.Buffer
+		line string
+		mp   Molpro
+	)
+	for scanner.Scan() {
+		line = scanner.Text()
+		if strings.Contains(line, "optg") && !strings.Contains(line, "gthresh") {
+			mp.Tail = buf.String()
+			buf.Reset()
+		}
+		buf.WriteString(line + "\n")
+		if strings.Contains(line, "geometry=") {
+			mp.Head = buf.String()
+			buf.Reset()
+		}
+	}
+	mp.Opt = buf.String()
+	return &mp
+}
+
+// Write a Molpro input file
+func (m *Molpro) WriteInput(filename string, p Procedure) {
+	var buf bytes.Buffer
+	buf.WriteString(m.Head)
+	buf.WriteString(m.Geometry + "\n")
+	buf.WriteString(m.Tail)
+	switch {
+	case p == opt:
+		buf.WriteString(m.Opt)
+	case p == freq:
+		buf.WriteString("{frequencies}\n")
+	}
+	ioutil.WriteFile(filename, buf.Bytes(), 0755)
 }
 
 // Format z-matrix for use in Molpro input

@@ -1,7 +1,8 @@
 #!/bin/sh
-#PBS -N al2o2
+#PBS -N o2al2
 #PBS -S /bin/bash
 #PBS -j oe
+#PBS -o /dev/null
 #PBS -W umask=022
 #PBS -l walltime=5000:00:00
 #PBS -l ncpus=1

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"os/exec"
 	"reflect"
 	"testing"
@@ -28,32 +27,6 @@ func TestReadFile(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, wanted %v\n", got, want)
-	}
-}
-
-func TestLoadTemplate(t *testing.T) {
-	temp := LoadTemplate("templates/molpro.in")
-	mp := Molpro{"this is a geom", "cc-pvtz-f12",
-		"charge", "spin", "ccsd(t)-f12", defaultOpt}
-	var buf bytes.Buffer
-	temp.Execute(&buf, mp)
-	got := buf.String()
-	want := `memory,312,m
-
-gthresh,energy=1.d-12,zero=1.d-22,oneint=1.d-22,twoint=1.d-22;
-gthresh,optgrad=1.d-8,optstep=1.d-8;
-nocompress;
-
-geometry={
-this is a geom
-basis=cc-pvtz-f12
-set,charge=charge
-set,spin=spin
-hf,accuracy=16,energy=1.0d-10
-ccsd(t)-f12,thrden=1.0d-8,thrvar=1.0d-10
-optg,grms=1.d-8,srms=1.d-8`
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("\ngot %q\nwad %q\n", got, want)
 	}
 }
 
@@ -96,10 +69,6 @@ func TestHandleSignal(t *testing.T) {
 func TestGetNames(t *testing.T) {
 	prog := Molpro{
 		Geometry: Input[Geometry],
-		Basis:    Input[Basis],
-		Charge:   Input[Charge],
-		Spin:     Input[Spin],
-		Method:   Input[Method],
 	}
 	cart, _, _ := prog.HandleOutput("testfiles/opt")
 	got := GetNames(cart)
@@ -159,4 +128,24 @@ func TestSummarize(t *testing.T) {
 			t.Errorf("didn't want an error, got one")
 		}
 	})
+}
+
+func TestUpdateZmat(t *testing.T) {
+	prog := LoadMolpro("testfiles/opt.inp")
+	_, zmat, _ := prog.HandleOutput("testfiles/nowarn")
+	got := UpdateZmat(FormatZmat(Input[Geometry]), zmat)
+	want := `X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 XXO  3 90.0
+O  1 OX  2 XXO  4 90.0
+}
+NH=                  1.91310288 BOHR
+XNH=               112.21209367 DEGREE
+D1=                119.99647304 DEGREE
+`
+	if got != want {
+		t.Errorf("got\n%q, wanted\n%q\n", got, want)
+	}
 }

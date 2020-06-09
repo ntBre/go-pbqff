@@ -30,20 +30,16 @@ func TestRunIntder(t *testing.T) {
 }
 
 func TestBuildPoints(t *testing.T) {
-	prog := Molpro{
-		Geometry: Input[Geometry],
-		Basis:    Input[Basis],
-		Charge:   Input[Charge],
-		Spin:     Input[Spin],
-		Method:   Input[Method],
-	}
+	prog := LoadMolpro("testfiles/opt.inp")
+	prog.Geometry = Input[Geometry]
 	cart, _, _ := prog.HandleOutput("testfiles/opt")
 	names := GetNames(cart)
-	got := BuildPoints("testfiles/pts/file07", names)
+	got := prog.BuildPoints("testfiles/file07", names)
+	prog.BuildPoints("testfiles/pts/file07", names)
 	want := []string{
-		"testfiles/pts/inp/NHHH.00000",
-		"testfiles/pts/inp/NHHH.00001",
-		"testfiles/pts/inp/NHHH.00002",
+		"testfiles/inp/NHHH.00000",
+		"testfiles/inp/NHHH.00001",
+		"testfiles/inp/NHHH.00002",
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, wanted %v", got, want)

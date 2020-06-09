@@ -24,14 +24,13 @@ XXO = 80.0 Deg`
 }
 
 func TestWriteInputMolpro(t *testing.T) {
-	mp := Molpro{FormatZmat(Input[Geometry]), Input[Basis],
-		Input[Charge], Input[Spin], Input[Method], defaultOpt}
-	mp.WriteInput("testfiles/opt/opt.inp", "templates/molpro.in")
+	mp := LoadMolpro("testfiles/opt.inp")
+	mp.Geometry = FormatZmat(Input[Geometry])
+	mp.WriteInput("testfiles/opt/opt.inp", opt)
 }
 
 func TestReadOut(t *testing.T) {
-	mp := Molpro{FormatZmat(Input[Geometry]), Input[Basis],
-		Input[Charge], Input[Spin], Input[Method], defaultOpt}
+	mp := Molpro{Geometry: FormatZmat(Input[Geometry])}
 
 	t.Run("Successful reading", func(t *testing.T) {
 		got, err := mp.ReadOut("testfiles/good.out")
@@ -87,11 +86,18 @@ func TestReadOut(t *testing.T) {
 			t.Errorf("got %q, wanted %q", err, ErrFinishedButNoEnergy)
 		}
 	})
+
+	t.Run("energy= in input", func(t *testing.T) {
+		got, _ := mp.ReadOut("testfiles/ALALOO.00000.out")
+		want := -633.710676610142
+		if got != want {
+			t.Errorf("got %v, wanted %v\n", got, want)
+		}
+	})
 }
 
 func TestHandleOutput(t *testing.T) {
-	mp := Molpro{FormatZmat(Input[Geometry]), Input[Basis],
-		Input[Charge], Input[Spin], Input[Method], defaultOpt}
+	mp := Molpro{Geometry: FormatZmat(Input[Geometry])}
 	t.Run("warning in outfile", func(t *testing.T) {
 		_, _, err := mp.HandleOutput("testfiles/opt")
 		if err != nil {
@@ -134,8 +140,7 @@ OCN=               176.79276221 DEG
 }
 
 func TestReadFreqs(t *testing.T) {
-	mp := Molpro{FormatZmat(Input[Geometry]), Input[Basis],
-		Input[Charge], Input[Spin], Input[Method], defaultOpt}
+	mp := Molpro{Geometry: FormatZmat(Input[Geometry])}
 	got := mp.ReadFreqs("testfiles/freq.out")
 	want := []float64{805.31, 774.77, 679.79, 647.70, 524.26, 301.99}
 	if !reflect.DeepEqual(got, want) {

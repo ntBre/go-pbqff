@@ -12,10 +12,9 @@ const (
 	Program
 	Geometry
 	GeomType
-	Method
-	Basis
-	Charge
-	Spin
+	IntderCmd
+	AnpassCmd
+	SpectroCmd
 	NumKeys
 )
 
@@ -29,11 +28,10 @@ func ParseInfile(filename string) {
 	Keywords := []Regexp{
 		Regexp{regexp.MustCompile(`(?i)queuetype=`), QueueType},
 		Regexp{regexp.MustCompile(`(?i)program=`), Program},
-		Regexp{regexp.MustCompile(`(?i)method=`), Method},
 		Regexp{regexp.MustCompile(`(?i)geomtype=`), GeomType},
-		Regexp{regexp.MustCompile(`(?i)basis=`), Basis},
-		Regexp{regexp.MustCompile(`(?i)charge=`), Charge},
-		Regexp{regexp.MustCompile(`(?i)spin=`), Spin},
+		Regexp{regexp.MustCompile(`(?i)intder=`), IntderCmd},
+		Regexp{regexp.MustCompile(`(?i)spectro=`), AnpassCmd},
+		Regexp{regexp.MustCompile(`(?i)anpass=`), SpectroCmd},
 	}
 	geom := regexp.MustCompile(`(?i)geometry={`)
 	for i := 0; i < len(lines); {
@@ -53,7 +51,7 @@ func ParseInfile(filename string) {
 			for _, kword := range Keywords {
 				if kword.MatchString(lines[i]) {
 					split := strings.Split(lines[i], "=")
-					Input[kword.Name] = strings.ToUpper(split[len(split)-1])
+					Input[kword.Name] = split[len(split)-1]
 				}
 			}
 			i++

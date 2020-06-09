@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -34,18 +35,22 @@ func RunProgram(progName, filename string) error {
 	file := path.Base(filename)
 	infile := file + ".in"
 	outfile := file + ".out"
-	_, err = exec.Command("bash", "-c", progName+" < "+infile+" > "+outfile).Output()
+	out, err := exec.Command("bash", "-c", progName+" < "+infile+" > "+outfile).Output()
 	os.Chdir(current)
-	return err
+	if err != nil {
+		return fmt.Errorf("RunProgram: failed with %v running %q on %q\nstdout: %q\n",
+			err, progName, infile, out)
+	}
+	return nil
 }
 
 // Takes a filename like pts/intder, runs intder
 // on pts/intder.in and redirects the output into
 // pts/intder.out
 func RunIntder(filename string) {
-	err := RunProgram(intderCmd, filename)
+	err := RunProgram(Input[IntderCmd], filename)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }
 
@@ -53,7 +58,7 @@ func RunIntder(filename string) {
 // on freqs/anpass1.in and redirects the output into
 // freqs/anpass1.out
 func RunAnpass(filename string) {
-	err := RunProgram(anpassCmd, filename)
+	err := RunProgram(Input[AnpassCmd], filename)
 	if err != nil {
 		panic(err)
 	}
@@ -63,7 +68,7 @@ func RunAnpass(filename string) {
 // on freqs/spectro.in and redirects the output into
 // freqs/spectro.out
 func RunSpectro(filename string) {
-	err := RunProgram(spectroCmd, filename)
+	err := RunProgram(Input[SpectroCmd], filename)
 	if err != nil {
 		panic(err)
 	}
@@ -71,32 +76,26 @@ func RunSpectro(filename string) {
 
 // Uses ./pts/file07 to construct the single-point
 // energy calculations. Return an array of jobs to run
-func BuildPoints(filename string, atomNames []string) (jobs []string) {
-	lines := ReadFile(filename)[1:17]
+func (mp *Molpro) BuildPoints(filename string, atomNames []string) (jobs []string) {
+	lines := ReadFile(filename)
 	l := len(atomNames)
 	i := 0
 	var buf bytes.Buffer
-	mp := Molpro{
-		Basis:  Input[Basis],
-		Charge: Input[Charge],
-		Spin:   Input[Spin],
-		Method: Input[Method],
-	}
 	dir := path.Dir(filename)
 	name := strings.Join(atomNames, "")
 	geom := 0
-	for _, line := range lines {
+	for li, line := range lines {
 		if !strings.Contains(line, "#") {
 			ind := i % l
-			if ind == 0 && i > 0 {
+			if (ind == 0 && i > 0) || li == len(lines)-1 {
 				mp.Geometry = fmt.Sprint(buf.String(), "}\n")
 				basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
 				fname := basename + ".inp"
 				pname := basename + ".pbs"
 				geom++
-				mp.WriteInput(fname, "templates/molpro.in")
+				mp.WriteInput(fname, none)
 				tmp := &Job{path.Base(fname), fname, 35}
-				WritePBS(pname, "templates/pbs.in", tmp)
+				WritePBS(pname, tmp)
 				jobs = append(jobs, basename)
 				buf.Reset()
 			}

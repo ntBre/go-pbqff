@@ -6,7 +6,7 @@ import (
 
 func TestWritePBS(t *testing.T) {
 	p := Job{MakeName(Input[Geometry]), "opt.inp", 35}
-	WritePBS("testfiles/opt/mp.pbs", "templates/pbs.in", &p)
+	WritePBS("testfiles/opt/mp.pbs", &p)
 }
 
 func TestSubmit(t *testing.T) {

@@ -1,9 +1,16 @@
+* TODO might need to change energy line now that energy= in input constraints
+  - maybe just a space before energy
+
+* TODO need way to specify atom ordering in transition from molpro to intder
+
 * TODO figure out a better way to handle templates
-  - maybe just use templates and have them in the current directory
-    - include path in input file, can also have central template dir then
-  - want to have a default, I guess put that in a templates.go file
-    - coded as string literals
+  - moved away from go templates but now using "template" input files
+  - could bundle literals with the program and use others if found in the input file
 
 * TODO use taylor.py internals to write anpass and intder files
+  - only includes bottom of intder file, top falls under the hard one below
+  - could write entire anpass from scratch though
 
 * TODO automate internal coordinate generation                         :HARD:
+
+* TODO replace intder, anpass, and spectro entirely                    :HARD:
