@@ -1,5 +1,5 @@
 #!/bin/sh
-#PBS -N NHHH.00002.inp
+#PBS -N NHHH.00001.inp
 #PBS -S /bin/bash
 #PBS -j oe
 #PBS -o /dev/null
@@ -19,7 +19,7 @@ cd $WORKDIR
 mkdir -p $TMPDIR
 
 date
-molpro -t 1 testfiles/pts/inp/NHHH.00002.inp
+molpro -t 1 testfiles/inp/NHHH.00001.inp
 date
 
 rm -rf $TMPDIR

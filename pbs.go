@@ -21,7 +21,7 @@ const pbs = `#!/bin/sh
 #PBS -W umask=022
 #PBS -l walltime=5000:00:00
 #PBS -l ncpus=1
-#PBS -l mem=32gb
+#PBS -l mem=9gb
 
 module load intel
 module load mvapich2

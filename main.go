@@ -22,7 +22,6 @@ import (
 	"math"
 	"os"
 	"os/signal"
-	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -257,62 +256,61 @@ func main() {
 	}()
 	// set up pts using opt.log geometry and given intder.in file
 	intder := LoadIntder("intder.in")
-	intder.ConvertCart(cart)
+	atomNames := intder.ConvertCart(cart)
 	intder.WritePts("pts/intder.in")
 	// run intder
 	RunIntder("pts/intder")
 	// build points and the list of pts to submit
-	atomNames := GetNames(cart)
 	pts := prog.BuildPoints("pts/file07", atomNames)
 	// submit points, wait for them to finish
 	for _, job := range pts {
-		Submit(job + ".pbs")
+		Submit(job.Name + ".pbs")
 	}
 
 	// - check for failed jobs, probably just loop at some interval
 	//   doesnt need to be fast (and resource intensive) like gocart
 	ptsInit := len(pts)
-	for len(pts) > 0 {
-		fmt.Println("len pts is : ", len(pts))
+	energies := make([]float64, ptsInit)
+	var min float64
+	nJobs := ptsInit
+	for nJobs > 0 {
 		shortenBy := 0
-		for i, job := range pts {
-			_, err := prog.ReadOut(job + ".out")
+		for i := 0; i < nJobs; i++ {
+			job := pts[i]
+			energy, err := prog.ReadOut(job.Name + ".out")
 			if err == nil {
-				pts[i], pts[len(pts)-1] = pts[len(pts)-1], pts[i]
+				pts[nJobs-1], pts[i] = pts[i], pts[nJobs-1]
+				nJobs--
+				pts = pts[:nJobs]
+				if energy < min {
+					min = energy
+				}
+				energies[job.Index] = energy
 				shortenBy++
-			} else if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
-				err == ErrFileContainsError || err == ErrBlankOutput) ||
+			} else if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
+				err == ErrFileContainsError || err == ErrBlankOutput { // ||
 				// must be a better way to do this -> check queue
-				(err == ErrFileNotFound && len(pts) < ptsInit/20) {
-
-				fmt.Printf("resubmitting %s for %s\n", job, err)
-				// Submit(job + ".pbs")
+				// disable for now
+				// (err == ErrFileNotFound && len(pts) < ptsInit/20) {
+				// write error found in case it can't be handled by resubmit
+				// then we need to kill it, manually for now
+				if err == ErrFileContainsError {
+					fmt.Fprintf(os.Stderr, "error: %v on %s\n", err, job.Name)
+				}
+				fmt.Printf("resubmitting %s for %s, with %d jobs remaining\n", job.Name, err, nJobs)
+				// delete output file to prevent rereading the same one
+				os.Remove(job.Name + ".out")
+				Submit(job.Name + ".pbs")
 			}
 		}
-		pts = pts[:len(pts)-shortenBy]
 		// if the list is shortened by less than 10%,
 		// sleep. could play with both of these values
-		if float64(shortenBy/ptsInit) < 0.1 {
-			fmt.Println("sleeping")
+		if nJobs > 0 && float64(shortenBy/nJobs) < 0.1 {
+			fmt.Printf("only shortened by %d out of %d remaining, sleeping\n", shortenBy, nJobs)
 			time.Sleep(time.Second)
 		}
 	}
 
-	// gather energies, convert to relative
-	// - this should probably be part of the checking
-	//   for finished jobs, but a little weird with rotating them to end
-	energies := make([]float64, ptsInit)
-	for i, job := range pts {
-		// disregard error because we checked them all above
-		energy, _ := prog.ReadOut(job + ".out")
-		fmt.Println(i, energy)
-		energies[i] = energy
-	}
-	toSort := make([]float64, ptsInit)
-	copy(toSort, energies)
-	sort.Float64s(toSort)
-	min := toSort[0]
-	fmt.Printf("minimum energy: %f\n", min)
 	// convert to relative energies
 	for i, _ := range energies {
 		energies[i] -= min

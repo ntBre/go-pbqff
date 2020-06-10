@@ -1,7 +1,11 @@
-* TODO might need to change energy line now that energy= in input constraints
-  - maybe just a space before energy
+* DONE need way to specify atom ordering in transition from molpro to intder
+  - leave intder geometry in as template for this
+  - sort by all fields in xyz coords to emulate what intder expects
+  - problem randomly matching atom order to coordinates
+    - H O O H for example if you flip the Os or Hs
 
-* TODO need way to specify atom ordering in transition from molpro to intder
+* TODO resume from each point of the process
+  - pts, freqs mainly; if opt fails probably need to restart and if freq fails just run that alone
 
 * TODO figure out a better way to handle templates
   - moved away from go templates but now using "template" input files

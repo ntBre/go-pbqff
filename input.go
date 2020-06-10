@@ -30,8 +30,8 @@ func ParseInfile(filename string) {
 		Regexp{regexp.MustCompile(`(?i)program=`), Program},
 		Regexp{regexp.MustCompile(`(?i)geomtype=`), GeomType},
 		Regexp{regexp.MustCompile(`(?i)intder=`), IntderCmd},
-		Regexp{regexp.MustCompile(`(?i)spectro=`), AnpassCmd},
-		Regexp{regexp.MustCompile(`(?i)anpass=`), SpectroCmd},
+		Regexp{regexp.MustCompile(`(?i)anpass=`), AnpassCmd},
+		Regexp{regexp.MustCompile(`(?i)spectro=`), SpectroCmd},
 	}
 	geom := regexp.MustCompile(`(?i)geometry={`)
 	for i := 0; i < len(lines); {

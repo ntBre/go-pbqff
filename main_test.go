@@ -1,11 +1,20 @@
 package main
 
 import (
+	"os"
 	"os/exec"
 	"reflect"
 	"testing"
 	"time"
 )
+
+func TestMain(m *testing.M) {
+	overwrite = true
+	MakeDirs("testfiles")
+	ParseInfile("testfiles/test.in")
+	code := m.Run()
+	os.Exit(code)
+}
 
 func TestMakeDirs(t *testing.T) {
 	overwrite = true

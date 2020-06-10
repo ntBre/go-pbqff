@@ -74,9 +74,14 @@ func RunSpectro(filename string) {
 	}
 }
 
+type Calc struct {
+	Name  string
+	Index int
+}
+
 // Uses ./pts/file07 to construct the single-point
 // energy calculations. Return an array of jobs to run
-func (mp *Molpro) BuildPoints(filename string, atomNames []string) (jobs []string) {
+func (mp *Molpro) BuildPoints(filename string, atomNames []string) (jobs []Calc) {
 	lines := ReadFile(filename)
 	l := len(atomNames)
 	i := 0
@@ -88,15 +93,19 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string) (jobs []strin
 		if !strings.Contains(line, "#") {
 			ind := i % l
 			if (ind == 0 && i > 0) || li == len(lines)-1 {
+				// last line needs to write first
+				if li == len(lines)-1 {
+					fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
+				}
 				mp.Geometry = fmt.Sprint(buf.String(), "}\n")
 				basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
 				fname := basename + ".inp"
 				pname := basename + ".pbs"
-				geom++
 				mp.WriteInput(fname, none)
 				tmp := &Job{path.Base(fname), fname, 35}
 				WritePBS(pname, tmp)
-				jobs = append(jobs, basename)
+				jobs = append(jobs, Calc{basename, geom})
+				geom++
 				buf.Reset()
 			}
 			fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)

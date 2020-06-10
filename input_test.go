@@ -6,10 +6,6 @@ import (
 )
 
 func TestParseInfile(t *testing.T) {
-	var before [NumKeys]string
-	if !reflect.DeepEqual(Input, before) {
-		t.Errorf("nonzero initial input")
-	}
 	ParseInfile("testfiles/test.in")
 	after := [NumKeys]string{
 		QueueType: "pbs",
