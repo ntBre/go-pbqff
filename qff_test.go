@@ -96,8 +96,8 @@ func TestRead9903(t *testing.T) {
 func TestWriteIntderFreqs(t *testing.T) {
 	cart, _ := ReadLog("testfiles/al2o2.log")
 	i := LoadIntder("testfiles/intder.full")
-	i.ConvertCart(cart)
+	order := i.ConvertCart(cart)
 	i.ReadGeom("testfiles/intder_geom.out")
-	i.Read9903("testfiles/fort.9903")
-	i.WriteFreqs("testfiles/freqs/intder.in", GetNames(cart))
+	i.Read9903("testfiles/prob.9903")
+	i.WriteFreqs("testfiles/freqs/intder.in", order)
 }

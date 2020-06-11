@@ -4,6 +4,8 @@ gthresh,energy=1.d-12,zero=1.d-22,oneint=1.d-22,twoint=1.d-22;
 gthresh,optgrad=1.d-8,optstep=1.d-8;
 nocompress;
 
+geomtyp=xyz
+bohr
 geometry={
 N 0.9937675071        0.1139401427       -2.1714786816
 H 0.0024025806       -1.5519006108       -2.8840027027

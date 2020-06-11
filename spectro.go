@@ -44,21 +44,29 @@ func LoadSpectro(filename string) *Spectro {
 func (s *Spectro) WriteInput(filename string) {
 	var buf bytes.Buffer
 	buf.WriteString(s.Head)
+	buf.WriteString("# CORIOL #####\n")
 	if s.Coriol != "" {
-		buf.WriteString("# CORIOL #####\n")
 		buf.WriteString(s.Coriol)
+	} else {
+		fmt.Fprintf(&buf, "%5d\n", 0)
 	}
+	buf.WriteString("# FERMI1 ####\n")
 	if s.Fermi1 != "" {
-		buf.WriteString("# FERMI1 ####\n")
 		buf.WriteString(s.Fermi1)
+	} else {
+		fmt.Fprintf(&buf, "%5d\n", 0)
 	}
+	buf.WriteString("# FERMI2 ####\n")
 	if s.Fermi2 != "" {
-		buf.WriteString("# FERMI2 ####\n")
 		buf.WriteString(s.Fermi2)
+	} else {
+		fmt.Fprintf(&buf, "%5d\n", 0)
 	}
+	buf.WriteString("# RESIN ####\n")
 	if s.Polyad != "" {
-		buf.WriteString("# RESIN ####\n")
 		buf.WriteString(s.Polyad)
+	} else {
+		fmt.Fprintf(&buf, "%5d\n", 0)
 	}
 	ioutil.WriteFile(filename, buf.Bytes(), 0755)
 }

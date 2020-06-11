@@ -155,7 +155,7 @@ func LoadIntder(filename string) *Intder {
 // and formats it as needed by intder, saving the
 // result in the passed in Intder. Return the ordered
 // slice atom names
-func (i *Intder) ConvertCart(cart string) (order []string) {
+func (i *Intder) ConvertCart(cart string) (names []string) {
 	lines := strings.Split(cart, "\n")
 	// slice off last newline
 	lines = lines[:len(lines)-1]
@@ -166,7 +166,7 @@ func (i *Intder) ConvertCart(cart string) (order []string) {
 		if len(line) > 3 {
 			floats = append(floats, make([]float64, 3))
 			fields := strings.Fields(line)
-			order = append(order, fields[0])
+			names = append(names, fields[0])
 			x, _ := strconv.ParseFloat(fields[1], 64)
 			floats[i][0] = x
 			y, _ := strconv.ParseFloat(fields[2], 64)
@@ -181,17 +181,102 @@ func (i *Intder) ConvertCart(cart string) (order []string) {
 	// remove last newline
 	buf.Truncate(buf.Len() - 1)
 	pattern := Pattern(buf.String())
+	colOrder := MatchCols(i.Pattern, pattern)
+	fmt.Println(colOrder)
+	strs = MoveCols(colOrder, strs)
 	transform, ok := MatchPattern(i.Pattern, pattern)
 	if !ok {
 		panic("transform failed")
 	}
 	i.Geometry = strings.Join(ApplyPattern(transform, strs), "\n")
-	return ApplyPattern(transform, order)
+	return ApplyPattern(transform, names)
+}
+
+// Print column index of every piece of data next to each other
+func PrintCol(index int, data ...[][]int) {
+	for row := range data[0] {
+		for set := range data {
+			fmt.Printf("%5d ", data[set][row][index])
+		}
+		fmt.Print("\n")
+	}
+}
+
+// Returns the transpose of the src slice of slice of int
+func Transpose(src [][]int) [][]int {
+	if len(src) < 1 || len(src[0]) < 1 {
+		panic("Transpose called with nil slice")
+	}
+	res := make([][]int, len(src[0]))
+	init := make(map[int]bool)
+	for i := range src {
+		for j := range src[i] {
+			if !init[j] {
+				res[j] = make([]int, len(src))
+				init[j] = true
+			}
+			res[j][i] = src[i][j]
+		}
+	}
+	return res
+}
+
+func MatchCols(dst, src [][]int) (order []int) {
+	dstT, srcT := Transpose(dst), Transpose(src)
+	fmt.Println(dstT, srcT)
+	order, ok := MatchPattern(dstT, srcT)
+	fmt.Println(order)
+	if !ok {
+		fmt.Errorf("MatchCols: column mismatch\n")
+	}
+	return
+}
+
+func MoveCols(order []int, lines []string) (newLines []string) {
+	// -> format for the fields
+	newLines = make([]string, len(lines))
+	fmt.Println(len(lines))
+	for i := range lines {
+		tmpLine := make([]string, 0)
+		fields := strings.Fields(lines[i])
+		for _, v := range order {
+			tmpLine = append(tmpLine, fields[v])
+		}
+		newLines[i] = fmt.Sprintf("%17s%19s%19s", tmpLine[0], tmpLine[1], tmpLine[2])
+	}
+	return
+}
+
+func Pop(x []int, i int) []int {
+	l := len(x) - 1
+	x[l], x[i] = x[i], x[l]
+	x = x[:l]
+	return x
+}
+
+func Compare(x, y []int) (same bool) {
+	for i := 0; i < len(x); i++ {
+		for j := 0; j < len(y); j++ {
+			if i <= len(x)-1 && j <= len(y)-1 && x[i] == y[j] {
+				x = Pop(x, i)
+				y = Pop(y, j)
+			}
+		}
+	}
+	// reduced to base case if successful
+	if x[0] != y[0] {
+		return false
+	}
+	return true
 }
 
 // Take source and destination patterns and return
 // the order of the source lines that will match that
 // of the destination
+// TODO handle column exchanges
+// - look at columns first and fix problems there - modify src
+// grab columns, sort, reflect compare to see if they are variants of each other
+// transpose and match/apply patern on that first
 func MatchPattern(dst, src [][]int) (order []int, ok bool) {
 	for i := 0; i < len(dst); i++ {
 		for j := 0; j < len(src); j++ {
@@ -240,13 +325,34 @@ func (i *Intder) WriteGeom(filename, longLine string) {
 	ioutil.WriteFile(filename, buf.Bytes(), 0755)
 }
 
+// Update the input directives of an intder
+// for the cartesian coordinate transform in freqs
+// TODO fields[8] is number of dummy atoms, check/update accordingly
+func (i *Intder) SecondLine() {
+	lines := strings.Split(i.Head, "\n")
+	lines = lines[:len(lines)-1] // trim trailing newline
+	fields := strings.Fields(lines[1])
+	fields[3] = "4"
+	fields[6] = "2"
+	fields[10] = "3"
+	fields[13] = "0"
+	fields[14] = "0"
+	var buf bytes.Buffer
+	for _, field := range fields {
+		fmt.Fprintf(&buf, "%5s", field)
+	}
+	lines[1] = buf.String()
+	i.Head = strings.Join(lines, "\n")
+}
+
 // Write an intder.in file for freqs to filename
 // TODO might need updating for many atoms - multiline mass format?
 func (i *Intder) WriteFreqs(filename string, names []string) {
 	var buf bytes.Buffer
-	buf.WriteString(i.Head + i.Geometry + "\n")
+	i.SecondLine()
+	buf.WriteString(i.Head + "\n" + i.Geometry + "\n")
 	for i, name := range names {
-		num, ok := ptable[name]
+		num, ok := ptable[strings.ToUpper(name)]
 		if !ok {
 			fmt.Errorf("WriteFreqs: element %q not found in ptable\n", name)
 		}
@@ -328,7 +434,11 @@ func (i *Intder) ReadOut(filename string) (freqs []float64) {
 
 // Set i.Tail to ouput from anpass for freqs/intder
 func (i *Intder) Read9903(filename string) {
-	var buf bytes.Buffer
+	var (
+		buf2 bytes.Buffer
+		buf3 bytes.Buffer
+		buf4 bytes.Buffer
+	)
 	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
@@ -336,26 +446,24 @@ func (i *Intder) Read9903(filename string) {
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	var (
-		line          string
-		third, fourth bool
+		line string
 	)
 	for scanner.Scan() {
 		line = scanner.Text()
 		fields := strings.Fields(line)
 		if len(fields) == 5 {
-			if !third && fields[2] != "0" {
-				fmt.Fprintf(&buf, "%5d\n", 0)
-				third = true
-			}
-			if !fourth && fields[3] != "0" {
-				fmt.Fprintf(&buf, "%5d\n", 0)
-				fourth = true
-			}
-			if fields[0] != "0" && fields[1] != "0" {
-				fmt.Fprintln(&buf, line)
+			switch {
+			case fields[3] != "0":
+				fmt.Fprintln(&buf4, line)
+			case fields[2] != "0":
+				fmt.Fprintln(&buf3, line)
+			case fields[1] != "0":
+				fmt.Fprintln(&buf2, line)
 			}
 		}
 	}
-	fmt.Fprintf(&buf, "%5d\n", 0)
-	i.Tail = buf.String()
+	fmt.Fprintf(&buf2, "%5d\n", 0)
+	fmt.Fprintf(&buf3, "%5d\n", 0)
+	fmt.Fprintf(&buf4, "%5d\n", 0)
+	i.Tail = buf2.String() + buf3.String() + buf4.String()
 }

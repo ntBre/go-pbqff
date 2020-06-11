@@ -12,12 +12,12 @@ import (
 
 var (
 	ptable = map[string]string{
-		"H": "1", "He": "4", "Li": "7",
-		"Be": "9", "B": "11", "C": "12",
+		"H": "1", "HE": "4", "LI": "7",
+		"BE": "9", "B": "11", "C": "12",
 		"N": "14", "O": "16", "F": "19",
-		"Ne": "20", "Na": "23", "Mg": "24",
-		"Al": "27", "Si": "28", "P": "31",
-		"S": "32", "Cl": "35", "Ar": "40",
+		"NE": "20", "NA": "23", "MG": "24",
+		"AL": "27", "SI": "28", "P": "31",
+		"S": "32", "CL": "35", "AR": "40",
 	}
 )
 
@@ -79,6 +79,22 @@ type Calc struct {
 	Index int
 }
 
+func (mp *Molpro) AugmentHead() {
+	lines := strings.Split(mp.Head, "\n")
+	add := "geomtyp=xyz\nbohr"
+	newlines := make([]string, 0)
+	for i, line := range lines {
+		if strings.Contains(line, "geometry") &&
+			!strings.Contains(lines[i-1], "bohr") {
+			newlines = append(newlines, lines[:i]...)
+			newlines = append(newlines, add)
+			newlines = append(newlines, lines[i:]...)
+			mp.Head = strings.Join(newlines, "\n")
+			return
+		}
+	}
+}
+
 // Uses ./pts/file07 to construct the single-point
 // energy calculations. Return an array of jobs to run
 func (mp *Molpro) BuildPoints(filename string, atomNames []string) (jobs []Calc) {
@@ -89,6 +105,7 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string) (jobs []Calc)
 	dir := path.Dir(filename)
 	name := strings.Join(atomNames, "")
 	geom := 0
+	mp.AugmentHead()
 	for li, line := range lines {
 		if !strings.Contains(line, "#") {
 			ind := i % l

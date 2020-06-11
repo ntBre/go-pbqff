@@ -338,6 +338,7 @@ func main() {
 	intder.Read9903("freqs/fort.9903")
 	// write freqs/intder.in, run intder
 	intder.WriteFreqs("freqs/intder.in", atomNames)
+	RunIntder("freqs/intder")
 	// read harmonics from intder.out
 	intderHarms := intder.ReadOut("freqs/intder.out")
 	// move files (tennis)
