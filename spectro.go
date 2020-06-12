@@ -12,17 +12,30 @@ import (
 	"strings"
 )
 
+var (
+	atmNum = map[string]float64{
+		"H": 1, "HE": 2, "LI": 3,
+		"BE": 4, "B": 5, "C": 6,
+		"N": 7, "O": 8, "F": 9,
+		"NE": 10, "NA": 11, "MG": 12,
+		"AL": 13, "SI": 14, "P": 15,
+		"S": 16, "CL": 17, "AR": 18,
+	}
+)
+
 type Spectro struct {
-	Head   string
-	Fermi1 string
-	Fermi2 string
-	Polyad string
-	Coriol string
-	Nfreqs int
+	Head     string // input directives
+	Geometry string
+	Body     string // weight and curvil
+	Fermi1   string
+	Fermi2   string
+	Polyad   string
+	Coriol   string
+	Nfreqs   int
 }
 
 // Load spectro input file, assumes no resonances included
-func LoadSpectro(filename string) *Spectro {
+func LoadSpectro(filename string, names []string, coords string) *Spectro {
 	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
@@ -32,18 +45,51 @@ func LoadSpectro(filename string) *Spectro {
 	var (
 		buf  bytes.Buffer
 		line string
+		sp   Spectro
+		geom bool
 	)
 	for scanner.Scan() {
 		line = scanner.Text()
-		buf.WriteString(line + "\n")
+		if !geom {
+			buf.WriteString(line + "\n")
+		}
+		if strings.Contains(line, "GEOM") {
+			sp.Head = buf.String()
+			buf.Reset()
+			geom = true
+		}
+		// order agnostic
+		if geom && (strings.Contains(line, "WEIGHT") ||
+			strings.Contains(line, "CURVIL")) {
+			geom = false
+			buf.WriteString(line + "\n")
+		}
 	}
-	return &Spectro{Head: buf.String()}
+	sp.Body = buf.String()
+	sp.FormatGeom(names, coords)
+	return &sp
+}
+
+func (s *Spectro) FormatGeom(names []string, coords string) {
+	// atomic numbers are 5.2f, 18.9f on coords
+	var buf bytes.Buffer
+	lines := strings.Split(coords, "\n")
+	fmt.Fprintf(&buf, "%4d%4d\n", len(names), 1)
+	for n := range names {
+		fields := strings.Fields(lines[n])
+		fmt.Fprintf(&buf, "%5.2f%18s%18s%18s\n",
+			atmNum[strings.ToUpper(names[n])],
+			fields[0], fields[1], fields[2])
+	}
+	s.Geometry = buf.String()
 }
 
 // Write a Spectro to an input file for use
 func (s *Spectro) WriteInput(filename string) {
 	var buf bytes.Buffer
 	buf.WriteString(s.Head)
+	buf.WriteString(s.Geometry)
+	buf.WriteString(s.Body)
 	buf.WriteString("# CORIOL #####\n")
 	if s.Coriol != "" {
 		buf.WriteString(s.Coriol)

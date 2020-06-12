@@ -343,7 +343,7 @@ func (i *Intder) WriteFreqs(filename string, names []string) {
 }
 
 // Update i.Geometry with the results of intder_geom
-func (i *Intder) ReadGeom(filename string) {
+func (i *Intder) ReadGeom(filename string) string {
 	const target = "NEW CARTESIAN GEOMETRY (BOHR)"
 	f, err := os.Open(filename)
 	if err != nil {
@@ -368,7 +368,9 @@ func (i *Intder) ReadGeom(filename string) {
 	}
 	// skip last newline
 	buf.Truncate(buf.Len() - 1)
-	i.Geometry = buf.String()
+	geometry := buf.String()
+	i.Geometry = geometry
+	return geometry
 }
 
 // Read a freqs/intder.out and return the harmonic

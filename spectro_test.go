@@ -5,28 +5,37 @@ import (
 	"testing"
 )
 
+var (
+	names  = []string{"Al", "O", "O", "Al"}
+	coords = `0.000000000        2.391678166        0.000000000
+     -2.274263181        0.000000000        0.000000000
+      2.274263181        0.000000000        0.000000000
+      0.000000000       -2.391678166        0.000000000
+`
+)
+
 func TestLoadSpectro(t *testing.T) {
-	LoadSpectro("testfiles/spectro.in")
+	LoadSpectro("testfiles/spectro.in", names, coords)
 }
 
 func TestWriteSpectroInput(t *testing.T) {
-	spec := LoadSpectro("testfiles/spectro.in")
+	spec := LoadSpectro("testfiles/spectro.in", names, coords)
 	spec.WriteInput("testfiles/freqs/spectro.in")
 }
 
 func TestReadSpectroOutput(t *testing.T) {
 	t.Run("all resonances present", func(t *testing.T) {
-		spec := LoadSpectro("testfiles/spectro.in")
+		spec := LoadSpectro("testfiles/spectro.in", names, coords)
 		spec.ReadOutput("testfiles/spectro.out")
 	})
 	t.Run("no fermi 2 resonances present", func(t *testing.T) {
-		spec := LoadSpectro("testfiles/spectro.in")
+		spec := LoadSpectro("testfiles/spectro.in", names, coords)
 		spec.ReadOutput("testfiles/spectro.prob")
 	})
 }
 
 func TestCheckPolyad(t *testing.T) {
-	spec := LoadSpectro("testfiles/spectro.in")
+	spec := LoadSpectro("testfiles/spectro.in", names, coords)
 	spec.Nfreqs = 6
 	spec.ReadOutput("testfiles/spectro.out")
 	spec.WriteInput("testfiles/freqs/spectro2.in")
@@ -58,7 +67,7 @@ func TestResinLine(t *testing.T) {
 }
 
 func TestFreqReport(t *testing.T) {
-	spec := LoadSpectro("testfiles/spectro.in")
+	spec := LoadSpectro("testfiles/spectro.in", names, coords)
 	spec.Nfreqs = 6
 	spec.ReadOutput("testfiles/spectro.out")
 	gzpt, gharm, gfund, gcorr := spec.FreqReport("testfiles/spectro.out")

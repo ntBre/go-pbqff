@@ -6,7 +6,8 @@ of quartic force fields, automating as many pieces as possible.
 Requirements:
 - intder, anpass, and spectro executables
 - template intder.in, anpass.in, spectro.in, and molpro.in files
-  - intder.in should be a pts intder input and have the geometry removed
+  - intder.in should be a pts intder input and have the old geometry to serve as template
+  - anpass.in should be a first run anpass file, not a stationary point
   - spectro.in should not have any resonance information
   - molpro.in should have the geometry removed
 */
@@ -333,7 +334,7 @@ func main() {
 	intder.WriteGeom("freqs/intder_geom.in", longLine)
 	RunIntder("freqs/intder_geom")
 	// update intder geometry
-	intder.ReadGeom("freqs/intder_geom.out")
+	coords := intder.ReadGeom("freqs/intder_geom.out")
 	// read freqs/intder.in bottom from fort.9903
 	intder.Read9903("freqs/fort.9903")
 	// write freqs/intder.in, run intder
@@ -344,7 +345,7 @@ func main() {
 	// move files (tennis)
 	Tennis()
 	// load spectro template
-	spectro := LoadSpectro("spectro.in")
+	spectro := LoadSpectro("spectro.in", atomNames, coords)
 	spectro.Nfreqs = len(intderHarms)
 	// write spectro input file
 	spectro.WriteInput("freqs/spectro.in")
