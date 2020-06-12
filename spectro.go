@@ -89,7 +89,7 @@ func ParseCoriol(line string) string {
 	}
 	i := string(fields[0][:abcIndex])
 	j := fields[1]
-	return fmt.Sprintf("%5s%5s%s\n", i, j, abc)
+	return fmt.Sprintf("%5s%5s%s\n%5d\n", i, j, abc, 0)
 }
 
 func ParseFermi1(line string) string {

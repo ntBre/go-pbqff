@@ -1,5 +1,5 @@
 #!/bin/sh
-#PBS -N al2o2
+#PBS -N o2al2
 #PBS -S /bin/bash
 #PBS -j oe
 #PBS -o /dev/null
