@@ -50,64 +50,19 @@ func TestPattern(t *testing.T) {
 	})
 }
 
-func TestPop(t *testing.T) {
-	got := Pop([]int{1, 2, 3}, 1)
-	want := []int{1, 3}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %v, wanted %v\n", got, want)
+func TestSwap(t *testing.T) {
+	start := [][]int{
+		[]int{2, 1, 1},
+		[]int{4, 2, 1},
+		[]int{1, 2, 1},
+		[]int{2, 4, 1},
 	}
-}
-
-func TestCompare(t *testing.T) {
-	t.Run("are the same", func(t *testing.T) {
-		x := []int{1, 2, 3}
-		y := []int{3, 2, 1}
-		got := Compare(x, y)
-		want := true
-		if got != want {
-			t.Errorf("got %v, wanted %v\n", got, want)
-		}
-	})
-	t.Run("not the same", func(t *testing.T) {
-		x := []int{1, 2, 3}
-		y := []int{4, 2, 1}
-		got := Compare(x, y)
-		want := false
-		if got != want {
-			t.Errorf("got %v, wanted %v\n", got, want)
-		}
-	})
-	t.Run("are the same (7)", func(t *testing.T) {
-		x := []int{1, 2, 3, 4, 5, 6, 7}
-		y := []int{7, 6, 5, 4, 3, 2, 1}
-		got := Compare(x, y)
-		want := true
-		if got != want {
-			t.Errorf("got %v, wanted %v\n", got, want)
-		}
-	})
-	t.Run("not the same (7)", func(t *testing.T) {
-		x := []int{1, 2, 3, 4, 5, 6, 7}
-		y := []int{4, 2, 1, 3, 2, 4, 5}
-		got := Compare(x, y)
-		want := false
-		if got != want {
-			t.Errorf("got %v, wanted %v\n", got, want)
-		}
-	})
-}
-
-func TestTranspose(t *testing.T) {
-	got := Transpose([][]int{
-		[]int{1, 2, 3},
-		[]int{4, 5, 6},
-		[]int{4, 5, 6},
-		[]int{4, 5, 6},
-	})
+	got := Swap(start, 0, 1)
 	want := [][]int{
-		[]int{1, 4, 4, 4},
-		[]int{2, 5, 5, 5},
-		[]int{3, 6, 6, 6},
+		[]int{1, 2, 1},
+		[]int{2, 4, 1},
+		[]int{2, 1, 1},
+		[]int{4, 2, 1},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, wanted %v\n", got, want)
@@ -118,30 +73,38 @@ func TestMatchPattern(t *testing.T) {
 	t.Run("columns match", func(t *testing.T) {
 		p1 := Pattern(text)
 		p2 := Pattern(text1)
-		got, _ := MatchPattern(p1, p2)
+		_, got, _ := MatchPattern(p1, p2)
 		want := []int{2, 0, 1, 3}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, wanted %v\n", got, want)
+		}
+	})
+	t.Run("column mismatch", func(t *testing.T) {
+		p1 := Pattern(text)
+		p2 := Pattern(text2)
+		_, got, _ := MatchPattern(p1, p2)
+		want := []int{0, 1, 2, 3}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, wanted %v\n", got, want)
 		}
 	})
 }
 
-func TestMatchCols(t *testing.T) {
-	p1 := Pattern(text)
-	p2 := Pattern(text2)
-	got := MatchCols(p1, p2)
-	want := []int{0, 2, 1}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %v, wanted %v\n", got, want)
+func TestSwapStr(t *testing.T) {
+	txt := []string{
+		"1 2 3",
+		"4 5 6",
+		"7 8 9",
 	}
-}
-
-func TestMoveCols(t *testing.T) {
-	tr := []string{"0 1 2", "0 1 2"}
-	got := MoveCols([]int{0, 2, 1}, tr)
+	swps := [][]int{
+		[]int{0, 1},
+		[]int{1, 2},
+	}
+	got := SwapStr(swps, txt, "%s %s %s")
 	want := []string{
-		"                0                  2                  1",
-		"                0                  2                  1",
+		"2 3 1",
+		"5 6 4",
+		"8 9 7",
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, wanted %v\n", got, want)
@@ -151,7 +114,7 @@ func TestMoveCols(t *testing.T) {
 func TestApplyPattern(t *testing.T) {
 	p1 := Pattern(text)
 	p2 := Pattern(text1)
-	tr, _ := MatchPattern(p1, p2)
+	_, tr, _ := MatchPattern(p1, p2)
 	s := []string{"Al", "Al", "O", "O"}
 	got := ApplyPattern(tr, s)
 	want := []string{"O", "Al", "Al", "O"}
@@ -166,15 +129,31 @@ func TestSecondLine(t *testing.T) {
 }
 
 func TestConvertCart(t *testing.T) {
-	cart := `Al        -1.2426875991        0.0000000000        0.0000000000
+	t.Run("columns in the right order", func(t *testing.T) {
+		cart := `Al        -1.2426875991        0.0000000000        0.0000000000
  Al         1.2426875991        0.0000000000        0.0000000000
  O          0.0000000000        1.3089084707        0.0000000000
  O          0.0000000000       -1.3089084707        0.0000000000
 `
-	i := LoadIntder("testfiles/intder.full")
-	got := i.ConvertCart(cart)
-	want := []string{"O", "Al", "Al", "O"}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %v, wanted %v\n", got, want)
-	}
+		i := LoadIntder("testfiles/intder.full")
+		got := i.ConvertCart(cart)
+		want := []string{"O", "Al", "Al", "O"}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, wanted %v\n", got, want)
+		}
+	})
+	t.Run("columns swapped order", func(t *testing.T) {
+		cart := `Al        -1.2426875991        0.0000000000        0.0000000000
+ Al         1.2426875991        0.0000000000        0.0000000000
+ O          0.0000000000        0.0000000000        1.3089084707
+ O          0.0000000000        0.0000000000       -1.3089084707
+`
+		i := LoadIntder("testfiles/intder.full")
+		got := i.ConvertCart(cart)
+		want := []string{"O", "Al", "Al", "O"}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, wanted %v\n", got, want)
+		}
+	})
+
 }

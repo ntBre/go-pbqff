@@ -145,7 +145,7 @@ func (s *Spectro) ReadOutput(filename string) {
 			}
 		}
 		if fermi2 {
-			if line == "" {
+			if line == "" || strings.Contains(line, "NOT FOUND") {
 				fermi2 = false
 			} else {
 				fermi2Count++
@@ -155,7 +155,8 @@ func (s *Spectro) ReadOutput(filename string) {
 		if strings.Contains(line, "CORIOLIS RESONANCES") {
 			skip = 3
 			coriol = true
-		} else if strings.Contains(line, "FERMI RESONANCE") {
+			// avoid fermi resonance in other contexts
+		} else if strings.Contains(line, "  FERMI RESONANCE  ") {
 			fields := strings.Fields(line)
 			if fields[3] == "1" {
 				fermi1 = true

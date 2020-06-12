@@ -15,8 +15,14 @@ func TestWriteSpectroInput(t *testing.T) {
 }
 
 func TestReadSpectroOutput(t *testing.T) {
-	spec := LoadSpectro("testfiles/spectro.in")
-	spec.ReadOutput("testfiles/spectro.out")
+	t.Run("all resonances present", func(t *testing.T) {
+		spec := LoadSpectro("testfiles/spectro.in")
+		spec.ReadOutput("testfiles/spectro.out")
+	})
+	t.Run("no fermi 2 resonances present", func(t *testing.T) {
+		spec := LoadSpectro("testfiles/spectro.in")
+		spec.ReadOutput("testfiles/spectro.prob")
+	})
 }
 
 func TestCheckPolyad(t *testing.T) {

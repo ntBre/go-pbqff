@@ -156,6 +156,10 @@ func LoadIntder(filename string) *Intder {
 // result in the passed in Intder. Return the ordered
 // slice atom names
 func (i *Intder) ConvertCart(cart string) (names []string) {
+	const (
+		geomFmt = "%17.9f%19.9f%19.9f"
+		strFmt  = "%17s%19s%19s"
+	)
 	lines := strings.Split(cart, "\n")
 	// slice off last newline
 	lines = lines[:len(lines)-1]
@@ -173,7 +177,7 @@ func (i *Intder) ConvertCart(cart string) (names []string) {
 			floats[i][1] = y
 			z, _ := strconv.ParseFloat(fields[3], 64)
 			floats[i][2] = z
-			str := fmt.Sprintf("%17.9f%19.9f%19.9f", x, y, z)
+			str := fmt.Sprintf(geomFmt, x, y, z)
 			fmt.Fprint(&buf, str+"\n")
 			strs = append(strs, str)
 		}
@@ -181,93 +185,28 @@ func (i *Intder) ConvertCart(cart string) (names []string) {
 	// remove last newline
 	buf.Truncate(buf.Len() - 1)
 	pattern := Pattern(buf.String())
-	colOrder := MatchCols(i.Pattern, pattern)
-	fmt.Println(colOrder)
-	strs = MoveCols(colOrder, strs)
-	transform, ok := MatchPattern(i.Pattern, pattern)
+	swaps, order, ok := MatchPattern(i.Pattern, pattern)
 	if !ok {
 		panic("transform failed")
 	}
-	i.Geometry = strings.Join(ApplyPattern(transform, strs), "\n")
-	return ApplyPattern(transform, names)
+	// swap columns
+	strs = SwapStr(swaps, strs, strFmt)
+	// swap rows and place in geometry
+	i.Geometry = strings.Join(ApplyPattern(order, strs), "\n")
+	return ApplyPattern(order, names)
 }
 
-// Print column index of every piece of data next to each other
-func PrintCol(index int, data ...[][]int) {
-	for row := range data[0] {
-		for set := range data {
-			fmt.Printf("%5d ", data[set][row][index])
-		}
-		fmt.Print("\n")
-	}
-}
-
-// Returns the transpose of the src slice of slice of int
-func Transpose(src [][]int) [][]int {
-	if len(src) < 1 || len(src[0]) < 1 {
-		panic("Transpose called with nil slice")
-	}
-	res := make([][]int, len(src[0]))
-	init := make(map[int]bool)
-	for i := range src {
-		for j := range src[i] {
-			if !init[j] {
-				res[j] = make([]int, len(src))
-				init[j] = true
-			}
-			res[j][i] = src[i][j]
+func SwapStr(swaps [][]int, strs []string, format string) []string {
+	for i := range swaps {
+		x := swaps[i][0]
+		y := swaps[i][1]
+		for s := range strs {
+			fields := strings.Fields(strs[s])
+			fields[x], fields[y] = fields[y], fields[x]
+			strs[s] = fmt.Sprintf(format, fields[0], fields[1], fields[2])
 		}
 	}
-	return res
-}
-
-func MatchCols(dst, src [][]int) (order []int) {
-	dstT, srcT := Transpose(dst), Transpose(src)
-	fmt.Println(dstT, srcT)
-	order, ok := MatchPattern(dstT, srcT)
-	fmt.Println(order)
-	if !ok {
-		fmt.Errorf("MatchCols: column mismatch\n")
-	}
-	return
-}
-
-func MoveCols(order []int, lines []string) (newLines []string) {
-	// -> format for the fields
-	newLines = make([]string, len(lines))
-	fmt.Println(len(lines))
-	for i := range lines {
-		tmpLine := make([]string, 0)
-		fields := strings.Fields(lines[i])
-		for _, v := range order {
-			tmpLine = append(tmpLine, fields[v])
-		}
-		newLines[i] = fmt.Sprintf("%17s%19s%19s", tmpLine[0], tmpLine[1], tmpLine[2])
-	}
-	return
-}
-
-func Pop(x []int, i int) []int {
-	l := len(x) - 1
-	x[l], x[i] = x[i], x[l]
-	x = x[:l]
-	return x
-}
-
-func Compare(x, y []int) (same bool) {
-	for i := 0; i < len(x); i++ {
-		for j := 0; j < len(y); j++ {
-			if i <= len(x)-1 && j <= len(y)-1 && x[i] == y[j] {
-				x = Pop(x, i)
-				y = Pop(y, j)
-			}
-		}
-	}
-	// reduced to base case if successful
-	if x[0] != y[0] {
-		return false
-	}
-	return true
+	return strs
 }
 
 // Take source and destination patterns and return
@@ -277,16 +216,49 @@ func Compare(x, y []int) (same bool) {
 // - look at columns first and fix problems there - modify src
 // grab columns, sort, reflect compare to see if they are variants of each other
 // transpose and match/apply patern on that first
-func MatchPattern(dst, src [][]int) (order []int, ok bool) {
+// keep everything in here - failed trying to handle elsewhere
+// if matching fails, swap columns and try again
+// possible permutations: 1,2,3; 1,3,2; 2,1,3; 2,3,1; 3,1,2; 3,2,1
+// six tries isn't too bad
+func MatchPattern(dst, src [][]int) (swaps [][]int, order []int, ok bool) {
+	for s := 0; s < 6; s++ {
+		switch {
+		// first time dont swap
+		case s == 0:
+			order = CheckPattern(dst, src)
+			// when s is even, swap 0,1
+		case s%2 == 0:
+			// helper is the loop below
+			// swap returns src with columns arg1 and arg2 swapped
+			order = CheckPattern(dst, Swap(src, 0, 1))
+			swaps = append(swaps, []int{0, 1})
+			// when odd, swap 1,2
+		default:
+			order = CheckPattern(dst, Swap(src, 1, 2))
+			swaps = append(swaps, []int{1, 2})
+		}
+		if len(order) == len(dst) {
+			return swaps, order, true
+		}
+	}
+	return nil, nil, false
+}
+
+// Swap columns i and j of src
+func Swap(src [][]int, i, j int) [][]int {
+	for x := range src {
+		src[x][i], src[x][j] = src[x][j], src[x][i]
+	}
+	return src
+}
+
+func CheckPattern(dst, src [][]int) (order []int) {
 	for i := 0; i < len(dst); i++ {
 		for j := 0; j < len(src); j++ {
 			if reflect.DeepEqual(dst[i], src[j]) {
 				order = append(order, j)
 			}
 		}
-	}
-	if len(order) == len(dst) {
-		ok = true
 	}
 	return
 }
