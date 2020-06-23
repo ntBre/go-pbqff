@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Job holds the information for a pbs job
 type Job struct {
 	Name     string
 	Filename string
@@ -68,8 +69,8 @@ rm -rf $TMPDIR
 ssh -t sequoia pkill -{{.Signal}} pbqff
 `
 
-// Write infile based on template
-// with job information from job
+// WritePBS writes a pbs infile based on the queue type and
+// the templates above, with job information from job
 func WritePBS(infile string, job *Job) {
 	var t *template.Template
 	f, err := os.Create(infile)
@@ -93,6 +94,7 @@ func WritePBS(infile string, job *Job) {
 	t.Execute(f, job)
 }
 
+// Submit submits the pbs script defined by filename to the queue 
 func Submit(filename string) error {
 	// -f option to run qsub in foreground
 	_, err := exec.Command("qsub", "-f", filename).Output()

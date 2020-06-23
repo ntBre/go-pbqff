@@ -21,7 +21,7 @@ var (
 	}
 )
 
-// Run a program, redirecting STDIN from filename.in
+// RunProgram runs a program, redirecting STDIN from filename.in
 // and STDOUT to filename.out
 func RunProgram(progName, filename string) error {
 	current, err := os.Getwd()
@@ -38,13 +38,14 @@ func RunProgram(progName, filename string) error {
 	out, err := exec.Command("bash", "-c", progName+" < "+infile+" > "+outfile).Output()
 	os.Chdir(current)
 	if err != nil {
-		return fmt.Errorf("RunProgram: failed with %v running %q on %q\nstdout: %q\n",
+		return fmt.Errorf("error RunProgram: failed with %v running %q on %q"+
+			"\nstdout: %q",
 			err, progName, infile, out)
 	}
 	return nil
 }
 
-// Takes a filename like pts/intder, runs intder
+// RunIntder takes a filename like pts/intder, runs intder
 // on pts/intder.in and redirects the output into
 // pts/intder.out
 func RunIntder(filename string) {
@@ -54,7 +55,7 @@ func RunIntder(filename string) {
 	}
 }
 
-// Takes a filename like freqs/anpass1, runs anpass
+// RunAnpass takes a filename like freqs/anpass1, runs anpass
 // on freqs/anpass1.in and redirects the output into
 // freqs/anpass1.out
 func RunAnpass(filename string) {
@@ -64,7 +65,7 @@ func RunAnpass(filename string) {
 	}
 }
 
-// Takes a filename like freqs/spectro, runs spectro
+// RunSpectro takes a filename like freqs/spectro, runs spectro
 // on freqs/spectro.in and redirects the output into
 // freqs/spectro.out
 func RunSpectro(filename string) {
@@ -74,11 +75,15 @@ func RunSpectro(filename string) {
 	}
 }
 
+// Calc holds the name of a job to be run and its result's index in
+// the output array
 type Calc struct {
 	Name  string
 	Index int
 }
 
+// AugmentHead augments the header of a molpro input file
+// with a specification of the geometry type and units
 func (mp *Molpro) AugmentHead() {
 	lines := strings.Split(mp.Head, "\n")
 	add := "geomtyp=xyz\nbohr"
@@ -95,8 +100,8 @@ func (mp *Molpro) AugmentHead() {
 	}
 }
 
-// Uses ./pts/file07 to construct the single-point
-// energy calculations. Return an array of jobs to run
+// BuildPoints uses ./pts/file07 to construct the single-point
+// energy calculations and return an array of jobs to run
 func (mp *Molpro) BuildPoints(filename string, atomNames []string) (jobs []Calc) {
 	lines := ReadFile(filename)
 	l := len(atomNames)

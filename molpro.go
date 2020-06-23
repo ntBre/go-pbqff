@@ -20,8 +20,11 @@ const (
 	none
 )
 
+// Procedure defines a type of molpro calculation. This includes
+// optimization (opt) and frequencies (freq).
 type Procedure int
 
+// Molpro holds the data for writing molpro input files
 type Molpro struct {
 	Head     string
 	Geometry string
@@ -30,7 +33,7 @@ type Molpro struct {
 	Extra    string
 }
 
-// Load a template molpro input file
+// LoadMolpro loads a template molpro input file
 func LoadMolpro(filename string) *Molpro {
 	f, err := os.Open(filename)
 	if err != nil {
@@ -61,7 +64,7 @@ func LoadMolpro(filename string) *Molpro {
 	return &mp
 }
 
-// Write a Molpro input file
+// WriteInput writes a Molpro input file
 func (m *Molpro) WriteInput(filename string, p Procedure) {
 	var buf bytes.Buffer
 	buf.WriteString(m.Head)
@@ -77,7 +80,7 @@ func (m *Molpro) WriteInput(filename string, p Procedure) {
 	ioutil.WriteFile(filename, buf.Bytes(), 0755)
 }
 
-// Format z-matrix for use in Molpro input
+// FormatZmat formats a z-matrix for use in Molpro input
 func FormatZmat(geom string) string {
 	var out []string
 	split := strings.Split(geom, "\n")
@@ -90,6 +93,8 @@ func FormatZmat(geom string) string {
 	return strings.Join(out, "\n")
 }
 
+// ReadOut reads a molpro output file and returns the resulting energy
+// and an error describing the status of the output
 func (m Molpro) ReadOut(filename string) (result float64, err error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -119,7 +124,7 @@ func (m Molpro) ReadOut(filename string) (result float64, err error) {
 			!strings.Contains(line, "gthresh") &&
 			!strings.Contains(line, "hf") {
 			split := strings.Fields(line)
-			for i, _ := range split {
+			for i := range split {
 				if strings.Contains(split[i], energyLine) {
 					// take the thing right after search term
 					// not the last entry in the line
@@ -142,8 +147,8 @@ func (m Molpro) ReadOut(filename string) (result float64, err error) {
 	return result, err
 }
 
-// Handle .out and .log files for filename, assumes no extension
-// Return optimized Cartesian geometry (in Bohr) and zmat
+// HandleOutput reads .out and .log files for filename, assumes no extension
+// and returns the optimized Cartesian geometry (in Bohr) and the zmat variables
 func (m Molpro) HandleOutput(filename string) (string, string, error) {
 	outfile := filename + ".out"
 	logfile := filename + ".log"
@@ -173,7 +178,7 @@ func (m Molpro) HandleOutput(filename string) (string, string, error) {
 	return cart, zmat, nil
 }
 
-// Read the log file and return the Cartesian geometry
+// ReadLog reads a molpro log file and returns the optimized Cartesian geometry
 // (in Bohr) and the zmat variables
 func ReadLog(filename string) (string, string) {
 	lines := ReadFile(filename)
@@ -199,7 +204,7 @@ func ReadLog(filename string) (string, string) {
 	return cart.String(), zmat.String()
 }
 
-// Read a Molpro frequency calculation output file
+// ReadFreqs reads a Molpro frequency calculation output file
 // and return a slice of the harmonic frequencies
 func (m Molpro) ReadFreqs(filename string) (freqs []float64) {
 	f, err := os.Open(filename)

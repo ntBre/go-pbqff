@@ -23,6 +23,7 @@ var (
 	}
 )
 
+// Spectro holds the information for a spectro input file
 type Spectro struct {
 	Head     string // input directives
 	Geometry string
@@ -34,7 +35,7 @@ type Spectro struct {
 	Nfreqs   int
 }
 
-// Load spectro input file, assumes no resonances included
+// LoadSpectro loads a spectro input file, assumes no resonances included
 func LoadSpectro(filename string, names []string, coords string) *Spectro {
 	f, err := os.Open(filename)
 	if err != nil {
@@ -70,6 +71,8 @@ func LoadSpectro(filename string, names []string, coords string) *Spectro {
 	return &sp
 }
 
+// FormatGeom formats a slice of atom names and their corresponding
+// coordinates for use in spectro
 func (s *Spectro) FormatGeom(names []string, coords string) {
 	// atomic numbers are 5.2f, 18.9f on coords
 	var buf bytes.Buffer
@@ -84,7 +87,7 @@ func (s *Spectro) FormatGeom(names []string, coords string) {
 	s.Geometry = buf.String()
 }
 
-// Write a Spectro to an input file for use
+// WriteInput writes a Spectro to an input file for use
 func (s *Spectro) WriteInput(filename string) {
 	var buf bytes.Buffer
 	buf.WriteString(s.Head)
@@ -117,7 +120,7 @@ func (s *Spectro) WriteInput(filename string) {
 	ioutil.WriteFile(filename, buf.Bytes(), 0755)
 }
 
-// Parse a Coriolis resonance from a spectro
+// ParseCoriol parse a coriolis resonance from a spectro
 // output line
 func ParseCoriol(line string) string {
 	letter := regexp.MustCompile(`A|B|C`)
@@ -138,17 +141,19 @@ func ParseCoriol(line string) string {
 	return fmt.Sprintf("%5s%5s%s\n%5d\n", i, j, abc, 0)
 }
 
+// ParseFermi1 parses a type 1 fermi resonance from a spectro output line
 func ParseFermi1(line string) string {
 	fields := strings.Fields(line)[2:4]
 	return fmt.Sprintf("%5s%5s\n", fields[0], fields[1])
 }
 
+// ParseFermi2 parses a type 2 fermi resonance from a spectro output line
 func ParseFermi2(line string) string {
 	fields := strings.Fields(line)[1:4]
 	return fmt.Sprintf("%5s%5s%5s\n", fields[0], fields[1], fields[2])
 }
 
-// Read spectro output and prepare resonance fields
+// ReadOutput reads a spectro output and prepares resonance fields
 // for rerunning spectro
 func (s *Spectro) ReadOutput(filename string) {
 	f, err := os.Open(filename)
@@ -219,7 +224,7 @@ func (s *Spectro) ReadOutput(filename string) {
 	s.CheckPolyad()
 }
 
-// Check for Fermi Polyads and set the Polyad field
+// CheckPolyad checks for Fermi Polyads and set the Polyad field of s
 // as necessary
 func (s *Spectro) CheckPolyad() {
 	f1 := strings.Split(s.Fermi1, "\n")
@@ -275,7 +280,7 @@ func (s *Spectro) CheckPolyad() {
 	s.Polyad = fmt.Sprintf("%5d\n%5d\n%s", 1, count, resin)
 }
 
-// Format a frequency number as a spectro RESIN line
+// ResinLine formats a frequency number as a spectro RESIN line
 func ResinLine(nfreqs, fill int, freqs ...int) string {
 	var (
 		buf   bytes.Buffer
@@ -296,7 +301,7 @@ func ResinLine(nfreqs, fill int, freqs ...int) string {
 	return buf.String() + "\n"
 }
 
-// Make a mappable key from a slice of ints
+// MakeKey makes a mappable key from a slice of ints
 func MakeKey(ints []int) string {
 	var buf bytes.Buffer
 	for i, v := range ints {
@@ -308,7 +313,7 @@ func MakeKey(ints []int) string {
 	return buf.String()
 }
 
-// Separate the fields of a spectro Fermi resonance into
+// EqnSeparate separates the fields of a spectro Fermi resonance into
 // a  left- and right-hand side
 func EqnSeparate(line string) (lhs []int, rhs int) {
 	fields := strings.Fields(line)
@@ -323,7 +328,7 @@ func EqnSeparate(line string) (lhs []int, rhs int) {
 	return
 }
 
-// Gather harmonic, anharmonic, and resonance-corrected
+// FreqReport gathers harmonic, anharmonic, and resonance-corrected
 // frequencies from a spectro  output file for reporting
 func (s *Spectro) FreqReport(filename string) (zpt float64,
 	harm, fund, corr []float64,
