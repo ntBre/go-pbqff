@@ -35,8 +35,7 @@ func TestBuildPoints(t *testing.T) {
 	prog.Geometry = Input[Geometry]
 	cart, _, _ := prog.HandleOutput("testfiles/opt")
 	names := GetNames(cart)
-	got := prog.BuildPoints("testfiles/file07", names)
-	prog.BuildPoints("testfiles/pts/file07", names)
+	got := prog.BuildPoints("testfiles/file07", names, true)
 	want := []Calc{
 		Calc{"testfiles/inp/NHHH.00000", 0},
 		Calc{"testfiles/inp/NHHH.00001", 1},

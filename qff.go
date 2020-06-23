@@ -101,8 +101,10 @@ func (mp *Molpro) AugmentHead() {
 }
 
 // BuildPoints uses ./pts/file07 to construct the single-point
-// energy calculations and return an array of jobs to run
-func (mp *Molpro) BuildPoints(filename string, atomNames []string) (jobs []Calc) {
+// energy calculations and return an array of jobs to run. If write
+// is set to true, write the necessary files. Otherwise just return the list
+// of jobs.
+func (mp *Molpro) BuildPoints(filename string, atomNames []string, write bool) (jobs []Calc) {
 	lines := ReadFile(filename)
 	l := len(atomNames)
 	i := 0
@@ -123,9 +125,10 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string) (jobs []Calc)
 				basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
 				fname := basename + ".inp"
 				pname := basename + ".pbs"
-				mp.WriteInput(fname, none)
-				tmp := &Job{path.Base(fname), fname, 35}
-				WritePBS(pname, tmp)
+				if write {
+					mp.WriteInput(fname, none)
+					WritePBS(pname, &Job{path.Base(fname), fname, 35})
+				}
 				jobs = append(jobs, Calc{basename, geom})
 				geom++
 				buf.Reset()

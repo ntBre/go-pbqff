@@ -37,9 +37,28 @@ Flags:
 `
 )
 
+// Flags for the procedures to be run
+const (
+	OPT int = 1 << iota
+	PTS
+	FREQS
+)
+
+// DoOpt is a helper function for checking whether the OPT flag is set
+func DoOpt() bool { return flags&OPT > 0 }
+
+// DoPts is a helper function for checking whether the PTS flag is set
+func DoPts() bool { return flags&PTS > 0 }
+
+// DoFreqs is a helper function for checking whether the FREQS flag is set
+func DoFreqs() bool { return flags&FREQS > 0 }
+
 var (
 	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	overwrite  = flag.Bool("o", false, "overwrite existing inp directory")
+	pts        = flag.Bool("pts", false, "start by running pts on optimized geometry from opt")
+	freqs      = flag.Bool("freqs", false, "start from running anpass on the pts output")
+	flags      int
 )
 
 // Global variables
@@ -139,6 +158,14 @@ func ParseFlags() []string {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+	switch {
+	case *freqs:
+		flags = FREQS
+	case *pts:
+		flags = PTS | FREQS
+	default:
+		flags = OPT | PTS | FREQS
+	}
 	return flag.Args()
 }
 
@@ -223,6 +250,9 @@ func UpdateZmat(old, new string) string {
 func main() {
 	// parse flags for overwrite before mkdirs
 	Args := ParseFlags()
+	if len(Args) < 1 {
+		log.Fatal("pbqff: no input file supplied")
+	}
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
 		if err != nil {
@@ -234,32 +264,37 @@ func main() {
 		}
 		defer pprof.StopCPUProfile()
 	}
-	MakeDirs(".")
-	if len(Args) < 1 {
-		log.Fatal("pbqff: no input file supplied")
+	// only make directories if starting with opt, otherwise assume
+	// they are made and we are resuming
+	if DoOpt() {
+		MakeDirs(".")
 	}
 	// might want a LoadDefaults function or something
 	// and then overwrite parts with ParseInfile
 	ParseInfile(Args[0])
 	prog := LoadMolpro("molpro.in")
 	prog.Geometry = FormatZmat(Input[Geometry])
-	// write opt.inp and mp.pbs
-	prog.WriteInput("opt/opt.inp", opt)
-	WritePBS("opt/mp.pbs",
-		&Job{MakeName(Input[Geometry]) + "/opt", "opt/opt.inp", 35})
-	// submit opt, wait for it to finish in main goroutine - block
-	Submit("opt/mp.pbs")
-	outfile := "opt/opt.out"
-	_, err := prog.ReadOut(outfile)
-	for err != nil {
-		HandleSignal(35, time.Minute)
-		_, err = prog.ReadOut(outfile)
-		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
-			err == ErrFileContainsError || err == ErrBlankOutput) ||
-			err == ErrFileNotFound {
+	if DoOpt() {
+		// write opt.inp and mp.pbs
+		prog.WriteInput("opt/opt.inp", opt)
+		WritePBS("opt/mp.pbs",
+			&Job{MakeName(Input[Geometry]) + "/opt", "opt/opt.inp", 35})
+		// submit opt, wait for it to finish in main goroutine - block
+		// TODO make submit return job number for qstat checking
+		// TODO use qstat checking before resubmit
+		Submit("opt/mp.pbs")
+		outfile := "opt/opt.out"
+		_, err := prog.ReadOut(outfile)
+		for err != nil {
+			HandleSignal(35, time.Minute)
+			_, err = prog.ReadOut(outfile)
+			if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
+				err == ErrFileContainsError || err == ErrBlankOutput) ||
+				err == ErrFileNotFound {
 
-			fmt.Fprintln(os.Stderr, "resubmitting for", err)
-			Submit("opt/mp.pbs")
+				fmt.Fprintln(os.Stderr, "resubmitting for", err)
+				Submit("opt/mp.pbs")
+			}
 		}
 	}
 	cart, zmat, err := prog.HandleOutput("opt/opt")
@@ -267,65 +302,71 @@ func main() {
 		// actually want to try to recover here probably
 		panic(err)
 	}
-	// write freq.inp and that mp.pbs
 	prog.Geometry = UpdateZmat(prog.Geometry, zmat)
-	prog.WriteInput("freq/freq.inp", freq)
-	WritePBS("freq/mp.pbs",
-		&Job{MakeName(Input[Geometry]) + "/freq", "freq/freq.inp", 35})
-	// submit freq, wait in separate goroutine
-	// doesn't matter if this finishes
-	Submit("freq/mp.pbs")
-	outfile = "freq/freq.out"
 	var (
 		mpHarm   []float64
 		finished bool
 	)
-	go func() {
-		_, err = prog.ReadOut(outfile)
-		for err != nil {
-			HandleSignal(35, time.Minute)
+	if DoOpt() {
+		// write freq.inp and that mp.pbs
+		prog.WriteInput("freq/freq.inp", freq)
+		WritePBS("freq/mp.pbs",
+			&Job{MakeName(Input[Geometry]) + "/freq", "freq/freq.inp", 35})
+		// submit freq, wait in separate goroutine
+		// doesn't matter if this finishes
+		Submit("freq/mp.pbs")
+		outfile := "freq/freq.out"
+		go func() {
 			_, err = prog.ReadOut(outfile)
-			// dont resubmit freq
-			if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
-				err == ErrFileContainsError {
-				fmt.Fprintln(os.Stderr, "error in freq, aborting that calculation")
-				return
+			for err != nil {
+				HandleSignal(35, time.Minute)
+				_, err = prog.ReadOut(outfile)
+				// dont resubmit freq
+				if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
+					err == ErrFileContainsError {
+					fmt.Fprintln(os.Stderr, "error in freq, aborting that calculation")
+					return
+				}
 			}
-		}
-		mpHarm = prog.ReadFreqs(outfile)
-		finished = true
-	}()
+			mpHarm = prog.ReadFreqs(outfile)
+			finished = true
+		}()
+	}
 	// set up pts using opt.log geometry and given intder.in file
 	intder := LoadIntder("intder.in")
 	atomNames := intder.ConvertCart(cart)
-	intder.WritePts("pts/intder.in")
-	// run intder
-	RunIntder("pts/intder")
-	// build points and the list of pts to submit
-	pts := prog.BuildPoints("pts/file07", atomNames)
-	// need to limit this to 220 on sequoia
-	// must have communicating goroutines between submit
-	// and readOut since we can't submit until some of the running ones finish
-	// submit points, wait for them to finish
-	for _, job := range pts {
-		Submit(job.Name + ".pbs")
+	var points []Calc
+	if DoPts() {
+		intder.WritePts("pts/intder.in")
+		// run intder
+		RunIntder("pts/intder")
+		// build points and the list of pts to submit
+		points = prog.BuildPoints("pts/file07", atomNames, true)
+		// need to limit this to 220 on sequoia
+		// must have communicating goroutines between submit
+		// and readOut since we can't submit until some of the running ones finish
+		// submit points, wait for them to finish
+		for _, job := range points {
+			Submit(job.Name + ".pbs")
+		}
+	} else {
+		points = prog.BuildPoints("pts/file07", atomNames, false)
 	}
-
 	// - check for failed jobs, probably just loop at some interval
 	//   doesnt need to be fast (and resource intensive) like gocart
-	ptsInit := len(pts)
+	ptsInit := len(points)
 	energies := make([]float64, ptsInit)
 	var min float64
 	nJobs := ptsInit
 	for nJobs > 0 {
 		shortenBy := 0
 		for i := 0; i < nJobs; i++ {
-			job := pts[i]
+			job := points[i]
 			energy, err := prog.ReadOut(job.Name + ".out")
 			if err == nil {
-				pts[nJobs-1], pts[i] = pts[i], pts[nJobs-1]
+				points[nJobs-1], points[i] = points[i], points[nJobs-1]
 				nJobs--
-				pts = pts[:nJobs]
+				points = points[:nJobs]
 				if energy < min {
 					min = energy
 				}
@@ -338,7 +379,7 @@ func main() {
 				// || err == ErrBlankOutput { // ||
 				// must be a better way to do this -> check queue
 				// disable for now
-				// (err == ErrFileNotFound && len(pts) < ptsInit/20) {
+				// (err == ErrFileNotFound && len(points) < pointsInit/20) {
 				// write error found in case it can't be handled by resubmit
 				// then we need to kill it, manually for now
 				if err == ErrFileContainsError {
@@ -417,4 +458,5 @@ func main() {
 	Summarize(zpt, mpHarm, intderHarms, spHarm, spFund, spCorr)
 	// TODO summarize rotational constants, geometry parameters,
 	//      maybe assignments too
+	// have rotational constants from FreqReport, but need to incorporate them
 }
