@@ -9,9 +9,8 @@
 #PBS -l mem=9gb
 
 module load intel
-module load mvapich2
-module load pbspro
-export PATH=/usr/local/apps/molpro/2015.1.35/bin:$PATH
+module load mpt
+export PATH=/ptmp/bwhopkin/molpro_mpt/2012/molprop_2012_1_Linux_x86_64_i8/bin:$PATH
 
 export WORKDIR=$PBS_O_WORKDIR
 export TMPDIR=/tmp/$USER/$PBS_JOBID
@@ -19,8 +18,8 @@ cd $WORKDIR
 mkdir -p $TMPDIR
 
 date
-molpro -t 1 testfiles/inp/NHHH.00001.inp
+mpiexec molpro.exe testfiles/inp/NHHH.00001.inp
 date
 
 rm -rf $TMPDIR
-ssh -t maple pkill -35 pbqff
+ssh -t sequoia pkill -35 pbqff

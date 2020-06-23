@@ -9,15 +9,29 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
 
+const (
+	geomFmt = "%17.9f%19.9f%19.9f"
+	strFmt  = "%17s%19s%19s"
+)
+
+// Intder holds the information for an intder input file
 type Intder struct {
 	Head     string
 	Geometry string
 	Tail     string
 	Pattern  [][]int
+	Dummies  []Dummy
+}
+
+// Dummy is a dummy atom in an intder input file
+type Dummy struct {
+	Coords  []float64 // x,y,z coords of dummy atom
+	Matches []int     // what real coordinate they match
 }
 
 /*
@@ -77,20 +91,53 @@ and apply the same ordering to the cartesian coordinates:
 and done!
 */
 
-// pretty print a slice of slice of int
+// Pprint pretty prints a slice of slice of int
 func Pprint(vals [][]int) {
 	for _, line := range vals {
 		fmt.Println(line)
 	}
 }
 
-func Pattern(geom string) [][]int {
-	lines := strings.Split(geom, "\n")
-	pattern := make([][]int, 0)
-	floats := make([][]float64, 0)
+// Pattern extracts the pattern of coordinates from a string
+// and returns the pattern, along with the required dummy atoms
+//y|0 1 2
+//x|-----
+//0|0 1 2 [x][y] -> [3x+y]
+//1|3 4 5
+//2|6 7 8
+func Pattern(geom string, ndummy int) ([][]int, []Dummy) {
+	lines := CleanSplit(geom, "\n")
+	pattern := make([][]int, 0, len(lines))
+	floats := make([][]float64, 0, len(lines))
+	dummies := make([]Dummy, 0, ndummy)
 	var line string
-	for i := range lines {
+	for i := 0; i < len(lines); i++ {
 		line = lines[i]
+		if i >= len(lines)-ndummy && line != "" {
+			// in a dummy atom
+			d := new(Dummy)
+			// compare fields of dummy to those in floats
+			for _, v := range strings.Fields(line) {
+				match := false
+				v, _ := strconv.ParseFloat(v, 64)
+				d.Coords = append(d.Coords, v)
+			loop:
+				for x := range floats {
+					for y := range floats[x] {
+						if floats[x][y] == v {
+							d.Matches = append(d.Matches, 3*x+y)
+							match = true
+							break loop
+						}
+					}
+				}
+				if !match {
+					d.Matches = append(d.Matches, -1)
+				}
+			}
+			dummies = append(dummies, *d)
+			continue
+		}
 		if line != "" {
 			pattern = append(pattern, make([]int, 3))
 			floats = append(floats, make([]float64, 3))
@@ -110,10 +157,10 @@ func Pattern(geom string) [][]int {
 			}
 		}
 	}
-	return pattern
+	return pattern, dummies
 }
 
-// Loads an intder input file with the geometry lines
+// LoadIntder loads an intder input file with the geometry lines
 // stripped out
 func LoadIntder(filename string) *Intder {
 	f, err := os.Open(filename)
@@ -123,16 +170,24 @@ func LoadIntder(filename string) *Intder {
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	var (
-		buf  bytes.Buffer
-		line string
-		i    Intder
-		geom string
+		buf    bytes.Buffer
+		line   string
+		i      Intder
+		geom   string
+		ndummy int
 	)
 	// end of symmetry internal coordinates
 	eosic := regexp.MustCompile(`(?U)^\s+0\s*$`)
 	head := true
+	c := 0
 	for scanner.Scan() {
+		c++
 		line = scanner.Text()
+		if c == 2 {
+			fields := strings.Fields(line)
+			// IOPT(8) NDUM - intder manual pg 5
+			ndummy, _ = strconv.Atoi(fields[7])
+		}
 		if head && eosic.MatchString(line) {
 			fmt.Fprintln(&buf, line)
 			i.Head = buf.String()
@@ -147,36 +202,27 @@ func LoadIntder(filename string) *Intder {
 		fmt.Fprintln(&buf, line)
 	}
 	i.Tail = buf.String()
-	i.Pattern = Pattern(geom)
+	i.Pattern, i.Dummies = Pattern(geom, ndummy)
 	return &i
 }
 
-// Takes a cartesian geometry as a single string
+// ConvertCart takes a cartesian geometry as a single string
 // and formats it as needed by intder, saving the
 // result in the passed in Intder. Return the ordered
 // slice atom names
 func (i *Intder) ConvertCart(cart string) (names []string) {
-	const (
-		geomFmt = "%17.9f%19.9f%19.9f"
-		strFmt  = "%17s%19s%19s"
-	)
 	lines := strings.Split(cart, "\n")
 	// slice off last newline
 	lines = lines[:len(lines)-1]
 	var buf bytes.Buffer
-	floats := make([][]float64, 0)
 	strs := make([]string, 0)
-	for i, line := range lines {
+	for _, line := range lines {
 		if len(line) > 3 {
-			floats = append(floats, make([]float64, 3))
 			fields := strings.Fields(line)
 			names = append(names, fields[0])
 			x, _ := strconv.ParseFloat(fields[1], 64)
-			floats[i][0] = x
 			y, _ := strconv.ParseFloat(fields[2], 64)
-			floats[i][1] = y
 			z, _ := strconv.ParseFloat(fields[3], 64)
-			floats[i][2] = z
 			str := fmt.Sprintf(geomFmt, x, y, z)
 			fmt.Fprint(&buf, str+"\n")
 			strs = append(strs, str)
@@ -184,7 +230,7 @@ func (i *Intder) ConvertCart(cart string) (names []string) {
 	}
 	// remove last newline
 	buf.Truncate(buf.Len() - 1)
-	pattern := Pattern(buf.String())
+	pattern, _ := Pattern(buf.String(), 0)
 	swaps, order, ok := MatchPattern(i.Pattern, pattern)
 	if !ok {
 		panic("transform failed")
@@ -193,9 +239,34 @@ func (i *Intder) ConvertCart(cart string) (names []string) {
 	strs = SwapStr(swaps, strs, strFmt)
 	// swap rows and place in geometry
 	i.Geometry = strings.Join(ApplyPattern(order, strs), "\n")
+	// need to add dummy to geometry
+	i.AddDummy()
 	return ApplyPattern(order, names)
 }
 
+// AddDummy modifies i.Geometry in place to add dummy atoms
+func (i *Intder) AddDummy() {
+	lines := CleanSplit(i.Geometry, "\n")
+	coords := make([]float64, 0, 3*len(lines))
+	for line := range lines {
+		fields := strings.Fields(lines[line])
+		x, _ := strconv.ParseFloat(fields[0], 64)
+		y, _ := strconv.ParseFloat(fields[1], 64)
+		z, _ := strconv.ParseFloat(fields[2], 64)
+		coords = append(coords, x, y, z)
+	}
+	for d := range i.Dummies {
+		for c := range i.Dummies[d].Coords {
+			if i.Dummies[d].Matches[c] != -1 {
+				i.Dummies[d].Coords[c] = coords[i.Dummies[d].Matches[c]]
+			}
+		}
+		i.Geometry += fmt.Sprintf("\n"+geomFmt, i.Dummies[d].Coords[0],
+			i.Dummies[d].Coords[1], i.Dummies[d].Coords[2])
+	}
+}
+
+// SwapStr exchanges the strings of strs based on the pattern defined in swaps
 func SwapStr(swaps [][]int, strs []string, format string) []string {
 	for i := range swaps {
 		x := swaps[i][0]
@@ -209,17 +280,9 @@ func SwapStr(swaps [][]int, strs []string, format string) []string {
 	return strs
 }
 
-// Take source and destination patterns and return
+// MatchPattern takes source and destination patterns and returns
 // the order of the source lines that will match that
 // of the destination
-// TODO handle column exchanges
-// - look at columns first and fix problems there - modify src
-// grab columns, sort, reflect compare to see if they are variants of each other
-// transpose and match/apply patern on that first
-// keep everything in here - failed trying to handle elsewhere
-// if matching fails, swap columns and try again
-// possible permutations: 1,2,3; 1,3,2; 2,1,3; 2,3,1; 3,1,2; 3,2,1
-// six tries isn't too bad
 func MatchPattern(dst, src [][]int) (swaps [][]int, order []int, ok bool) {
 	for s := 0; s < 6; s++ {
 		switch {
@@ -252,6 +315,8 @@ func Swap(src [][]int, i, j int) [][]int {
 	return src
 }
 
+// CheckPattern is a helper for MatchPattern, which checks
+// if dst and src have the same pattern
 func CheckPattern(dst, src [][]int) (order []int) {
 	for i := 0; i < len(dst); i++ {
 		for j := 0; j < len(src); j++ {
@@ -263,8 +328,7 @@ func CheckPattern(dst, src [][]int) (order []int) {
 	return
 }
 
-// Because of the lack of generics, only order slices
-// of strings based on the ordering ord :(
+// ApplyPattern applies an ordering to a slice of strings
 func ApplyPattern(ord []int, lines []string) (ordered []string) {
 	for i := range ord {
 		ordered = append(ordered, lines[ord[i]])
@@ -272,14 +336,14 @@ func ApplyPattern(ord []int, lines []string) (ordered []string) {
 	return
 }
 
-// Write an intder.in file for points to filename
+// WritePts writes an intder.in file for points to filename
 func (i *Intder) WritePts(filename string) {
 	var buf bytes.Buffer
 	buf.WriteString(i.Head + i.Geometry + "\n" + i.Tail)
 	ioutil.WriteFile(filename, buf.Bytes(), 0755)
 }
 
-// Write an intder_geom.in file to filename, using
+// WriteGeom writes an intder_geom.in file to filename, using
 // longLine as the displacement
 func (i *Intder) WriteGeom(filename, longLine string) {
 	var buf bytes.Buffer
@@ -297,9 +361,8 @@ func (i *Intder) WriteGeom(filename, longLine string) {
 	ioutil.WriteFile(filename, buf.Bytes(), 0755)
 }
 
-// Update the input directives of an intder
+// SecondLine updates the input directives of an intder
 // for the cartesian coordinate transform in freqs
-// TODO fields[8] is number of dummy atoms, check/update accordingly
 func (i *Intder) SecondLine() {
 	lines := strings.Split(i.Head, "\n")
 	lines = lines[:len(lines)-1] // trim trailing newline
@@ -317,7 +380,7 @@ func (i *Intder) SecondLine() {
 	i.Head = strings.Join(lines, "\n")
 }
 
-// Write an intder.in file for freqs to filename
+// WriteFreqs writes an intder.in file for freqs to filename
 // TODO might need updating for many atoms - multiline mass format?
 func (i *Intder) WriteFreqs(filename string, names []string) {
 	var buf bytes.Buffer
@@ -326,7 +389,7 @@ func (i *Intder) WriteFreqs(filename string, names []string) {
 	for i, name := range names {
 		num, ok := ptable[strings.ToUpper(name)]
 		if !ok {
-			fmt.Errorf("WriteFreqs: element %q not found in ptable\n", name)
+			fmt.Errorf("error WriteFreqs: element %q not found in ptable", name)
 		}
 		switch i {
 		case 0:
@@ -342,7 +405,7 @@ func (i *Intder) WriteFreqs(filename string, names []string) {
 	ioutil.WriteFile(filename, buf.Bytes(), 0755)
 }
 
-// Update i.Geometry with the results of intder_geom
+// ReadGeom updates i.Geometry with the results of intder_geom
 func (i *Intder) ReadGeom(filename string) string {
 	const target = "NEW CARTESIAN GEOMETRY (BOHR)"
 	f, err := os.Open(filename)
@@ -373,7 +436,7 @@ func (i *Intder) ReadGeom(filename string) string {
 	return geometry
 }
 
-// Read a freqs/intder.out and return the harmonic
+// ReadOut reads a freqs/intder.out and returns the harmonic
 // frequencies found therein
 func (i *Intder) ReadOut(filename string) (freqs []float64) {
 	f, err := os.Open(filename)
@@ -394,6 +457,7 @@ func (i *Intder) ReadOut(filename string) (freqs []float64) {
 			modes = true
 		case modes:
 			if strings.Contains(line, "NORMAL") {
+				sort.Sort(sort.Reverse(sort.Float64Slice(freqs)))
 				return
 			}
 			if line != "" {
@@ -406,7 +470,8 @@ func (i *Intder) ReadOut(filename string) (freqs []float64) {
 	return
 }
 
-// Set i.Tail to ouput from anpass for freqs/intder
+// Read9903 reads fort.9903 output by anpass and
+// sets i.Tail to that for freqs/intder
 func (i *Intder) Read9903(filename string) {
 	var (
 		buf2 bytes.Buffer

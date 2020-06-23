@@ -6,6 +6,36 @@ import (
 	"testing"
 )
 
+func TestLoadMolpro(t *testing.T) {
+	got := LoadMolpro("testfiles/molpro.in")
+	want := &Molpro{
+		Head: `memory,995,m   ! 30GB 12procs
+
+gthresh,energy=1.d-12,zero=1.d-22,oneint=1.d-22,twoint=1.d-22;
+gthresh,optgrad=1.d-8,optstep=1.d-8;
+nocompress;
+
+geometry={
+`,
+		Geometry: "",
+		Tail: `basis={
+default,cc-pvdz-f12
+}
+set,charge=0
+set,spin=0
+hf,accuracy=16,energy=1.0d-10
+{ccsd(t)-f12,thrden=1.0d-8,thrvar=1.0d-10;orbital,IGNORE_ERROR;}
+`,
+		Opt: `{optg,grms=1.d-8,srms=1.d-8}
+`,
+		Extra: `pbqff=energy
+`,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got\n%#v, wanted\n%#v\n", got, want)
+	}
+}
+
 func TestFormatZmat(t *testing.T) {
 	got := FormatZmat(Input[Geometry])
 	want := `X
@@ -24,7 +54,7 @@ XXO = 80.0 Deg`
 }
 
 func TestWriteInputMolpro(t *testing.T) {
-	mp := LoadMolpro("testfiles/opt.inp")
+	mp := LoadMolpro("testfiles/molpro.in")
 	mp.Geometry = FormatZmat(Input[Geometry])
 	mp.WriteInput("testfiles/opt/opt.inp", opt)
 }
@@ -87,11 +117,30 @@ func TestReadOut(t *testing.T) {
 		}
 	})
 
-	t.Run("energy= in input", func(t *testing.T) {
-		got, _ := mp.ReadOut("testfiles/ALALOO.00000.out")
-		want := -633.710676610142
+	t.Run("sequoia, partial", func(t *testing.T) {
+		got, err := mp.ReadOut("testfiles/seq.part")
+		if !math.IsNaN(got) {
+			t.Errorf("got %v, wanted %v\n", got, math.NaN())
+		} else if err != ErrEnergyNotFound {
+			t.Errorf("got %q, wanted %q", err, ErrFinishedButNoEnergy)
+		}
+	})
+
+	t.Run("sequoia success", func(t *testing.T) {
+		e := energyLine
+		s := energySpace
+		energyLine = "PBQFF(2)"
+		energySpace = 2
+		defer func() {
+			energyLine = e
+			energySpace = s
+		}()
+		got, err := mp.ReadOut("testfiles/seq.out")
+		want := -634.43134170
 		if got != want {
 			t.Errorf("got %v, wanted %v\n", got, want)
+		} else if err != nil {
+			t.Error("got an error, didn't want one")
 		}
 	})
 }
@@ -116,27 +165,61 @@ func TestHandleOutput(t *testing.T) {
 			t.Errorf("got %q, wanted %q", err, ErrFileContainsError)
 		}
 	})
+	// There was a problem on Sequoia where the new zmat params
+	// were inexplicably not in the frequency calculation
+	t.Run("Sequoia", func(t *testing.T) {
+		p := LoadMolpro("testfiles/molpro.in")
+		p.Geometry = FormatZmat(Input[Geometry])
+		_, zmat, _ := p.HandleOutput("testfiles/seq")
+		want := `ALX=                 1.20291856 ANG
+OX=                  1.26606700 ANG
+`
+		p.Geometry = UpdateZmat(p.Geometry, zmat)
+		p.WriteInput("testfiles/seq.freq", freq)
+		if !reflect.DeepEqual(zmat, want) {
+			t.Errorf("got %q, wanted %q\n", zmat, want)
+		}
+	})
 }
 
 func TestReadLog(t *testing.T) {
-	cart, zmat := ReadLog("testfiles/coords.log")
-	wantCart := `O 1.000000000 0.118481857 -2.183553663
+	t.Run("maple", func(t *testing.T) {
+		cart, zmat := ReadLog("testfiles/coords.log")
+		wantCart := `O 1.000000000 0.118481857 -2.183553663
 H 0.000000000 -1.563325812 -2.884671935
 C 0.000000000 -0.014536611 0.273763522
 N 0.000000000 -0.010373662 2.467030139
 `
-	wantZmat := `OH=                  0.96421314 ANG
+		wantZmat := `OH=                  0.96421314 ANG
 OC=                  1.30226003 ANG
 HOC=               109.53197453 DEG
 CN=                  1.16062880 ANG
 OCN=               176.79276221 DEG
 `
-	if cart != wantCart {
-		t.Errorf("got %v, wanted %v\n", cart, wantCart)
-	}
-	if zmat != wantZmat {
-		t.Errorf("got %v, wanted %v\n", zmat, wantZmat)
-	}
+		if cart != wantCart {
+			t.Errorf("got %v, wanted %v\n", cart, wantCart)
+		}
+		if zmat != wantZmat {
+			t.Errorf("got %v, wanted %v\n", zmat, wantZmat)
+		}
+	})
+	t.Run("sequoia", func(t *testing.T) {
+		cart, zmat := ReadLog("testfiles/seq.log")
+		wantCart := `AL 0.000000000 0.000000000 2.273186636
+AL 0.000000000 0.000000000 -2.273186636
+O 0.000000000 2.392519895 0.000000000
+O 0.000000000 -2.392519895 0.000000000
+`
+		wantZmat := `ALX=                 1.20291856 ANG
+OX=                  1.26606700 ANG
+`
+		if cart != wantCart {
+			t.Errorf("\ngot %q, \nwad %q\n", cart, wantCart)
+		}
+		if zmat != wantZmat {
+			t.Errorf("got %v, wanted %v\n", zmat, wantZmat)
+		}
+	})
 }
 
 func TestReadFreqs(t *testing.T) {

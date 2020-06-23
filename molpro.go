@@ -27,6 +27,7 @@ type Molpro struct {
 	Geometry string
 	Tail     string
 	Opt      string
+	Extra    string
 }
 
 // Load a template molpro input file
@@ -47,6 +48,8 @@ func LoadMolpro(filename string) *Molpro {
 		if strings.Contains(line, "optg") && !strings.Contains(line, "gthresh") {
 			mp.Tail = buf.String()
 			buf.Reset()
+			mp.Opt = line + "\n"
+			continue
 		}
 		buf.WriteString(line + "\n")
 		if strings.Contains(line, "geometry=") {
@@ -54,7 +57,7 @@ func LoadMolpro(filename string) *Molpro {
 			buf.Reset()
 		}
 	}
-	mp.Opt = buf.String()
+	mp.Extra = buf.String()
 	return &mp
 }
 
@@ -70,6 +73,7 @@ func (m *Molpro) WriteInput(filename string, p Procedure) {
 	case p == freq:
 		buf.WriteString("{frequencies}\n")
 	}
+	buf.WriteString(m.Extra)
 	ioutil.WriteFile(filename, buf.Bytes(), 0755)
 }
 
@@ -88,8 +92,8 @@ func FormatZmat(geom string) string {
 
 func (m Molpro) ReadOut(filename string) (result float64, err error) {
 	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 	if _, err = os.Stat(filename); os.IsNotExist(err) {
-		runtime.UnlockOSThread()
 		return brokenFloat, ErrFileNotFound
 	}
 	error := regexp.MustCompile(`(?i)[^_]error`)
@@ -111,17 +115,19 @@ func (m Molpro) ReadOut(filename string) (result float64, err error) {
 		if error.MatchString(line) {
 			return result, ErrFileContainsError
 		}
-		if strings.Contains(line, energyLine) {
+		if strings.Contains(line, energyLine) &&
+			!strings.Contains(line, "gthresh") &&
+			!strings.Contains(line, "hf") {
 			split := strings.Fields(line)
 			for i, _ := range split {
 				if strings.Contains(split[i], energyLine) {
 					// take the thing right after search term
 					// not the last entry in the line
-					if i+1 < len(split) {
+					if i+energySpace < len(split) {
 						// assume we found energy so no error
 						// from default EnergyNotFound
 						err = nil
-						result, err = strconv.ParseFloat(split[i+1], 64)
+						result, err = strconv.ParseFloat(split[i+energySpace], 64)
 						if err != nil {
 							result = math.NaN()
 						}
@@ -133,7 +139,6 @@ func (m Molpro) ReadOut(filename string) (result float64, err error) {
 			err = ErrFinishedButNoEnergy
 		}
 	}
-	runtime.UnlockOSThread()
 	return result, err
 }
 

@@ -526,7 +526,7 @@
   CCSD-F12b total energy             -168.434828387282
   CCSD[T]-F12b energy                -168.465048862306
   CCSD-T-F12b energy                 -168.463198735794
- !CCSD(T)-F12b total energy          -168.463746717540
+ !CCSD(T)-F12b total energy          parsethis
 
  Timing summary (sec):
 

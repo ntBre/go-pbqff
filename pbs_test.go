@@ -5,6 +5,7 @@ import (
 )
 
 func TestWritePBS(t *testing.T) {
+	Input[QueueType] = "sequoia"
 	p := Job{MakeName(Input[Geometry]), "opt.inp", 35}
 	WritePBS("testfiles/opt/mp.pbs", &p)
 }

@@ -1,18 +1,42 @@
+* Summarize could probably be a separate package
+  - probably the most useful to separate out into its own executable
+
+* WAIT how/when to handle num disps? 
+  - waiting on email back
+
+* TODO report rotational and geometrical data
+** TODO try using the table package I ignored before
+** TODO report BZS or BZA? 
+   - need to ask
+** TODO which geometry data?
+   - guessing r(equil) but what are the other two
+
+* DONE Problem with sequoia freq associated with reading zmat from log file
+  - it was reading the CCSD(t)-F12b energy line before the optimization finished
+    - reporting job finished when it was still running
+  - cannot replicate locally
+  - potentially reading the log file before it's finished being written?
+  - just skip freq if zmat is nil for now
+
 * DONE need way to specify atom ordering in transition from molpro to intder
   - leave intder geometry in as template for this
   - sort by all fields in xyz coords to emulate what intder expects
   - problem randomly matching atom order to coordinates
     - H O O H for example if you flip the Os or Hs
-** TODO if transform fails, try exchanging columns to fix it
+
+** DONE if transform fails, try exchanging columns to fix it
    - molpro put my al2o2 in a different plane when setting one angle to 90.0
    - this broke the transform because the pattern didnt match
-   - also might need to be robust to slight variations in the coords
-     - ie not a perfect tie
+** WAIT also might need to be robust to slight variations in the coords
+   - I think this is handled, but wait and see
+   - ie not a perfect tie
 
 * TODO resume from each point of the process
-  - pts, freqs mainly; if opt fails probably need to restart and if freq fails just run that alone
+  - pts, freqs mainly; if opt fails need to restart and if freq fails just run that
 
-* TODO figure out a better way to handle templates
+* WAIT figure out a better way to handle templates
+  - I think the current approach is okay - eventually shrink to only a molpro input file
+    - the intder, anpass, and spectro should be generated
   - moved away from go templates but now using "template" input files
   - could bundle literals with the program and use others if found in the input file
 

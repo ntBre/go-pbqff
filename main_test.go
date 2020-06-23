@@ -9,7 +9,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	overwrite = true
+	*overwrite = true
 	MakeDirs("testfiles")
 	ParseInfile("testfiles/test.in")
 	code := m.Run()
@@ -17,9 +17,9 @@ func TestMain(m *testing.M) {
 }
 
 func TestMakeDirs(t *testing.T) {
-	overwrite = true
+	*overwrite = true
 	got := MakeDirs("testfiles")
-	overwrite = false
+	*overwrite = false
 	if got != nil {
 		t.Errorf("got an error %q, didn't want one", got)
 	}
@@ -40,12 +40,23 @@ func TestReadFile(t *testing.T) {
 }
 
 func TestMakeName(t *testing.T) {
-	got := MakeName(Input[Geometry])
-	want := "al2o2"
-	want2 := "o2al2"
-	if !(got == want || got == want2) {
-		t.Errorf("got %v, wanted %v\n", got, want)
-	}
+	t.Run("original", func(t *testing.T) {
+		got := MakeName(Input[Geometry])
+		want := "Al2O2"
+		if got != want {
+			t.Errorf("got %v, wanted %v\n", got, want)
+		}
+	})
+	t.Run("no dummy atoms", func(t *testing.T) {
+		keep := Input
+		defer func() { Input = keep }()
+		ParseInfile("testfiles/prob.in")
+		got := MakeName(Input[Geometry])
+		want := "CHO"
+		if got != want {
+			t.Errorf("got %v, wanted %v\n", got, want)
+		}
+	})
 }
 
 func TestHandleSignal(t *testing.T) {
@@ -140,10 +151,11 @@ func TestSummarize(t *testing.T) {
 }
 
 func TestUpdateZmat(t *testing.T) {
-	prog := LoadMolpro("testfiles/opt.inp")
-	_, zmat, _ := prog.HandleOutput("testfiles/nowarn")
-	got := UpdateZmat(FormatZmat(Input[Geometry]), zmat)
-	want := `X
+	t.Run("maple", func(t *testing.T) {
+		prog := LoadMolpro("testfiles/opt.inp")
+		_, zmat, _ := prog.HandleOutput("testfiles/nowarn")
+		got := UpdateZmat(FormatZmat(Input[Geometry]), zmat)
+		want := `X
 X 1 1.0
 Al 1 AlX 2 90.0
 Al 1 AlX 2 90.0 3 180.0
@@ -154,7 +166,36 @@ NH=                  1.91310288 BOHR
 XNH=               112.21209367 DEGREE
 D1=                119.99647304 DEGREE
 `
-	if got != want {
-		t.Errorf("got\n%q, wanted\n%q\n", got, want)
-	}
+		if got != want {
+			t.Errorf("got\n%q, wanted\n%q\n", got, want)
+		}
+	})
+	t.Run("sequoia", func(t *testing.T) {
+		prog := LoadMolpro("testfiles/opt.inp")
+		_, zmat, _ := prog.HandleOutput("testfiles/seq")
+		start := `X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 90.0  3 90.0
+O  1 OX  2 90.0  4 90.0
+}
+ALX=                 1.20291855 ANG
+OX=                  1.26606704 ANG
+`
+		got := UpdateZmat(start, zmat)
+		want := `X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 90.0  3 90.0
+O  1 OX  2 90.0  4 90.0
+}
+ALX=                 1.20291856 ANG
+OX=                  1.26606700 ANG
+`
+		if got != want {
+			t.Errorf("got\n%q, wanted\n%q\n", got, want)
+		}
+	})
 }

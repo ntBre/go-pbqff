@@ -1,0 +1,15 @@
+program=molpro
+queueType=sequoia
+geomType=zmat
+geometry={
+X
+C 1 1.0
+O 2 co 1 90.0
+H 2 ch 1 90.0 3 180.0
+
+co=                  1.10797263 ANG
+ch=                  1.09346324 ANG
+}
+intder=/ddn/home6/r2533/programs/intder/Intder2005.x
+anpass=/ddn/home6/r2533/programs/anpass/anpass_cerebro.x
+spectro=/ddn/home6/r2533/programs/spec3jm.ifort-O0.static.x

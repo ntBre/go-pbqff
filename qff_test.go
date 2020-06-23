@@ -2,6 +2,7 @@ package main
 
 import (
 	"reflect"
+	"sort"
 	"testing"
 )
 
@@ -30,7 +31,7 @@ func TestRunIntder(t *testing.T) {
 }
 
 func TestBuildPoints(t *testing.T) {
-	prog := LoadMolpro("testfiles/opt.inp")
+	prog := LoadMolpro("testfiles/molpro.in")
 	prog.Geometry = Input[Geometry]
 	cart, _, _ := prog.HandleOutput("testfiles/opt")
 	names := GetNames(cart)
@@ -78,8 +79,9 @@ func TestReadIntderOut(t *testing.T) {
 	i.ConvertCart(cart)
 	i.ReadGeom("testfiles/intder_geom.out")
 	got := i.ReadOut("testfiles/fintder.out")
-	want := []float64{437.8, 496.8, 1086.4,
-		1267.6, 2337.7, 3811.4}
+	f := []float64{437.8, 496.8, 1086.4, 1267.6, 2337.7, 3811.4}
+	sort.Sort(sort.Reverse(sort.Float64Slice(f)))
+	want := f
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, wanted %v", got, want)
 	}

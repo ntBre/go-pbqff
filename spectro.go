@@ -324,8 +324,12 @@ func EqnSeparate(line string) (lhs []int, rhs int) {
 }
 
 // Gather harmonic, anharmonic, and resonance-corrected
-// frequencies for reporting
-func (s *Spectro) FreqReport(filename string) (zpt float64, harm, fund, corr []float64) {
+// frequencies from a spectro  output file for reporting
+func (s *Spectro) FreqReport(filename string) (zpt float64,
+	harm, fund, corr []float64,
+	rotABC [][]float64,
+	deltas, phis []float64) {
+
 	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
@@ -337,8 +341,11 @@ func (s *Spectro) FreqReport(filename string) (zpt float64, harm, fund, corr []f
 		skip     int
 		freqs    int
 		harmFund bool
+		rot      bool
 	)
 	freq := regexp.MustCompile(`[0-9]+`)
+	delta := regexp.MustCompile(`(?i)delta (J|(JK)|K)`)
+	phi := regexp.MustCompile(`(?i)phi (J|(JK)|(KJ)|K)`)
 	for scanner.Scan() {
 		line = scanner.Text()
 		switch {
@@ -376,9 +383,41 @@ func (s *Spectro) FreqReport(filename string) (zpt float64, harm, fund, corr []f
 					freqs--
 				}
 			}
+		case strings.Contains(line, "NON-DEG(Vt)"):
+			skip += 3
+			rot = true
+		case rot:
+			// order is A0 -> An
+			// in cm-1
+			// could skip 3 more here to get BZS too
+			rot = false
+			fields := strings.Fields(line)
+			tmp := make([]float64, 0, 3)
+			for f := range fields {
+				v, _ := strconv.ParseFloat(fields[f], 64)
+				tmp = append(tmp, v)
+			}
+			rotABC = append(rotABC, tmp)
+		case delta.MatchString(line):
+			// order is DELTA J, K, JK, delta J, K
+			// in MHz
+			fields := strings.Fields(line)
+			f, _ := strconv.ParseFloat(fields[len(fields)-1], 64)
+			deltas = append(deltas, f)
+		case phi.MatchString(line):
+			// order is PHI J, K, JK, KJ, phi j, jk, k
+			// in Hz
+			// may need this in delta too
+			line := strings.ReplaceAll(line, "D", "E")
+			fields := strings.Fields(line)
+			f, _ := strconv.ParseFloat(fields[len(fields)-1], 64)
+			phis = append(phis, f)
 		}
+		// TODO geometry parameters
+		// presumably vibrationally averaged coordinates
+		// - pretty sure R(EQUIL), but what are R(G) and R(ALPHA)?
 	}
-	// put in decreasing order
+	// put freqs in decreasing order
 	sort.Sort(sort.Reverse(sort.Float64Slice(harm)))
 	sort.Sort(sort.Reverse(sort.Float64Slice(fund)))
 	sort.Sort(sort.Reverse(sort.Float64Slice(corr)))

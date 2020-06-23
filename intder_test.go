@@ -25,7 +25,7 @@ var (
 
 func TestPattern(t *testing.T) {
 	t.Run("first test", func(t *testing.T) {
-		got := Pattern(text)
+		got, _ := Pattern(text, 0)
 		want := [][]int{
 			[]int{2, 1, 1},
 			[]int{4, 2, 1},
@@ -37,7 +37,7 @@ func TestPattern(t *testing.T) {
 		}
 	})
 	t.Run("second test", func(t *testing.T) {
-		got := Pattern(text1)
+		got, _ := Pattern(text1, 0)
 		want := [][]int{
 			[]int{4, 2, 1},
 			[]int{1, 2, 1},
@@ -71,8 +71,8 @@ func TestSwap(t *testing.T) {
 
 func TestMatchPattern(t *testing.T) {
 	t.Run("columns match", func(t *testing.T) {
-		p1 := Pattern(text)
-		p2 := Pattern(text1)
+		p1, _ := Pattern(text, 0)
+		p2, _ := Pattern(text1, 0)
 		_, got, _ := MatchPattern(p1, p2)
 		want := []int{2, 0, 1, 3}
 		if !reflect.DeepEqual(got, want) {
@@ -80,8 +80,8 @@ func TestMatchPattern(t *testing.T) {
 		}
 	})
 	t.Run("column mismatch", func(t *testing.T) {
-		p1 := Pattern(text)
-		p2 := Pattern(text2)
+		p1, _ := Pattern(text, 0)
+		p2, _ := Pattern(text2, 0)
 		_, got, _ := MatchPattern(p1, p2)
 		want := []int{0, 1, 2, 3}
 		if !reflect.DeepEqual(got, want) {
@@ -112,8 +112,8 @@ func TestSwapStr(t *testing.T) {
 }
 
 func TestApplyPattern(t *testing.T) {
-	p1 := Pattern(text)
-	p2 := Pattern(text1)
+	p1, _ := Pattern(text, 0)
+	p2, _ := Pattern(text1, 0)
 	_, tr, _ := MatchPattern(p1, p2)
 	s := []string{"Al", "Al", "O", "O"}
 	got := ApplyPattern(tr, s)
@@ -155,5 +155,39 @@ func TestConvertCart(t *testing.T) {
 			t.Errorf("got %v, wanted %v\n", got, want)
 		}
 	})
+	t.Run("dummy atom in intder", func(t *testing.T) {
+		cart := `C       0.000000000    0.000000000   -1.079963204
+O       0.000000000    0.000000000    1.008829581
+H       0.000000000    0.000000000   -3.144264495
+`
+		i := LoadIntder("testfiles/lin.intder")
+		got := i.ConvertCart(cart)
+		want := []string{"O", "C", "H"}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, wanted %v\n", got, want)
+		}
+		wantDum := []Dummy{Dummy{Coords: []float64{0.000000000, 1.111111111, -1.079963204},
+			Matches: []int{0, -1, 5}}} // position in intder is 5
+		if !reflect.DeepEqual(i.Dummies, wantDum) {
+			t.Errorf("got %v, wanted %v\n", i.Dummies, wantDum)
+		}
+	})
+}
 
+func TestAddDummy(t *testing.T) {
+	i := LoadIntder("testfiles/lin.intder")
+	i.Dummies[0].Coords[2] = 3.4 // check that matching works
+	cart := `C       0.000000000    0.000000000   -1.079963204
+O       0.000000000    0.000000000    1.008829581
+H       0.000000000    0.000000000   -3.144264495
+`
+	i.ConvertCart(cart) // add dummy happens in ConvertCart
+	got := i.Geometry
+	want := `      0.000000000        0.000000000        1.008829581
+      0.000000000        0.000000000       -1.079963204
+      0.000000000        0.000000000       -3.144264495
+      0.000000000        1.111111111       -1.079963204`
+	if got != want {
+		t.Errorf("got\n%q, wanted\n%q\n", got, want)
+	}
 }

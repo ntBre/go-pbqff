@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"os/exec"
+	"regexp"
 	"text/template"
 	"time"
 )
@@ -13,7 +14,7 @@ type Job struct {
 	Signal   int
 }
 
-const pbs = `#!/bin/sh
+const pbsMaple = `#!/bin/sh
 #PBS -N {{.Name}}
 #PBS -S /bin/bash
 #PBS -j oe
@@ -40,14 +41,52 @@ date
 rm -rf $TMPDIR
 ssh -t maple pkill -{{.Signal}} pbqff`
 
+const pbsSequoia = `#!/bin/sh
+#PBS -N {{.Name}}
+#PBS -S /bin/bash
+#PBS -j oe
+#PBS -o /dev/null
+#PBS -W umask=022
+#PBS -l walltime=5000:00:00
+#PBS -l ncpus=1
+#PBS -l mem=9gb
+
+module load intel
+module load mpt
+export PATH=/ptmp/bwhopkin/molpro_mpt/2012/molprop_2012_1_Linux_x86_64_i8/bin:$PATH
+
+export WORKDIR=$PBS_O_WORKDIR
+export TMPDIR=/tmp/$USER/$PBS_JOBID
+cd $WORKDIR
+mkdir -p $TMPDIR
+
+date
+mpiexec molpro.exe {{.Filename}}
+date
+
+rm -rf $TMPDIR
+ssh -t sequoia pkill -{{.Signal}} pbqff
+`
+
 // Write infile based on template
 // with job information from job
 func WritePBS(infile string, job *Job) {
+	var t *template.Template
 	f, err := os.Create(infile)
 	if err != nil {
 		panic(err)
 	}
-	t, err := template.New("pbs").Parse(pbs)
+	sequoia := regexp.MustCompile(`(?i)sequoia`)
+	maple := regexp.MustCompile(`(?i)maple`)
+	q := Input[QueueType]
+	switch {
+	case q == "", maple.MatchString(q):
+		t, err = template.New("pbs").Parse(pbsMaple)
+	case sequoia.MatchString(q):
+		energyLine = "PBQFF(2)"
+		energySpace = 2
+		t, err = template.New("pbs").Parse(pbsSequoia)
+	}
 	if err != nil {
 		panic(err)
 	}
