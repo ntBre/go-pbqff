@@ -16,6 +16,7 @@ import (
 	"math"
 	"os"
 	"os/signal"
+	"regexp"
 	"runtime/pprof"
 	"sort"
 	"strings"
@@ -70,6 +71,7 @@ var (
 	energySpace      = 1
 	molproTerminated = "Molpro calculation terminated"
 	defaultOpt       = "optg,grms=1.d-8,srms=1.d-8"
+	pbs              string
 )
 
 // Errors used throughout
@@ -272,6 +274,17 @@ func main() {
 	// might want a LoadDefaults function or something
 	// and then overwrite parts with ParseInfile
 	ParseInfile(Args[0])
+	sequoia := regexp.MustCompile(`(?i)sequoia`)
+	maple := regexp.MustCompile(`(?i)maple`)
+	q := Input[QueueType]
+	switch {
+	case q == "", maple.MatchString(q):
+		pbs = pbsMaple
+	case sequoia.MatchString(q):
+		energyLine = "PBQFF(2)"
+		energySpace = 2
+		pbs = pbsSequoia
+	}
 	prog := LoadMolpro("molpro.in")
 	prog.Geometry = FormatZmat(Input[Geometry])
 	if DoOpt() {

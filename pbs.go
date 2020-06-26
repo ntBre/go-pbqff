@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"os/exec"
-	"regexp"
 	"text/template"
 	"time"
 )
@@ -77,24 +76,14 @@ func WritePBS(infile string, job *Job) {
 	if err != nil {
 		panic(err)
 	}
-	sequoia := regexp.MustCompile(`(?i)sequoia`)
-	maple := regexp.MustCompile(`(?i)maple`)
-	q := Input[QueueType]
-	switch {
-	case q == "", maple.MatchString(q):
-		t, err = template.New("pbs").Parse(pbsMaple)
-	case sequoia.MatchString(q):
-		energyLine = "PBQFF(2)"
-		energySpace = 2
-		t, err = template.New("pbs").Parse(pbsSequoia)
-	}
+	t, err = template.New("pbs").Parse(pbs)
 	if err != nil {
 		panic(err)
 	}
 	t.Execute(f, job)
 }
 
-// Submit submits the pbs script defined by filename to the queue 
+// Submit submits the pbs script defined by filename to the queue
 func Submit(filename string) error {
 	// -f option to run qsub in foreground
 	_, err := exec.Command("qsub", "-f", filename).Output()

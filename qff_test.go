@@ -59,17 +59,33 @@ func TestWriteIntderGeom(t *testing.T) {
 }
 
 func TestReadGeom(t *testing.T) {
-	cart, _ := ReadLog("testfiles/al2o2.log")
-	i := LoadIntder("testfiles/intder.full")
-	i.ConvertCart(cart)
-	i.ReadGeom("testfiles/intder_geom.out")
-	want := `        0.0000000000       -0.0115666469        2.4598228639
+	t.Run("no dummy atoms", func(t *testing.T) {
+		cart, _ := ReadLog("testfiles/al2o2.log")
+		i := LoadIntder("testfiles/intder.full")
+		i.ConvertCart(cart)
+		i.ReadGeom("testfiles/intder_geom.out")
+		want := `        0.0000000000       -0.0115666469        2.4598228639
         0.0000000000       -0.0139207809        0.2726915161
         0.0000000000        0.1184234620       -2.1785371074
         0.0000000000       -1.5591967852       -2.8818447886`
-	if i.Geometry != want {
-		t.Errorf("got %v, wanted %v", i.Geometry, want)
-	}
+		if i.Geometry != want {
+			t.Errorf("got %v, wanted %v", i.Geometry, want)
+		}
+	})
+	t.Run("dummy atoms", func(t *testing.T) {
+		cart, _ := ReadLog("testfiles/dummy.log")
+		i := LoadIntder("testfiles/dummy.intder.in")
+		i.ConvertCart(cart)
+		i.ReadGeom("testfiles/dummy_geom.out")
+		want := `        0.0000000000        0.0000000000        1.0109039650
+        0.0000000000        0.0000000000       -1.0824085329
+        0.0000000000        0.0000000000       -3.1489094311
+        0.0000000000        1.1111111110       -1.0824085329
+        1.1111111110        0.0000000000       -1.0824085329`
+		if i.Geometry != want {
+			t.Errorf("got\n%v, wanted\n%v", i.Geometry, want)
+		}
+	})
 }
 
 func TestReadIntderOut(t *testing.T) {

@@ -16,6 +16,7 @@ import (
 
 const (
 	geomFmt = "%17.9f%19.9f%19.9f"
+	freqFmt = "%20.10f%20.10f%20.10f"
 	strFmt  = "%17s%19s%19s"
 )
 
@@ -240,12 +241,18 @@ func (i *Intder) ConvertCart(cart string) (names []string) {
 	// swap rows and place in geometry
 	i.Geometry = strings.Join(ApplyPattern(order, strs), "\n")
 	// need to add dummy to geometry
-	i.AddDummy()
+	i.AddDummy(false)
 	return ApplyPattern(order, names)
 }
 
 // AddDummy modifies i.Geometry in place to add dummy atoms
-func (i *Intder) AddDummy() {
+func (i *Intder) AddDummy(freqs bool) {
+	var format string
+	if freqs {
+		format = freqFmt
+	} else {
+		format = geomFmt
+	}
 	lines := CleanSplit(i.Geometry, "\n")
 	coords := make([]float64, 0, 3*len(lines))
 	for line := range lines {
@@ -261,7 +268,7 @@ func (i *Intder) AddDummy() {
 				i.Dummies[d].Coords[c] = coords[i.Dummies[d].Matches[c]]
 			}
 		}
-		i.Geometry += fmt.Sprintf("\n"+geomFmt, i.Dummies[d].Coords[0],
+		i.Geometry += fmt.Sprintf("\n"+format, i.Dummies[d].Coords[0],
 			i.Dummies[d].Coords[1], i.Dummies[d].Coords[2])
 	}
 }
@@ -433,6 +440,7 @@ func (i *Intder) ReadGeom(filename string) string {
 	buf.Truncate(buf.Len() - 1)
 	geometry := buf.String()
 	i.Geometry = geometry
+	i.AddDummy(true)
 	return geometry
 }
 

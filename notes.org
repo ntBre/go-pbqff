@@ -1,15 +1,28 @@
 * Summarize could probably be a separate package
   - probably the most useful to separate out into its own executable
+  - flag for bzs vs bza - linear or not
+  - flag for format of output: org, tex, etc
+** TODO report rotational and geometrical data
+*** TODO report BZS or BZA? 
+    - BZS for linear
+    - BZA for all others (but sometimes near linear needs BZS?)
+    - probably going to split the summary stuff into a separate package
+*** TODO which geometry data?
+    - want r(alpha) - vibrationally averaged data
+    - also want r(equil) but can get it from freqs intder.out too
+** Package structure
+   - pbqff and summarize need to import a spectro package
+   - pbqff imports summarize
 
-* WAIT how/when to handle num disps? 
-  - waiting on email back
-
-* TODO report rotational and geometrical data
-** TODO try using the table package I ignored before
-** TODO report BZS or BZA? 
-   - need to ask
-** TODO which geometry data?
-   - guessing r(equil) but what are the other two
+* DONE how/when to handle num disps? 
+** need to generate bottom of anpass.in after adding column to make work for hco/lin3atomics
+  - non-problem, saves time for linear triatomics, but these are fast anyway
+    - use freqs intder.in header for hco+ and I guess the other linears
+  - have to use anp2int.awk to generate intder coordinates from an anpass file
+  - also have to make sure anpass has the same number of variables as intder
+    - ie degenerate x and y bends are treated as one in anpass the old way
+      - and then duplicated in the final intder file manually
+    - manual intervention required for now
 
 * DONE Problem with sequoia freq associated with reading zmat from log file
   - it was reading the CCSD(t)-F12b energy line before the optimization finished

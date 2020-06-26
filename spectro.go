@@ -330,6 +330,7 @@ func EqnSeparate(line string) (lhs []int, rhs int) {
 
 // FreqReport gathers harmonic, anharmonic, and resonance-corrected
 // frequencies from a spectro  output file for reporting
+// TODO move to package summarize
 func (s *Spectro) FreqReport(filename string) (zpt float64,
 	harm, fund, corr []float64,
 	rotABC [][]float64,
