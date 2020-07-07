@@ -1,3 +1,21 @@
+* TODO convert build, submit, poll separate loops into concurrent build/submit, poll functions
+  - build is fine on its own for small sets, but building larger jobs and numbers of jobs could be bad
+  - some work on this already but maybe trying to do too much at once
+  - just focus on replicating current functionality with channels between concurrent routines
+
+* TODO modularize and slot in go-cart as an option
+  - Optimization is a step for SIC but assumed already done in go-cart
+    - this doesnt have to be true, the geometry for go-cart has to be optimized at some point
+    - add switch for optimizing with go-cart, for now assume no opt for it
+  - Require molpro.in for go-cart as well instead of embedded template
+    
+* TODO make submit return job number for qstat checking
+* TODO use qstat checking before resubmit
+* TODO default input parameters 
+  - probably before ParseInfile and then overwrite with what's present there
+* TODO WhichCluster should probably be part of parseinfile
+  - defaults should probably be part of that as well actually
+
 * Summarize could probably be a separate package
   - probably the most useful to separate out into its own executable
   - flag for bzs vs bza - linear or not

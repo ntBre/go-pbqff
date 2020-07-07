@@ -124,10 +124,9 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, write bool) (
 				mp.Geometry = fmt.Sprint(buf.String(), "}\n")
 				basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
 				fname := basename + ".inp"
-				pname := basename + ".pbs"
 				if write {
 					mp.WriteInput(fname, none)
-					WritePBS(pname, &Job{path.Base(fname), fname, 35})
+					AddCommand(fname)
 				}
 				jobs = append(jobs, Calc{basename, geom})
 				geom++
@@ -136,6 +135,11 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, write bool) (
 			fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
 			i++
 		}
+	}
+	if write {
+		// TODO maple specific for now
+		pbs = ptsMaple
+		WritePBS("main.pbs", &Job{"pts", "", 35})
 	}
 	return
 }

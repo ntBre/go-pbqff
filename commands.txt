@@ -1,0 +1,3 @@
+molpro -t 1  testfiles/inp/NHHH.00000.inp
+molpro -t 1  testfiles/inp/NHHH.00001.inp
+molpro -t 1  testfiles/inp/NHHH.00002.inp

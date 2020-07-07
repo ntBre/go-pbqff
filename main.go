@@ -20,13 +20,28 @@ import (
 	"runtime/pprof"
 	"sort"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
 
+// Points is a wrapper for a []Calc with an embedded sync.Mutex
+type Points struct {
+	Calcs []Calc
+	sync.Mutex
+}
+
+// Globals for queue
+var (
+	points   Points
+)
+
 const (
-	resBound = 1e-16
-	help     = `Requirements:
+	// these should  be in the input
+	jobLimit  = 50
+	chunkSize = 25
+	resBound  = 1e-16
+	help      = `Requirements:
 - intder, anpass, and spectro executables
 - template intder.in, anpass.in, spectro.in, and molpro.in files
   - intder.in should be a pts intder input and have the old geometry to serve as template
@@ -249,31 +264,9 @@ func UpdateZmat(old, new string) string {
 	return updated + "\n" + new
 }
 
-func main() {
-	// parse flags for overwrite before mkdirs
-	Args := ParseFlags()
-	if len(Args) < 1 {
-		log.Fatal("pbqff: no input file supplied")
-	}
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			log.Fatal("could not create CPU profile: ", err)
-		}
-		defer f.Close() // error handling omitted for example
-		if err := pprof.StartCPUProfile(f); err != nil {
-			log.Fatal("could not start CPU profile: ", err)
-		}
-		defer pprof.StopCPUProfile()
-	}
-	// only make directories if starting with opt, otherwise assume
-	// they are made and we are resuming
-	if DoOpt() {
-		MakeDirs(".")
-	}
-	// might want a LoadDefaults function or something
-	// and then overwrite parts with ParseInfile
-	ParseInfile(Args[0])
+// WhichCluster sets the PBS template and energyLine depending on the
+// which computer is to be used
+func WhichCluster() {
 	sequoia := regexp.MustCompile(`(?i)sequoia`)
 	maple := regexp.MustCompile(`(?i)maple`)
 	q := Input[QueueType]
@@ -284,102 +277,74 @@ func main() {
 		energyLine = "PBQFF(2)"
 		energySpace = 2
 		pbs = pbsSequoia
+	default:
+		panic("no queue selected")
 	}
-	prog := LoadMolpro("molpro.in")
-	prog.Geometry = FormatZmat(Input[Geometry])
-	if DoOpt() {
-		// write opt.inp and mp.pbs
-		prog.WriteInput("opt/opt.inp", opt)
-		WritePBS("opt/mp.pbs",
-			&Job{MakeName(Input[Geometry]) + "/opt", "opt/opt.inp", 35})
-		// submit opt, wait for it to finish in main goroutine - block
-		// TODO make submit return job number for qstat checking
-		// TODO use qstat checking before resubmit
-		Submit("opt/mp.pbs")
-		outfile := "opt/opt.out"
-		_, err := prog.ReadOut(outfile)
-		for err != nil {
-			HandleSignal(35, time.Minute)
-			_, err = prog.ReadOut(outfile)
-			if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
-				err == ErrFileContainsError || err == ErrBlankOutput) ||
-				err == ErrFileNotFound {
+}
 
-				fmt.Fprintln(os.Stderr, "resubmitting for", err)
-				Submit("opt/mp.pbs")
-			}
+// Optimize runs a Molpro optimization in the opt directory
+func Optimize(prog *Molpro) {
+	// write opt.inp and mp.pbs
+	prog.WriteInput("opt/opt.inp", opt)
+	WritePBS("opt/mp.pbs",
+		&Job{MakeName(Input[Geometry]) + "-opt", "opt/opt.inp", 35})
+	// submit opt, wait for it to finish in main goroutine - block
+	Submit("opt/mp.pbs")
+	outfile := "opt/opt.out"
+	_, err := prog.ReadOut(outfile)
+	for err != nil {
+		HandleSignal(35, time.Minute)
+		_, err = prog.ReadOut(outfile)
+		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
+			err == ErrFileContainsError || err == ErrBlankOutput) ||
+			err == ErrFileNotFound {
+
+			fmt.Fprintln(os.Stderr, "resubmitting for", err)
+			Submit("opt/mp.pbs")
 		}
 	}
-	cart, zmat, err := prog.HandleOutput("opt/opt")
-	if err != nil {
-		// actually want to try to recover here probably
-		panic(err)
-	}
-	prog.Geometry = UpdateZmat(prog.Geometry, zmat)
-	var (
-		mpHarm   []float64
-		finished bool
-	)
-	if DoOpt() {
-		// write freq.inp and that mp.pbs
-		prog.WriteInput("freq/freq.inp", freq)
-		WritePBS("freq/mp.pbs",
-			&Job{MakeName(Input[Geometry]) + "/freq", "freq/freq.inp", 35})
-		// submit freq, wait in separate goroutine
-		// doesn't matter if this finishes
-		Submit("freq/mp.pbs")
-		outfile := "freq/freq.out"
-		go func() {
-			_, err = prog.ReadOut(outfile)
-			for err != nil {
-				HandleSignal(35, time.Minute)
-				_, err = prog.ReadOut(outfile)
-				// dont resubmit freq
-				if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
-					err == ErrFileContainsError {
-					fmt.Fprintln(os.Stderr, "error in freq, aborting that calculation")
-					return
-				}
-			}
-			mpHarm = prog.ReadFreqs(outfile)
-			finished = true
-		}()
-	}
-	// set up pts using opt.log geometry and given intder.in file
-	intder := LoadIntder("intder.in")
-	atomNames := intder.ConvertCart(cart)
-	var points []Calc
-	if DoPts() {
-		intder.WritePts("pts/intder.in")
-		// run intder
-		RunIntder("pts/intder")
-		// build points and the list of pts to submit
-		points = prog.BuildPoints("pts/file07", atomNames, true)
-		// need to limit this to 220 on sequoia
-		// must have communicating goroutines between submit
-		// and readOut since we can't submit until some of the running ones finish
-		// submit points, wait for them to finish
-		for _, job := range points {
-			Submit(job.Name + ".pbs")
+}
+
+// Frequency runs a Molpro harmonic frequency calculation in the freq
+// directory
+func Frequency(prog *Molpro) ([]float64, bool) {
+	// write freq.inp and that mp.pbs
+	prog.WriteInput("freq/freq.inp", freq)
+	WritePBS("freq/mp.pbs",
+		&Job{MakeName(Input[Geometry]) + "-freq", "freq/freq.inp", 35})
+	// submit freq, wait in separate goroutine
+	// doesn't matter if this finishes
+	Submit("freq/mp.pbs")
+	outfile := "freq/freq.out"
+	_, err := prog.ReadOut(outfile)
+	for err != nil {
+		HandleSignal(35, time.Minute)
+		_, err = prog.ReadOut(outfile)
+		// dont resubmit freq
+		if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
+			err == ErrFileContainsError {
+			fmt.Fprintln(os.Stderr, "error in freq, aborting that calculation")
+			return nil, false
 		}
-	} else {
-		points = prog.BuildPoints("pts/file07", atomNames, false)
 	}
-	// - check for failed jobs, probably just loop at some interval
-	//   doesnt need to be fast (and resource intensive) like gocart
-	ptsInit := len(points)
-	energies := make([]float64, ptsInit)
-	var min float64
-	nJobs := ptsInit
+	return prog.ReadFreqs(outfile), true
+}
+
+// Drain drains the queue of jobs and receives on ch when ready for more
+func Drain(prog *Molpro) (min float64, energies []float64) {
+	nJobs := len(points.Calcs)
+	energies = make([]float64, nJobs, nJobs)
 	for nJobs > 0 {
 		shortenBy := 0
 		for i := 0; i < nJobs; i++ {
-			job := points[i]
+			job := points.Calcs[i]
 			energy, err := prog.ReadOut(job.Name + ".out")
 			if err == nil {
-				points[nJobs-1], points[i] = points[i], points[nJobs-1]
+				points.Lock()
+				points.Calcs[nJobs-1], points.Calcs[i] = points.Calcs[i], points.Calcs[nJobs-1]
 				nJobs--
-				points = points[:nJobs]
+				points.Calcs = points.Calcs[:nJobs]
+				points.Unlock()
 				if energy < min {
 					min = energy
 				}
@@ -412,7 +377,93 @@ func main() {
 				"only shortened by %d out of %d remaining, sleeping\n", shortenBy, nJobs)
 			time.Sleep(time.Second)
 		}
+		nJobs = len(points.Calcs)
+		fmt.Fprintf(os.Stderr, "nJobs: %d\n", nJobs)
 	}
+	return
+}
+
+func main() {
+	// parse flags for overwrite before mkdirs
+	Args := ParseFlags()
+	if len(Args) < 1 {
+		log.Fatal("pbqff: no input file supplied")
+	}
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		defer f.Close() // error handling omitted for example
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+	// only make directories if starting with opt, otherwise assume
+	// they are made and we are resuming
+	if DoOpt() {
+		MakeDirs(".")
+	}
+	ParseInfile(Args[0])
+	WhichCluster()
+	prog := LoadMolpro("molpro.in")
+	// if go-cart and !DoOpt(), geometry will be in cartesians so no FormatZmat
+	// can use GeomType Input key
+	prog.Geometry = FormatZmat(Input[Geometry])
+	if DoOpt() {
+		Optimize(prog)
+	}
+	// if go-cart and !DoOpt(), need to skip this and get my geometries elsewhere
+	cart, zmat, err := prog.HandleOutput("opt/opt")
+	if err != nil {
+		// actually want to try to recover here probably
+		// need to assess the error cases possible to do so
+		panic(err)
+	}
+	// only need this if running a freq
+	prog.Geometry = UpdateZmat(prog.Geometry, zmat)
+	var (
+		mpHarm   []float64
+		finished bool
+	)
+	if DoOpt() {
+		// run the frequency in the background
+		go func() {
+			mpHarm, finished = Frequency(prog)
+		}()
+	}
+	// only need to do this if !go-cart
+	// this is the big fork between the two, either dopts the SIC way or the go-cart way
+	// use the same infrastructure for both though
+	// set up pts using opt.log geometry and given intder.in file
+	intder := LoadIntder("intder.in")
+	atomNames := intder.ConvertCart(cart)
+	// submit needs to also add jobs to a global array shared by this and Drain
+	if DoPts() {
+		intder.WritePts("pts/intder.in")
+		// run intder
+		RunIntder("pts/intder")
+		// build points and the list of pts to submit
+		points.Calcs = prog.BuildPoints("pts/file07", atomNames, true)
+		// need to limit this to 220 on sequoia
+		// must have communicating goroutines between submit
+		// and readOut since we can't submit until some of the running ones finish
+		// submit points, wait for them to finish
+		Submit("main.pbs")
+		// this works if no points were deleted, else need a resume from checkpoint thing
+	} else {
+		points.Calcs = prog.BuildPoints("pts/file07", atomNames, false)
+	}
+	// TODO BIG - this is where to separate the submit and shorten goroutines
+	//          - see note above and also ben pharr email
+	var (
+		energies []float64
+		min      float64
+	)
+	min, energies = Drain(prog)
+	// - check for failed jobs, probably just loop at some interval
+	//   doesnt need to be fast (and resource intensive) like gocart
 
 	// convert to relative energies
 	for i := range energies {
@@ -422,6 +473,10 @@ func main() {
 	// TODO make test case out of this
 	// PROBLEM WITH NUMERICAL DISPS - 14 extra points in anpass not in intder
 	// why the extra dummy atom in freqs intder too?  r2666=mason/hco+/freqs
+	// this has been somewhat resolved, linear triatomics we take double
+	// shortcut, only consider one of the bending modes and then only
+	// calculate half of its points typically so either generate a full
+	// intder file without the shortcuts or have to do these manual additions later
 	anpass := LoadAnpass("anpass.in")
 	anpass.WriteAnpass("freqs/anpass1.in", energies)
 	// run anpass1.in

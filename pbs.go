@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"text/template"
 	"time"
+	"fmt"
 )
 
 // Job holds the information for a pbs job
@@ -13,6 +14,34 @@ type Job struct {
 	Filename string
 	Signal   int
 }
+const mapleCmd = `molpro -t 1 `
+
+const ptsMaple = `#!/bin/sh
+#PBS -N {{.Name}}
+#PBS -S /bin/bash
+#PBS -j oe
+#PBS -o pbs.out
+#PBS -W umask=022
+#PBS -l walltime=5000:00:00
+#PBS -l ncpus=8
+#PBS -l mem=64gb
+
+module load intel
+module load mvapich2
+module load pbspro
+export PATH=/usr/local/apps/molpro/2015.1.35/bin:$PATH
+
+export WORKDIR=$PBS_O_WORKDIR
+export TMPDIR=/tmp/$USER/$PBS_JOBID
+cd $WORKDIR
+mkdir -p $TMPDIR
+
+date
+parallel -j 8 < commands.txt
+date
+
+rm -rf $TMPDIR
+`
 
 const pbsMaple = `#!/bin/sh
 #PBS -N {{.Name}}
@@ -39,7 +68,8 @@ molpro -t 1 {{.Filename}}
 date
 
 rm -rf $TMPDIR
-ssh -t maple pkill -{{.Signal}} pbqff`
+ssh -t maple pkill -{{.Signal}} pbqff
+`
 
 const pbsSequoia = `#!/bin/sh
 #PBS -N {{.Name}}
@@ -67,6 +97,14 @@ date
 rm -rf $TMPDIR
 ssh -t sequoia pkill -{{.Signal}} pbqff
 `
+
+func AddCommand(filename string) {
+	f, err := os.OpenFile("commands.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
+	if err != nil {
+		panic("Cannot open commands file")
+	}
+	fmt.Fprintf(f, "%s %s\n", mapleCmd, filename)
+}
 
 // WritePBS writes a pbs infile based on the queue type and
 // the templates above, with job information from job
