@@ -203,6 +203,7 @@ func LoadIntder(filename string) *Intder {
 		fmt.Fprintln(&buf, line)
 	}
 	i.Tail = buf.String()
+	i.Geometry = geom[:len(geom)-1]
 	i.Pattern, i.Dummies = Pattern(geom, ndummy)
 	return &i
 }

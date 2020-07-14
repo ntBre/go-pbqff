@@ -3,6 +3,7 @@ package main
 import (
 	"math"
 	"reflect"
+	"regexp"
 	"testing"
 )
 
@@ -128,17 +129,29 @@ func TestReadOut(t *testing.T) {
 
 	t.Run("sequoia success", func(t *testing.T) {
 		e := energyLine
-		s := energySpace
-		energyLine = "PBQFF(2)"
-		energySpace = 2
+		energyLine = regexp.MustCompile(`PBQFF\(2\)`)
 		defer func() {
 			energyLine = e
-			energySpace = s
 		}()
 		got, err := mp.ReadOut("testfiles/seq.out")
 		want := -634.43134170
 		if got != want {
-			t.Errorf("got %v, wanted %v\n", got, want)
+			t.Errorf("got %v and %v, wanted %v\n", got, err, want)
+		} else if err != nil {
+			t.Error("got an error, didn't want one")
+		}
+	})
+
+	t.Run("cccr success", func(t *testing.T) {
+		e := energyLine
+		energyLine = regexp.MustCompile(`^\s*CCCRE\s+=`)
+		defer func() {
+			energyLine = e
+		}()
+		got, err := mp.ReadOut("testfiles/cccr.out")
+		want := -56.591603910177
+		if got != want {
+			t.Errorf("got %v and %v, wanted %v\n", got, err, want)
 		} else if err != nil {
 			t.Error("got an error, didn't want one")
 		}

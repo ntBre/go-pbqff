@@ -96,6 +96,7 @@ func FormatZmat(geom string) string {
 // ReadOut reads a molpro output file and returns the resulting energy
 // and an error describing the status of the output
 func (m Molpro) ReadOut(filename string) (result float64, err error) {
+	fmt.Println(energyLine)
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	if _, err = os.Stat(filename); os.IsNotExist(err) {
@@ -120,19 +121,20 @@ func (m Molpro) ReadOut(filename string) (result float64, err error) {
 		if error.MatchString(line) {
 			return result, ErrFileContainsError
 		}
-		if strings.Contains(line, energyLine) &&
+		fmt.Println(line)
+		if energyLine.MatchString(line) &&
 			!strings.Contains(line, "gthresh") &&
 			!strings.Contains(line, "hf") {
 			split := strings.Fields(line)
 			for i := range split {
-				if strings.Contains(split[i], energyLine) {
+				if strings.Contains(split[i], "=") {
 					// take the thing right after search term
 					// not the last entry in the line
-					if i+energySpace < len(split) {
+					if i+1 < len(split) {
 						// assume we found energy so no error
 						// from default EnergyNotFound
 						err = nil
-						result, err = strconv.ParseFloat(split[i+energySpace], 64)
+						result, err = strconv.ParseFloat(split[i+1], 64)
 						if err != nil {
 							result = math.NaN()
 						}

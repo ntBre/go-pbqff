@@ -23,6 +23,10 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"path/filepath"
+
+	"github.com/ntBre/chemutils/summarize"
 )
 
 // Points is a wrapper for a []Calc with an embedded sync.Mutex
@@ -33,13 +37,13 @@ type Points struct {
 
 // Globals for queue
 var (
-	points   Points
+	points Points
 )
 
 const (
 	// these should  be in the input
 	jobLimit  = 50
-	chunkSize = 25
+	chunkSize = 50
 	resBound  = 1e-16
 	help      = `Requirements:
 - intder, anpass, and spectro executables
@@ -74,6 +78,7 @@ var (
 	overwrite  = flag.Bool("o", false, "overwrite existing inp directory")
 	pts        = flag.Bool("pts", false, "start by running pts on optimized geometry from opt")
 	freqs      = flag.Bool("freqs", false, "start from running anpass on the pts output")
+	irdy       = flag.String("irdy", "", "intder file is ready to be used in pts; specify the atom order")
 	flags      int
 )
 
@@ -82,8 +87,7 @@ var (
 	Input            [NumKeys]string
 	dirs             = []string{"opt", "freq", "pts", "freqs", "pts/inp"}
 	brokenFloat      = math.NaN()
-	energyLine       = "energy=" // default search patterns, altered for sequoia in pbs.go
-	energySpace      = 1
+	energyLine       = regexp.MustCompile(`energy=`) // default search patterns, altered for sequoia in pbs.go
 	molproTerminated = "Molpro calculation terminated"
 	defaultOpt       = "optg,grms=1.d-8,srms=1.d-8"
 	pbs              string
@@ -274,8 +278,7 @@ func WhichCluster() {
 	case q == "", maple.MatchString(q):
 		pbs = pbsMaple
 	case sequoia.MatchString(q):
-		energyLine = "PBQFF(2)"
-		energySpace = 2
+		energyLine = regexp.MustCompile(`PBQFF\(2\)`)
 		pbs = pbsSequoia
 	default:
 		panic("no queue selected")
@@ -351,7 +354,8 @@ func Drain(prog *Molpro) (min float64, energies []float64) {
 				energies[job.Index] = energy
 				shortenBy++
 			} else if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
-				err == ErrFileContainsError {
+				err == ErrFileContainsError || err == ErrBlankOutput {
+				// TODO reremove blankoutput for sequoia
 				// Removing this one too now since problem on Sequoia
 				// same problem as below, solved by queue
 				// || err == ErrBlankOutput { // ||
@@ -367,6 +371,9 @@ func Drain(prog *Molpro) (min float64, energies []float64) {
 					"resubmitting %s for %s, with %d jobs remaining\n", job.Name, err, nJobs)
 				// delete output file to prevent rereading the same one
 				os.Remove(job.Name + ".out")
+				// if we have to resubmit, need individual submission from pbsMaple
+				pbs = pbsMaple
+				WritePBS(job.Name+".pbs", &Job{"redo", job.Name + ".inp", 35})
 				Submit(job.Name + ".pbs")
 			}
 		}
@@ -407,38 +414,44 @@ func main() {
 	}
 	ParseInfile(Args[0])
 	WhichCluster()
-	prog := LoadMolpro("molpro.in")
-	// if go-cart and !DoOpt(), geometry will be in cartesians so no FormatZmat
-	// can use GeomType Input key
-	prog.Geometry = FormatZmat(Input[Geometry])
-	if DoOpt() {
-		Optimize(prog)
-	}
-	// if go-cart and !DoOpt(), need to skip this and get my geometries elsewhere
-	cart, zmat, err := prog.HandleOutput("opt/opt")
-	if err != nil {
-		// actually want to try to recover here probably
-		// need to assess the error cases possible to do so
-		panic(err)
-	}
-	// only need this if running a freq
-	prog.Geometry = UpdateZmat(prog.Geometry, zmat)
 	var (
 		mpHarm   []float64
 		finished bool
+		cart     string
+		zmat     string
+		err      error
 	)
+	prog := LoadMolpro("molpro.in")
 	if DoOpt() {
+		prog.Geometry = FormatZmat(Input[Geometry])
+		Optimize(prog)
+		cart, zmat, err = prog.HandleOutput("opt/opt")
+		if err != nil {
+			// actually want to try to recover here probably
+			// need to assess the error cases possible to do so
+			panic(err)
+		}
+		// only need this if running a freq
+		prog.Geometry = UpdateZmat(prog.Geometry, zmat)
 		// run the frequency in the background
 		go func() {
 			mpHarm, finished = Frequency(prog)
 		}()
+		// if go-cart and !DoOpt(), geometry will be in cartesians so no FormatZmat
+		// can use GeomType Input key
+	} else {
+		cart = Input[Geometry]
 	}
-	// only need to do this if !go-cart
-	// this is the big fork between the two, either dopts the SIC way or the go-cart way
+	// this is the big fork between the two, either adopts the SIC way or the go-cart way
 	// use the same infrastructure for both though
 	// set up pts using opt.log geometry and given intder.in file
 	intder := LoadIntder("intder.in")
-	atomNames := intder.ConvertCart(cart)
+	var atomNames []string
+	if *irdy == "" {
+		atomNames = intder.ConvertCart(cart)
+	} else {
+		atomNames = strings.Fields(*irdy)
+	}
 	// submit needs to also add jobs to a global array shared by this and Drain
 	if DoPts() {
 		intder.WritePts("pts/intder.in")
@@ -450,7 +463,13 @@ func main() {
 		// must have communicating goroutines between submit
 		// and readOut since we can't submit until some of the running ones finish
 		// submit points, wait for them to finish
-		Submit("main.pbs")
+		subfiles, err := filepath.Glob("pts/inp/main*.pbs")
+		if err != nil {
+			panic(err)
+		}
+		for _, file := range subfiles {
+			Submit(file)
+		}
 		// this works if no points were deleted, else need a resume from checkpoint thing
 	} else {
 		points.Calcs = prog.BuildPoints("pts/file07", atomNames, false)
@@ -461,6 +480,9 @@ func main() {
 		energies []float64
 		min      float64
 	)
+	if Input[Program] == "cccr" {
+		energyLine = regexp.MustCompile(`^\s*CCCRE\s+=`)
+	}
 	min, energies = Drain(prog)
 	// - check for failed jobs, probably just loop at some interval
 	//   doesnt need to be fast (and resource intensive) like gocart
@@ -518,7 +540,7 @@ func main() {
 	// run spectro
 	RunSpectro("freqs/spectro2")
 	// extract output
-	zpt, spHarm, spFund, spCorr, _, _, _ := spectro.FreqReport("freqs/spectro2.out")
+	zpt, spHarm, spFund, spCorr, _, _, _ := summarize.Spectro("freqs/spectro2.out", spectro.Nfreqs)
 	if !finished {
 		mpHarm = make([]float64, spectro.Nfreqs)
 	}

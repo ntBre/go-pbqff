@@ -1,11 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"text/template"
 	"time"
-	"fmt"
 )
 
 // Job holds the information for a pbs job
@@ -14,13 +14,14 @@ type Job struct {
 	Filename string
 	Signal   int
 }
+
 const mapleCmd = `molpro -t 1 `
 
 const ptsMaple = `#!/bin/sh
 #PBS -N {{.Name}}
 #PBS -S /bin/bash
 #PBS -j oe
-#PBS -o pbs.out
+#PBS -o {{.Filename}}.out
 #PBS -W umask=022
 #PBS -l walltime=5000:00:00
 #PBS -l ncpus=8
@@ -37,7 +38,7 @@ cd $WORKDIR
 mkdir -p $TMPDIR
 
 date
-parallel -j 8 < commands.txt
+parallel -j 8 < {{.Filename}}
 date
 
 rm -rf $TMPDIR
@@ -98,12 +99,12 @@ rm -rf $TMPDIR
 ssh -t sequoia pkill -{{.Signal}} pbqff
 `
 
-func AddCommand(filename string) {
-	f, err := os.OpenFile("commands.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
+func AddCommand(cmdfile, infile string) {
+	f, err := os.OpenFile(cmdfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
 	if err != nil {
 		panic("Cannot open commands file")
 	}
-	fmt.Fprintf(f, "%s %s\n", mapleCmd, filename)
+	fmt.Fprintf(f, "%s %s\n", mapleCmd, infile)
 }
 
 // WritePBS writes a pbs infile based on the queue type and

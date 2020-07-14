@@ -99,13 +99,30 @@ func TestGetNames(t *testing.T) {
 }
 
 func TestLoadAnpass(t *testing.T) {
-	got := LoadAnpass("testfiles/anpass.small")
-	want := Anpass{Fmt1: "%12.8f", Fmt2: "%20.12f"}
-	if got.Fmt1 != want.Fmt1 {
-		t.Errorf("got %#v, wanted %#v\n", got.Fmt1, want.Fmt1)
+	tests := []struct {
+		file string
+		fmt1 string
+		fmt2 string
+	}{
+		{
+			file: "testfiles/anpass.small",
+			fmt1: "%12.8f",
+			fmt2: "%20.12f",
+		},
+		{
+			file: "testfiles/anpass.prob",
+			fmt1: "%12.8f",
+			fmt2: "%20.12f",
+		},
 	}
-	if got.Fmt2 != want.Fmt2 {
-		t.Errorf("got %#v, wanted %#v\n", got.Fmt2, want.Fmt2)
+	for _, test := range tests {
+		got := LoadAnpass(test.file)
+		if got.Fmt1 != test.fmt1 {
+			t.Errorf("got %#v, wanted %#v\n", got.Fmt1, test.fmt1)
+		}
+		if got.Fmt2 != test.fmt2 {
+			t.Errorf("got %#v, wanted %#v\n", got.Fmt2, test.fmt2)
+		}
 	}
 }
 

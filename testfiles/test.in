@@ -14,6 +14,6 @@ OX = 1.1 Ang
 XXO = 80.0 Deg
 }
 # comment followed by blank line
-intder=/home/brent/Projects/go/src/github.com/ntBre/pbqff/intder
+intder=/home/brent/Packages/intder/intder
 anpass=
 spectro=

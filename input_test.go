@@ -20,7 +20,7 @@ AlX = 0.85 Ang
 OX = 1.1 Ang
 XXO = 80.0 Deg`,
 		GeomType:   "zmat",
-		IntderCmd:  "/home/brent/Projects/go/src/github.com/ntBre/pbqff/intder",
+		IntderCmd:  "/home/brent/Packages/intder/intder",
 		AnpassCmd:  "",
 		SpectroCmd: "",
 	}

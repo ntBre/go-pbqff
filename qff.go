@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -108,10 +109,15 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, write bool) (
 	lines := ReadFile(filename)
 	l := len(atomNames)
 	i := 0
-	var buf bytes.Buffer
+	var (
+		buf     bytes.Buffer
+		cmdfile string
+	)
 	dir := path.Dir(filename)
 	name := strings.Join(atomNames, "")
 	geom := 0
+	count := 0
+	pf := 0
 	mp.AugmentHead()
 	for li, line := range lines {
 		if !strings.Contains(line, "#") {
@@ -125,8 +131,15 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, write bool) (
 				basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
 				fname := basename + ".inp"
 				if write {
+					// write the molpro input file and add it to the list of commands
 					mp.WriteInput(fname, none)
-					AddCommand(fname)
+					if count == chunkSize {
+						count = 0
+						pf++
+					}
+					cmdfile = fmt.Sprintf("%s/inp/commands%d.txt", dir, pf)
+					AddCommand(cmdfile, fname)
+					count++
 				}
 				jobs = append(jobs, Calc{basename, geom})
 				geom++
@@ -139,7 +152,13 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, write bool) (
 	if write {
 		// TODO maple specific for now
 		pbs = ptsMaple
-		WritePBS("main.pbs", &Job{"pts", "", 35})
+		subfiles, err := filepath.Glob(dir + "/inp/commands*.txt")
+		if err != nil {
+			panic(err)
+		}
+		for i, file := range subfiles {
+			WritePBS(fmt.Sprintf("%s/inp/main%d.pbs", dir, i), &Job{"pts", file, 35})
+		}
 	}
 	return
 }
