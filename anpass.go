@@ -55,7 +55,7 @@ func (a *Anpass) WriteAnpass2(filename, longLine string, energies []float64) {
 	ioutil.WriteFile(filename, []byte(buf.String()), 0755)
 }
 
-func LoadAnpass(filename string) *Anpass {
+func LoadAnpass(filename string) (*Anpass, error) {
 	file, _ := ioutil.ReadFile(filename)
 	lines := strings.Split(string(file), "\n")
 	var (
@@ -97,7 +97,7 @@ func LoadAnpass(filename string) *Anpass {
 		}
 		buf.WriteString(line + "\n")
 	}
-	return &a
+	return &a, nil
 }
 
 // Scan an anpass output file and return the "long line"

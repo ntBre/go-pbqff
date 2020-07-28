@@ -163,10 +163,10 @@ func Pattern(geom string, ndummy int) ([][]int, []Dummy) {
 
 // LoadIntder loads an intder input file with the geometry lines
 // stripped out
-func LoadIntder(filename string) *Intder {
+func LoadIntder(filename string) (*Intder, error) {
 	f, err := os.Open(filename)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
@@ -205,7 +205,7 @@ func LoadIntder(filename string) *Intder {
 	i.Tail = buf.String()
 	i.Geometry = geom[:len(geom)-1]
 	i.Pattern, i.Dummies = Pattern(geom, ndummy)
-	return &i
+	return &i, nil
 }
 
 // ConvertCart takes a cartesian geometry as a single string

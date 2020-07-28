@@ -116,7 +116,7 @@ func TestLoadAnpass(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		got := LoadAnpass(test.file)
+		got, _ := LoadAnpass(test.file)
 		if got.Fmt1 != test.fmt1 {
 			t.Errorf("got %#v, wanted %#v\n", got.Fmt1, test.fmt1)
 		}
@@ -127,7 +127,7 @@ func TestLoadAnpass(t *testing.T) {
 }
 
 func TestWriteAnpass(t *testing.T) {
-	a := LoadAnpass("testfiles/anpass.small")
+	a, _ := LoadAnpass("testfiles/anpass.small")
 	a.WriteAnpass("testfiles/anpass.test", []float64{0, 0, 0, 0, 0, 0})
 }
 
@@ -140,7 +140,7 @@ func TestGetLongLine(t *testing.T) {
 }
 
 func TestWriteAnpass2(t *testing.T) {
-	a := LoadAnpass("testfiles/anpass.small")
+	a, _ := LoadAnpass("testfiles/anpass.small")
 	ll, _ := GetLongLine("testfiles/anpass1.out")
 	a.WriteAnpass2("testfiles/anpass2.test", ll, []float64{0, 0, 0, 0, 0, 0})
 }
@@ -169,7 +169,7 @@ func TestSummarize(t *testing.T) {
 
 func TestUpdateZmat(t *testing.T) {
 	t.Run("maple", func(t *testing.T) {
-		prog := LoadMolpro("testfiles/opt.inp")
+		prog, _ := LoadMolpro("testfiles/opt.inp")
 		_, zmat, _ := prog.HandleOutput("testfiles/nowarn")
 		got := UpdateZmat(FormatZmat(Input[Geometry]), zmat)
 		want := `X
@@ -188,7 +188,7 @@ D1=                119.99647304 DEGREE
 		}
 	})
 	t.Run("sequoia", func(t *testing.T) {
-		prog := LoadMolpro("testfiles/opt.inp")
+		prog, _ := LoadMolpro("testfiles/opt.inp")
 		_, zmat, _ := prog.HandleOutput("testfiles/seq")
 		start := `X
 X 1 1.0

@@ -8,7 +8,7 @@ import (
 )
 
 func TestLoadMolpro(t *testing.T) {
-	got := LoadMolpro("testfiles/molpro.in")
+	got, _ := LoadMolpro("testfiles/molpro.in")
 	want := &Molpro{
 		Head: `memory,995,m   ! 30GB 12procs
 
@@ -55,7 +55,7 @@ XXO = 80.0 Deg`
 }
 
 func TestWriteInputMolpro(t *testing.T) {
-	mp := LoadMolpro("testfiles/molpro.in")
+	mp, _ := LoadMolpro("testfiles/molpro.in")
 	mp.Geometry = FormatZmat(Input[Geometry])
 	mp.WriteInput("testfiles/opt/opt.inp", opt)
 }
@@ -181,7 +181,7 @@ func TestHandleOutput(t *testing.T) {
 	// There was a problem on Sequoia where the new zmat params
 	// were inexplicably not in the frequency calculation
 	t.Run("Sequoia", func(t *testing.T) {
-		p := LoadMolpro("testfiles/molpro.in")
+		p, _ := LoadMolpro("testfiles/molpro.in")
 		p.Geometry = FormatZmat(Input[Geometry])
 		_, zmat, _ := p.HandleOutput("testfiles/seq")
 		want := `ALX=                 1.20291856 ANG

@@ -1,7 +1,103 @@
+* Flow charts
+  
+** Optimize 
+   #+BEGIN_SRC dot :file figs/opt.pdf
+digraph {
+prog, infile, outfile, pbsFile [shape=polygon,sides=4,skew=.4]
+prog -> Optimize -> "prog.WriteInput" -> "WritePBS"
+{ rank = same; "prog.WriteInput"; infile }
+{ rank = same; "WritePBS"; pbsFile }
+{ rank = same; "prog.ReadOut"; outfile }
+infile -> "prog.WriteInput"
+pbsFile -> WritePBS
+WritePBS -> Submit
+pbsFile -> Submit
+outfile -> "prog.ReadOut"
+Submit -> "prog.ReadOut"
+a [shape = diamond, label = "err != nil"]
+"prog.ReadOut" -> a
+a -> return [label = "T"]
+a -> "prog.ReadOut" [label = "F", tailport = "e", headport = "e"]
+}
+   #+END_SRC
+
+   #+RESULTS:
+   [[file:figs/opt.pdf]]
+
+** Initialize
+   #+BEGIN_SRC dot :file figs/init.pdf
+      digraph {
+ParseFlags -> ParseInfile -> WhichCluster
+     }
+   #+END_SRC
+
+   #+RESULTS:
+   [[file:figs/init.pdf]]
+   
+** Main
+   #+BEGIN_SRC dot :file figs/main.pdf
+  digraph {
+  DoOpt, irdy [shape=diamond]
+  ParseFlags -> ParseInfile
+  ParseInfile -> WhichCluster
+  WhichCluster -> LoadMolpro
+  LoadMolpro -> DoOpt
+  setup [label = "MakeDirs\nFormatZmat\nOptimize\nHandleOutput\nUpdateZmat\nFrequency"]
+  DoOpt -> setup [label = "Yes"]
+  geom [label = "Input[Geometry]"]
+  DoOpt -> geom [label = "No"]
+  setup -> LoadIntder
+  geom -> LoadIntder
+  LoadIntder -> irdy
+  irdy -> ConvertCart [label = Yes]
+  irdy -> "Fields(irdy)" [label = No]
+  }
+   #+END_SRC
+
+   #+RESULTS:
+   [[file:main.pdf]]
+   
+* 7/28 fast results
+  +---------+---------+---------+---------+---------+
+  | Mp Harm | Id Harm | Sp Harm | Sp Fund | Sp Corr |
+  +---------+---------+---------+---------+---------+
+  |     0.0 |   945.8 |   945.8 |   933.8 |   933.8 |
+  |     0.0 |   868.4 |   868.4 |   855.2 |   855.2 |
+  |     0.0 |   766.3 |   766.3 |   754.0 |   754.0 |
+  |     0.0 |   627.6 |   627.6 |   616.7 |   616.7 |
+  |     0.0 |   608.3 |   608.3 |   604.0 |   603.7 |
+  |     0.0 |   345.7 |   345.7 |   344.5 |   344.5 |
+  +---------+---------+---------+---------+---------+
+
+   
+* Notes
+  - May want to recover [[file:main.go::cart,%20zmat,%20err%20=%20prog.HandleOutput("opt/opt")][from HandleOutput error]]
+  - communicating goroutines between submit and readOut 
+    - can't submit until some of the running ones finish so check between them
+  - [[file:main.go::if%20err%20==%20ErrFileContainsError%20{][Error notes]]
+    - TODO reremove blankoutput for sequoia
+    - Removing this one too now since problem on Sequoia
+    - same problem as below, solved by queue
+    - || err == ErrBlankOutput { // ||
+    - must be a better way to do this -> check queue
+    - disable for now
+    - (err == ErrFileNotFound && len(points) < pointsInit/20) {
+    - write error found in case it can't be handled by resubmit
+    - then we need to kill it, manually for now
+
 * TODO convert build, submit, poll separate loops into concurrent build/submit, poll functions
   - build is fine on its own for small sets, but building larger jobs and numbers of jobs could be bad
   - some work on this already but maybe trying to do too much at once
   - just focus on replicating current functionality with channels between concurrent routines
+    
+* TODO handle numerical disps
+  -
+    // PROBLEM WITH NUMERICAL DISPS - 14 extra points in anpass not in intder
+    // why the extra dummy atom in freqs intder too?  r2666=mason/hco+/freqs
+    // this has been somewhat resolved, linear triatomics we take double
+    // shortcut, only consider one of the bending modes and then only
+    // calculate half of its points typically so either generate a full
+    // intder file without the shortcuts or have to do these manual additions later
 
 * TODO modularize and slot in go-cart as an option
   - Optimization is a step for SIC but assumed already done in go-cart
@@ -18,13 +114,13 @@
 
 * DONE how/when to handle num disps? 
 ** need to generate bottom of anpass.in after adding column to make work for hco/lin3atomics
-  - non-problem, saves time for linear triatomics, but these are fast anyway
-    - use freqs intder.in header for hco+ and I guess the other linears
-  - have to use anp2int.awk to generate intder coordinates from an anpass file
-  - also have to make sure anpass has the same number of variables as intder
-    - ie degenerate x and y bends are treated as one in anpass the old way
-      - and then duplicated in the final intder file manually
-    - manual intervention required for now
+   - non-problem, saves time for linear triatomics, but these are fast anyway
+     - use freqs intder.in header for hco+ and I guess the other linears
+   - have to use anp2int.awk to generate intder coordinates from an anpass file
+   - also have to make sure anpass has the same number of variables as intder
+     - ie degenerate x and y bends are treated as one in anpass the old way
+       - and then duplicated in the final intder file manually
+     - manual intervention required for now
 
 * DONE Problem with sequoia freq associated with reading zmat from log file
   - it was reading the CCSD(t)-F12b energy line before the optimization finished

@@ -35,10 +35,10 @@ type Spectro struct {
 }
 
 // LoadSpectro loads a spectro input file, assumes no resonances included
-func LoadSpectro(filename string, names []string, coords string) *Spectro {
+func LoadSpectro(filename string, names []string, coords string) (*Spectro, error) {
 	f, err := os.Open(filename)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
@@ -67,7 +67,7 @@ func LoadSpectro(filename string, names []string, coords string) *Spectro {
 	}
 	sp.Body = buf.String()
 	sp.FormatGeom(names, coords)
-	return &sp
+	return &sp, nil
 }
 
 // FormatGeom formats a slice of atom names and their corresponding

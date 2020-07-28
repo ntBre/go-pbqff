@@ -36,6 +36,7 @@ func TestPattern(t *testing.T) {
 			t.Errorf("got %v, wanted %v\n", got, want)
 		}
 	})
+
 	t.Run("second test", func(t *testing.T) {
 		got, _ := Pattern(text1, 0)
 		want := [][]int{
@@ -151,43 +152,54 @@ func TestApplyPattern(t *testing.T) {
 }
 
 func TestSecondLine(t *testing.T) {
-	i := LoadIntder("testfiles/intder.full")
+	i, _ := LoadIntder("testfiles/intder.full")
 	i.SecondLine()
 }
 
 func TestConvertCart(t *testing.T) {
-	t.Run("columns in the right order", func(t *testing.T) {
-		cart := `Al        -1.2426875991        0.0000000000        0.0000000000
+	tests := []struct {
+		msg        string
+		cart       string
+		intderFile string
+		want       []string
+	}{
+		{
+			msg: "Columns in right order",
+			cart: `Al        -1.2426875991        0.0000000000        0.0000000000
  Al         1.2426875991        0.0000000000        0.0000000000
  O          0.0000000000        1.3089084707        0.0000000000
  O          0.0000000000       -1.3089084707        0.0000000000
-`
-		i := LoadIntder("testfiles/intder.full")
-		got := i.ConvertCart(cart)
-		want := []string{"O", "Al", "Al", "O"}
+`,
+			intderFile: "testfiles/intder.full",
+			want:       []string{"O", "Al", "Al", "O"},
+		},
+		{
+			msg: "columns swapped order",
+			cart: `Al        -1.2426875991        0.0000000000        0.0000000000
+	 Al         1.2426875991        0.0000000000        0.0000000000
+	 O          0.0000000000        0.0000000000        1.3089084707
+	 O          0.0000000000        0.0000000000       -1.3089084707
+	`,
+			intderFile: "testfiles/intder.full",
+			want:       []string{"O", "Al", "Al", "O"},
+		},
+	}
+
+	for _, test := range tests {
+		i, _ := LoadIntder(test.intderFile)
+		got := i.ConvertCart(test.cart)
+		want := test.want
 		if !reflect.DeepEqual(got, want) {
-			t.Errorf("got %v, wanted %v\n", got, want)
+			t.Errorf("ConvertCart(%s): got %v, wanted %v\n", test.msg, got, want)
 		}
-	})
-	t.Run("columns swapped order", func(t *testing.T) {
-		cart := `Al        -1.2426875991        0.0000000000        0.0000000000
- Al         1.2426875991        0.0000000000        0.0000000000
- O          0.0000000000        0.0000000000        1.3089084707
- O          0.0000000000        0.0000000000       -1.3089084707
-`
-		i := LoadIntder("testfiles/intder.full")
-		got := i.ConvertCart(cart)
-		want := []string{"O", "Al", "Al", "O"}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("got %v, wanted %v\n", got, want)
-		}
-	})
+	}
+
 	t.Run("dummy atom in intder", func(t *testing.T) {
 		cart := `C       0.000000000    0.000000000   -1.079963204
-O       0.000000000    0.000000000    1.008829581
-H       0.000000000    0.000000000   -3.144264495
-`
-		i := LoadIntder("testfiles/lin.intder")
+	O       0.000000000    0.000000000    1.008829581
+	H       0.000000000    0.000000000   -3.144264495
+	`
+		i, _ := LoadIntder("testfiles/lin.intder")
 		got := i.ConvertCart(cart)
 		want := []string{"O", "C", "H"}
 		if !reflect.DeepEqual(got, want) {
@@ -202,7 +214,7 @@ H       0.000000000    0.000000000   -3.144264495
 }
 
 func TestAddDummy(t *testing.T) {
-	i := LoadIntder("testfiles/lin.intder")
+	i, _ := LoadIntder("testfiles/lin.intder")
 	i.Dummies[0].Coords[2] = 3.4 // check that matching works
 	cart := `C       0.000000000    0.000000000   -1.079963204
 O       0.000000000    0.000000000    1.008829581

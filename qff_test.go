@@ -8,7 +8,7 @@ import (
 
 func TestNewIntder(t *testing.T) {
 	cart, _ := ReadLog("testfiles/al2o2.log")
-	got := LoadIntder("testfiles/intder.full")
+	got, _ := LoadIntder("testfiles/intder.full")
 	got.ConvertCart(cart)
 	want := &Intder{Geometry: `      0.000000000        2.473478532        0.000000000
      -2.348339221        0.000000000        0.000000000
@@ -21,7 +21,7 @@ func TestNewIntder(t *testing.T) {
 
 func TestWritePtsIntder(t *testing.T) {
 	cart, _ := ReadLog("testfiles/al2o2.log")
-	i := LoadIntder("testfiles/intder.full")
+	i, _ := LoadIntder("testfiles/intder.full")
 	i.ConvertCart(cart)
 	i.WritePts("testfiles/pts/intder.in")
 }
@@ -31,7 +31,7 @@ func TestRunIntder(t *testing.T) {
 }
 
 func TestBuildPoints(t *testing.T) {
-	prog := LoadMolpro("testfiles/molpro.in")
+	prog, _ := LoadMolpro("testfiles/molpro.in")
 	prog.Geometry = Input[Geometry]
 	cart, _, _ := prog.HandleOutput("testfiles/opt")
 	names := GetNames(cart)
@@ -52,7 +52,7 @@ func TestLoadIntder(t *testing.T) {
 
 func TestWriteIntderGeom(t *testing.T) {
 	cart, _ := ReadLog("testfiles/al2o2.log")
-	i := LoadIntder("testfiles/intder.full")
+	i, _ := LoadIntder("testfiles/intder.full")
 	i.ConvertCart(cart)
 	longLine, _ := GetLongLine("testfiles/anpass1.out")
 	i.WriteGeom("testfiles/freqs/intder_geom.in", longLine)
@@ -61,7 +61,7 @@ func TestWriteIntderGeom(t *testing.T) {
 func TestReadGeom(t *testing.T) {
 	t.Run("no dummy atoms", func(t *testing.T) {
 		cart, _ := ReadLog("testfiles/al2o2.log")
-		i := LoadIntder("testfiles/intder.full")
+		i, _ := LoadIntder("testfiles/intder.full")
 		i.ConvertCart(cart)
 		i.ReadGeom("testfiles/intder_geom.out")
 		want := `        0.0000000000       -0.0115666469        2.4598228639
@@ -74,7 +74,7 @@ func TestReadGeom(t *testing.T) {
 	})
 	t.Run("dummy atoms", func(t *testing.T) {
 		cart, _ := ReadLog("testfiles/dummy.log")
-		i := LoadIntder("testfiles/dummy.intder.in")
+		i, _ := LoadIntder("testfiles/dummy.intder.in")
 		i.ConvertCart(cart)
 		i.ReadGeom("testfiles/dummy_geom.out")
 		want := `        0.0000000000        0.0000000000        1.0109039650
@@ -90,7 +90,7 @@ func TestReadGeom(t *testing.T) {
 
 func TestReadIntderOut(t *testing.T) {
 	cart, _ := ReadLog("testfiles/al2o2.log")
-	i := LoadIntder("testfiles/intder.full")
+	i, _:= LoadIntder("testfiles/intder.full")
 	i.ConvertCart(cart)
 	i.ReadGeom("testfiles/intder_geom.out")
 	got := i.ReadOut("testfiles/fintder.out")
@@ -104,7 +104,7 @@ func TestReadIntderOut(t *testing.T) {
 
 func TestRead9903(t *testing.T) {
 	cart, _ := ReadLog("testfiles/al2o2.log")
-	i := LoadIntder("testfiles/intder.full")
+	i, _:= LoadIntder("testfiles/intder.full")
 	i.ConvertCart(cart)
 	i.ReadGeom("testfiles/intder_geom.out")
 	i.Read9903("testfiles/fort.9903")
@@ -112,7 +112,7 @@ func TestRead9903(t *testing.T) {
 
 func TestWriteIntderFreqs(t *testing.T) {
 	cart, _ := ReadLog("testfiles/al2o2.log")
-	i := LoadIntder("testfiles/intder.full")
+	i , _:= LoadIntder("testfiles/intder.full")
 	order := i.ConvertCart(cart)
 	i.ReadGeom("testfiles/intder_geom.out")
 	i.Read9903("testfiles/prob.9903")

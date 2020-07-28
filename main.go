@@ -17,7 +17,6 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
-	"runtime/pprof"
 	"sort"
 	"strings"
 	"sync"
@@ -333,6 +332,46 @@ func Frequency(prog *Molpro) ([]float64, bool) {
 	return prog.ReadFreqs(outfile), true
 }
 
+// DoAnpass runs anpass
+func DoAnpass(anp *Anpass, energies []float64) string {
+	anp.WriteAnpass("freqs/anpass1.in", energies)
+	RunAnpass("freqs/anpass1")
+	longLine, ok := GetLongLine("freqs/anpass1.out")
+	if !ok {
+		panic("Problem getting long line from anpass1.out")
+	}
+	anp.WriteAnpass2("freqs/anpass2.in", longLine, energies)
+	RunAnpass("freqs/anpass2")
+	return longLine
+}
+
+// DoIntder runs freqs intder
+func DoIntder(intder *Intder, atomNames []string, longLine string) (string, []float64) {
+	intder.WriteGeom("freqs/intder_geom.in", longLine)
+	RunIntder("freqs/intder_geom")
+	coords := intder.ReadGeom("freqs/intder_geom.out")
+	intder.Read9903("freqs/fort.9903")
+	intder.WriteFreqs("freqs/intder.in", atomNames)
+	RunIntder("freqs/intder")
+	intderHarms := intder.ReadOut("freqs/intder.out")
+	Tennis()
+	return coords, intderHarms
+}
+
+// DoSpectro runs spectro
+func DoSpectro(spectro *Spectro, harms []float64) (float64, []float64, []float64, []float64) {
+	spectro.Nfreqs = len(harms)
+	spectro.WriteInput("freqs/spectro.in")
+	RunSpectro("freqs/spectro")
+	spectro.ReadOutput("freqs/spectro.out")
+	spectro.WriteInput("freqs/spectro2.in")
+	RunSpectro("freqs/spectro2")
+	// have rotational constants from FreqReport, but need to incorporate them
+	zpt, spHarm, spFund, spCorr,
+		_, _, _ := summarize.Spectro("freqs/spectro2.out", spectro.Nfreqs)
+	return zpt, spHarm, spFund, spCorr
+}
+
 // Drain drains the queue of jobs and receives on ch when ready for more
 func Drain(prog *Molpro) (min float64, energies []float64) {
 	nJobs := len(points.Calcs)
@@ -355,15 +394,6 @@ func Drain(prog *Molpro) (min float64, energies []float64) {
 				shortenBy++
 			} else if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 				err == ErrFileContainsError || err == ErrBlankOutput {
-				// TODO reremove blankoutput for sequoia
-				// Removing this one too now since problem on Sequoia
-				// same problem as below, solved by queue
-				// || err == ErrBlankOutput { // ||
-				// must be a better way to do this -> check queue
-				// disable for now
-				// (err == ErrFileNotFound && len(points) < pointsInit/20) {
-				// write error found in case it can't be handled by resubmit
-				// then we need to kill it, manually for now
 				if err == ErrFileContainsError {
 					fmt.Fprintf(os.Stderr, "error: %v on %s\n", err, job.Name)
 				}
@@ -390,30 +420,43 @@ func Drain(prog *Molpro) (min float64, energies []float64) {
 	return
 }
 
-func main() {
+func initialize() (*Molpro, *Intder, *Anpass) {
 	// parse flags for overwrite before mkdirs
-	Args := ParseFlags()
-	if len(Args) < 1 {
-		log.Fatal("pbqff: no input file supplied")
+	args := ParseFlags()
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "pbqff: no input file supplied\n")
+		os.Exit(1)
 	}
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			log.Fatal("could not create CPU profile: ", err)
-		}
-		defer f.Close() // error handling omitted for example
-		if err := pprof.StartCPUProfile(f); err != nil {
-			log.Fatal("could not start CPU profile: ", err)
-		}
-		defer pprof.StopCPUProfile()
-	}
-	// only make directories if starting with opt, otherwise assume
-	// they are made and we are resuming
-	if DoOpt() {
-		MakeDirs(".")
-	}
-	ParseInfile(Args[0])
+	ParseInfile(args[0])
 	WhichCluster()
+	if Input[Program] == "cccr" {
+		energyLine = regexp.MustCompile(`^\s*CCCRE\s+=`)
+	}
+	mpName := "molpro.in"
+	idName := "intder.in"
+	apName := "anpass.in"
+	prog, err := LoadMolpro("molpro.in")
+	if err != nil {
+		errExit(err, fmt.Sprintf("loading molpro input %q", mpName))
+	}
+	intder, err := LoadIntder("intder.in")
+	if err != nil {
+		errExit(err, fmt.Sprintf("loading intder input %q", idName))
+	}
+	anpass, err := LoadAnpass("anpass.in")
+	if err != nil {
+		errExit(err, fmt.Sprintf("loading anpass input %q", apName))
+	}
+	return prog, intder, anpass
+}
+
+func errExit(err error, msg string) {
+	fmt.Fprintf(os.Stderr, "pbqff: %v %s\n", err, msg)
+	os.Exit(1)
+}
+
+func main() {
+	prog, intder, anpass := initialize()
 	var (
 		mpHarm   []float64
 		finished bool
@@ -421,14 +464,12 @@ func main() {
 		zmat     string
 		err      error
 	)
-	prog := LoadMolpro("molpro.in")
 	if DoOpt() {
+		MakeDirs(".")
 		prog.Geometry = FormatZmat(Input[Geometry])
 		Optimize(prog)
 		cart, zmat, err = prog.HandleOutput("opt/opt")
 		if err != nil {
-			// actually want to try to recover here probably
-			// need to assess the error cases possible to do so
 			panic(err)
 		}
 		// only need this if running a freq
@@ -437,32 +478,19 @@ func main() {
 		go func() {
 			mpHarm, finished = Frequency(prog)
 		}()
-		// if go-cart and !DoOpt(), geometry will be in cartesians so no FormatZmat
-		// can use GeomType Input key
 	} else {
 		cart = Input[Geometry]
 	}
-	// this is the big fork between the two, either adopts the SIC way or the go-cart way
-	// use the same infrastructure for both though
-	// set up pts using opt.log geometry and given intder.in file
-	intder := LoadIntder("intder.in")
 	var atomNames []string
 	if *irdy == "" {
 		atomNames = intder.ConvertCart(cart)
 	} else {
 		atomNames = strings.Fields(*irdy)
 	}
-	// submit needs to also add jobs to a global array shared by this and Drain
 	if DoPts() {
 		intder.WritePts("pts/intder.in")
-		// run intder
 		RunIntder("pts/intder")
-		// build points and the list of pts to submit
 		points.Calcs = prog.BuildPoints("pts/file07", atomNames, true)
-		// need to limit this to 220 on sequoia
-		// must have communicating goroutines between submit
-		// and readOut since we can't submit until some of the running ones finish
-		// submit points, wait for them to finish
 		subfiles, err := filepath.Glob("pts/inp/main*.pbs")
 		if err != nil {
 			panic(err)
@@ -474,79 +502,25 @@ func main() {
 	} else {
 		points.Calcs = prog.BuildPoints("pts/file07", atomNames, false)
 	}
-	// TODO BIG - this is where to separate the submit and shorten goroutines
-	//          - see note above and also ben pharr email
 	var (
 		energies []float64
 		min      float64
 	)
-	if Input[Program] == "cccr" {
-		energyLine = regexp.MustCompile(`^\s*CCCRE\s+=`)
-	}
 	min, energies = Drain(prog)
-	// - check for failed jobs, probably just loop at some interval
-	//   doesnt need to be fast (and resource intensive) like gocart
 
 	// convert to relative energies
 	for i := range energies {
 		energies[i] -= min
 	}
-	// write anpass1.in
-	// TODO make test case out of this
-	// PROBLEM WITH NUMERICAL DISPS - 14 extra points in anpass not in intder
-	// why the extra dummy atom in freqs intder too?  r2666=mason/hco+/freqs
-	// this has been somewhat resolved, linear triatomics we take double
-	// shortcut, only consider one of the bending modes and then only
-	// calculate half of its points typically so either generate a full
-	// intder file without the shortcuts or have to do these manual additions later
-	anpass := LoadAnpass("anpass.in")
-	anpass.WriteAnpass("freqs/anpass1.in", energies)
-	// run anpass1.in
-	RunAnpass("freqs/anpass1")
-	// Read anpass1.out
-	longLine, ok := GetLongLine("freqs/anpass1.out")
-	if !ok {
-		panic("Problem getting long line from anpass1.out")
+	longLine := DoAnpass(anpass, energies)
+	coords, intderHarms := DoIntder(intder, atomNames, longLine)
+	spectro, err := LoadSpectro("spectro.in", atomNames, coords)
+	if err != nil {
+		errExit(err, "loading spectro input")
 	}
-	// - write anpass2.in, run anpass
-	anpass.WriteAnpass2("freqs/anpass2.in", longLine, energies)
-	// run anpass2.in
-	RunAnpass("freqs/anpass2")
-	// write intder_geom.in, run intder_geom
-	intder.WriteGeom("freqs/intder_geom.in", longLine)
-	RunIntder("freqs/intder_geom")
-	// update intder geometry
-	coords := intder.ReadGeom("freqs/intder_geom.out")
-	// read freqs/intder.in bottom from fort.9903
-	intder.Read9903("freqs/fort.9903")
-	// write freqs/intder.in, run intder
-	intder.WriteFreqs("freqs/intder.in", atomNames)
-	RunIntder("freqs/intder")
-	// read harmonics from intder.out
-	intderHarms := intder.ReadOut("freqs/intder.out")
-	// move files (tennis)
-	Tennis()
-	// load spectro template
-	spectro := LoadSpectro("spectro.in", atomNames, coords)
-	spectro.Nfreqs = len(intderHarms)
-	// write spectro input file
-	spectro.WriteInput("freqs/spectro.in")
-	// run spectro
-	RunSpectro("freqs/spectro")
-	// read spectro output, handle resonances
-	spectro.ReadOutput("freqs/spectro.out")
-	// write the new input
-	spectro.WriteInput("freqs/spectro2.in")
-	// run spectro
-	RunSpectro("freqs/spectro2")
-	// extract output
-	zpt, spHarm, spFund, spCorr, _, _, _ := summarize.Spectro("freqs/spectro2.out", spectro.Nfreqs)
+	zpt, spHarm, spFund, spCorr := DoSpectro(spectro, intderHarms)
 	if !finished {
 		mpHarm = make([]float64, spectro.Nfreqs)
 	}
-	// print summary table
 	Summarize(zpt, mpHarm, intderHarms, spHarm, spFund, spCorr)
-	// TODO summarize rotational constants, geometry parameters,
-	//      maybe assignments too
-	// have rotational constants from FreqReport, but need to incorporate them
 }

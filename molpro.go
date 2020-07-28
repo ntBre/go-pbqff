@@ -34,10 +34,10 @@ type Molpro struct {
 }
 
 // LoadMolpro loads a template molpro input file
-func LoadMolpro(filename string) *Molpro {
+func LoadMolpro(filename string) (*Molpro, error) {
 	f, err := os.Open(filename)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
@@ -61,7 +61,7 @@ func LoadMolpro(filename string) *Molpro {
 		}
 	}
 	mp.Extra = buf.String()
-	return &mp
+	return &mp, nil
 }
 
 // WriteInput writes a Molpro input file
@@ -96,7 +96,6 @@ func FormatZmat(geom string) string {
 // ReadOut reads a molpro output file and returns the resulting energy
 // and an error describing the status of the output
 func (m Molpro) ReadOut(filename string) (result float64, err error) {
-	fmt.Println(energyLine)
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	if _, err = os.Stat(filename); os.IsNotExist(err) {
