@@ -7,7 +7,12 @@ import (
 func TestWritePBS(t *testing.T) {
 	Input[QueueType] = "sequoia"
 	p := Job{MakeName(Input[Geometry]), "opt.inp", 35}
-	WritePBS("testfiles/opt/mp.pbs", &p)
+	write := "testfiles/write/mp.pbs"
+	right := "testfiles/right/mp.pbs"
+	WritePBS(write, &p)
+	if !compareFile(write, right) {
+		t.Errorf("mismatch between %s and %s\n", right, write)
+	}
 }
 
 func TestSubmit(t *testing.T) {

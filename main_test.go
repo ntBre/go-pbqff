@@ -1,9 +1,11 @@
 package main
 
 import (
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -18,10 +20,19 @@ func TestMain(m *testing.M) {
 
 func TestMakeDirs(t *testing.T) {
 	*overwrite = true
-	got := MakeDirs("testfiles")
+	root := "testfiles"
+	got := MakeDirs(root)
 	*overwrite = false
 	if got != nil {
 		t.Errorf("got an error %q, didn't want one", got)
+	}
+	for _, dir := range dirs {
+		if _, err := os.Stat(root + "/" + dir); os.IsNotExist(err) {
+			t.Errorf("failed to create %s in %s\n", dir, root)
+		}
+	}
+	for _, dir := range dirs {
+		os.RemoveAll(root + "/" + dir)
 	}
 }
 
@@ -105,7 +116,7 @@ func TestLoadAnpass(t *testing.T) {
 		fmt2 string
 	}{
 		{
-			file: "testfiles/anpass.small",
+			file: "testfiles/load/anpass.small",
 			fmt1: "%12.8f",
 			fmt2: "%20.12f",
 		},
@@ -126,23 +137,79 @@ func TestLoadAnpass(t *testing.T) {
 	}
 }
 
-func TestWriteAnpass(t *testing.T) {
-	a, _ := LoadAnpass("testfiles/anpass.small")
-	a.WriteAnpass("testfiles/anpass.test", []float64{0, 0, 0, 0, 0, 0})
+func compareFile(file1, file2 string) bool {
+	str1, err := ioutil.ReadFile(file1)
+	if err != nil {
+		panic(err)
+	}
+	str2, err := ioutil.ReadFile(file2)
+	if err != nil {
+		panic(err)
+	}
+	lines1 := strings.Split(string(str1), "\n")
+	lines2 := strings.Split(string(str2), "\n")
+	if len(lines1) != len(lines2) {
+		return false
+	}
+	for l := range lines1 {
+		if lines1[l] != lines2[l] {
+			return false
+		}
+	}
+	return true
 }
 
-func TestGetLongLine(t *testing.T) {
-	got, _ := GetLongLine("testfiles/anpass1.out")
-	want := `     -0.000879072913     -0.000974769219     -0.000489284859     -0.000744291296      0.000772915057      0.000000000000     -0.000002937018`
-	if got != want {
-		t.Errorf("got %v, wanted %v\n", got, want)
+func TestWriteAnpass(t *testing.T) {
+	tests := []struct {
+		load  string
+		write string
+		right string
+	}{
+		{
+			load:  "testfiles/load/anpass.small",
+			write: "testfiles/write/anpass.test",
+			right: "testfiles/right/anpass.test",
+		},
+	}
+	for _, test := range tests {
+		a, _ := LoadAnpass(test.load)
+		a.WriteAnpass(test.write, []float64{0, 0, 0, 0, 0, 0})
+		if !compareFile(test.write, test.right) {
+			t.Errorf("mismatch between %s and %s\n", test.write, test.right)
+		}
 	}
 }
 
 func TestWriteAnpass2(t *testing.T) {
-	a, _ := LoadAnpass("testfiles/anpass.small")
-	ll, _ := GetLongLine("testfiles/anpass1.out")
-	a.WriteAnpass2("testfiles/anpass2.test", ll, []float64{0, 0, 0, 0, 0, 0})
+	tests := []struct {
+		load  string
+		lline string
+		write string
+		right string
+	}{
+		{
+			load:  "testfiles/load/anpass.small",
+			lline: "testfiles/read/anpass1.out",
+			write: "testfiles/write/anpass2.test",
+			right: "testfiles/right/anpass2.test",
+		},
+	}
+	for _, test := range tests {
+		a, _ := LoadAnpass(test.load)
+		ll, _ := GetLongLine(test.lline)
+		a.WriteAnpass2(test.write, ll, []float64{0, 0, 0, 0, 0, 0})
+		if !compareFile(test.write, test.right) {
+			t.Errorf("mismatch between %s and %s\n", test.write, test.right)
+		}
+	}
+}
+
+func TestGetLongLine(t *testing.T) {
+	got, _ := GetLongLine("testfiles/read/anpass1.out")
+	want := `     -0.000879072913     -0.000974769219     -0.000489284859     -0.000744291296      0.000772915057      0.000000000000     -0.000002937018`
+	if got != want {
+		t.Errorf("got %v, wanted %v\n", got, want)
+	}
 }
 
 func TestSummarize(t *testing.T) {

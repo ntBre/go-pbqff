@@ -71,6 +71,12 @@ ParseFlags -> ParseInfile -> WhichCluster
 
    
 * Notes
+  - main difference for go-cart is build points, I guess that makes go-cart a program?
+    - kinda awkward since it uses molpro too
+    - does that mean load gocart?
+    - have fc arrays global but only initialize with make if go-cart
+    - really just change go-cart derivative stuff to output molpro input file and that slots into queue
+    - then work on the queue to limit number of jobs running at once
   - May want to recover [[file:main.go::cart,%20zmat,%20err%20=%20prog.HandleOutput("opt/opt")][from HandleOutput error]]
   - communicating goroutines between submit and readOut 
     - can't submit until some of the running ones finish so check between them

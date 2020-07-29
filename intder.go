@@ -20,6 +20,17 @@ const (
 	strFmt  = "%17s%19s%19s"
 )
 
+var (
+	ptable = map[string]string{
+		"H": "1", "HE": "4", "LI": "7",
+		"BE": "9", "B": "11", "C": "12",
+		"N": "14", "O": "16", "F": "19",
+		"NE": "20", "NA": "23", "MG": "24",
+		"AL": "27", "SI": "28", "P": "31",
+		"S": "32", "CL": "35", "AR": "40",
+	}
+)
+
 // Intder holds the information for an intder input file
 type Intder struct {
 	Head     string
@@ -371,7 +382,7 @@ func (i *Intder) WriteGeom(filename, longLine string) {
 
 // SecondLine updates the input directives of an intder
 // for the cartesian coordinate transform in freqs
-func (i *Intder) SecondLine() {
+func (i *Intder) SecondLine() string {
 	lines := strings.Split(i.Head, "\n")
 	lines = lines[:len(lines)-1] // trim trailing newline
 	fields := strings.Fields(lines[1])
@@ -386,6 +397,7 @@ func (i *Intder) SecondLine() {
 	}
 	lines[1] = buf.String()
 	i.Head = strings.Join(lines, "\n")
+	return lines[1]
 }
 
 // WriteFreqs writes an intder.in file for freqs to filename

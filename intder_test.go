@@ -1,7 +1,14 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"reflect"
+	"sort"
 	"testing"
 )
 
@@ -152,8 +159,12 @@ func TestApplyPattern(t *testing.T) {
 }
 
 func TestSecondLine(t *testing.T) {
-	i, _ := LoadIntder("testfiles/intder.full")
-	i.SecondLine()
+	i, _ := LoadIntder("testfiles/load/intder.full")
+	got := i.SecondLine()
+	want := `    4    7    6    4    0    3    2    0    0    1    3    0    0    0    0    0`
+	if got != want {
+		t.Errorf("got %v, wanted %v\n", got, want)
+	}
 }
 
 func TestConvertCart(t *testing.T) {
@@ -170,7 +181,7 @@ func TestConvertCart(t *testing.T) {
  O          0.0000000000        1.3089084707        0.0000000000
  O          0.0000000000       -1.3089084707        0.0000000000
 `,
-			intderFile: "testfiles/intder.full",
+			intderFile: "testfiles/load/intder.full",
 			want:       []string{"O", "Al", "Al", "O"},
 		},
 		{
@@ -180,7 +191,7 @@ func TestConvertCart(t *testing.T) {
 	 O          0.0000000000        0.0000000000        1.3089084707
 	 O          0.0000000000        0.0000000000       -1.3089084707
 	`,
-			intderFile: "testfiles/intder.full",
+			intderFile: "testfiles/load/intder.full",
 			want:       []string{"O", "Al", "Al", "O"},
 		},
 	}
@@ -229,4 +240,156 @@ H       0.000000000    0.000000000   -3.144264495
 	if got != want {
 		t.Errorf("got\n%q, wanted\n%q\n", got, want)
 	}
+}
+
+func TestNewIntder(t *testing.T) {
+	cart, _ := ReadLog("testfiles/read/al2o2.log")
+	got, _ := LoadIntder("testfiles/load/intder.full")
+	got.ConvertCart(cart)
+	want := &Intder{Geometry: `      0.000000000        2.473478532        0.000000000
+     -2.348339221        0.000000000        0.000000000
+      2.348339221        0.000000000        0.000000000
+      0.000000000       -2.473478532        0.000000000`}
+	if got.Geometry != want.Geometry {
+		t.Errorf("got\n%v\n, wanted\n%v\n", got.Geometry, want.Geometry)
+	}
+}
+
+func TestWritePtsIntder(t *testing.T) {
+	write := "testfiles/write/intder.in"
+	right := "testfiles/right/intder.in"
+	cart, _ := ReadLog("testfiles/read/al2o2.log")
+	i, _ := LoadIntder("testfiles/load/intder.full")
+	i.ConvertCart(cart)
+	i.WritePts(write)
+	if !compareFile(write, right) {
+		t.Errorf("mismatch between %s and %s\n", write, right)
+	}
+}
+
+func workDir(filename string, f func(string), test bool) {
+	temp := "tmp"
+	if _, err := os.Stat(temp); os.IsExist(err) && !test {
+		panic("tmp already exists")
+	}
+	os.Mkdir(temp, 0755)
+	current, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	infile, _ := os.Open(filename)
+	base := filepath.Base(filename)
+	outfile, _ := os.Create(temp + "/" + base)
+	io.Copy(outfile, infile)
+	os.Chdir(temp)
+	f(base)
+	os.Chdir(current)
+	if !test {
+		os.RemoveAll(temp)
+	}
+}
+
+func TestWorkDir(t *testing.T) {
+	workDir("testfiles/write/opt.inp", func(s string) {
+		fmt.Println(s)
+	}, true)
+	if !compareFile("tmp/opt.inp", "testfiles/write/opt.inp") {
+		t.Errorf("mismatch\n")
+	}
+}
+
+func TestRunIntder(t *testing.T) {
+	workDir("testfiles/write/intder.in", func(s string) {
+		RunIntder(s[:len(s)-3])
+	}, false)
+}
+
+func TestLoadIntder(t *testing.T) {
+	got, _ := LoadIntder("testfiles/load/intder.full")
+	data, err := ioutil.ReadFile("testfiles/right/intder.full.json")
+	if err != nil {
+		panic(err)
+	}
+	want := new(Intder)
+	err = json.Unmarshal(data, want)
+	if err != nil {
+		panic(err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+}
+
+func TestWriteIntderGeom(t *testing.T) {
+	cart, _ := ReadLog("testfiles/read/al2o2.log")
+	i, _ := LoadIntder("testfiles/load/intder.full")
+	i.ConvertCart(cart)
+	longLine, _ := GetLongLine("testfiles/read/anpass1.out")
+	write := "testfiles/write/intder_geom.in"
+	right := "testfiles/right/intder_geom.in"
+	i.WriteGeom(write, longLine)
+	if !compareFile(right, write) {
+		t.Errorf("mismatch between %s and %s\n", right, write)
+	}
+}
+
+func TestReadGeom(t *testing.T) {
+	t.Run("no dummy atoms", func(t *testing.T) {
+		cart, _ := ReadLog("testfiles/read/al2o2.log")
+		i, _ := LoadIntder("testfiles/load/intder.full")
+		i.ConvertCart(cart)
+		i.ReadGeom("testfiles/intder_geom.out")
+		want := `        0.0000000000       -0.0115666469        2.4598228639
+        0.0000000000       -0.0139207809        0.2726915161
+        0.0000000000        0.1184234620       -2.1785371074
+        0.0000000000       -1.5591967852       -2.8818447886`
+		if i.Geometry != want {
+			t.Errorf("got %v, wanted %v", i.Geometry, want)
+		}
+	})
+	t.Run("dummy atoms", func(t *testing.T) {
+		cart, _ := ReadLog("testfiles/dummy.log")
+		i, _ := LoadIntder("testfiles/dummy.intder.in")
+		i.ConvertCart(cart)
+		i.ReadGeom("testfiles/dummy_geom.out")
+		want := `        0.0000000000        0.0000000000        1.0109039650
+        0.0000000000        0.0000000000       -1.0824085329
+        0.0000000000        0.0000000000       -3.1489094311
+        0.0000000000        1.1111111110       -1.0824085329
+        1.1111111110        0.0000000000       -1.0824085329`
+		if i.Geometry != want {
+			t.Errorf("got\n%v, wanted\n%v", i.Geometry, want)
+		}
+	})
+}
+
+func TestReadIntderOut(t *testing.T) {
+	cart, _ := ReadLog("testfiles/read/al2o2.log")
+	i, _ := LoadIntder("testfiles/load/intder.full")
+	i.ConvertCart(cart)
+	i.ReadGeom("testfiles/intder_geom.out")
+	got := i.ReadOut("testfiles/fintder.out")
+	f := []float64{437.8, 496.8, 1086.4, 1267.6, 2337.7, 3811.4}
+	sort.Sort(sort.Reverse(sort.Float64Slice(f)))
+	want := f
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, wanted %v", got, want)
+	}
+}
+
+func TestRead9903(t *testing.T) {
+	cart, _ := ReadLog("testfiles/read/al2o2.log")
+	i, _ := LoadIntder("testfiles/load/intder.full")
+	i.ConvertCart(cart)
+	i.ReadGeom("testfiles/intder_geom.out")
+	i.Read9903("testfiles/fort.9903")
+}
+
+func TestWriteIntderFreqs(t *testing.T) {
+	cart, _ := ReadLog("testfiles/read/al2o2.log")
+	i, _ := LoadIntder("testfiles/load/intder.full")
+	order := i.ConvertCart(cart)
+	i.ReadGeom("testfiles/intder_geom.out")
+	i.Read9903("testfiles/prob.9903")
+	i.WriteFreqs("testfiles/freqs/intder.in", order)
 }

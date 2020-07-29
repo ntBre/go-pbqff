@@ -11,17 +11,6 @@ import (
 	"strings"
 )
 
-var (
-	ptable = map[string]string{
-		"H": "1", "HE": "4", "LI": "7",
-		"BE": "9", "B": "11", "C": "12",
-		"N": "14", "O": "16", "F": "19",
-		"NE": "20", "NA": "23", "MG": "24",
-		"AL": "27", "SI": "28", "P": "31",
-		"S": "32", "CL": "35", "AR": "40",
-	}
-)
-
 // RunProgram runs a program, redirecting STDIN from filename.in
 // and STDOUT to filename.out
 func RunProgram(progName, filename string) error {

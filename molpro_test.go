@@ -1,14 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"math"
+	"os"
+	"path"
 	"reflect"
 	"regexp"
 	"testing"
 )
 
 func TestLoadMolpro(t *testing.T) {
-	got, _ := LoadMolpro("testfiles/molpro.in")
+	got, _ := LoadMolpro("testfiles/load/molpro.in")
 	want := &Molpro{
 		Head: `memory,995,m   ! 30GB 12procs
 
@@ -55,9 +58,15 @@ XXO = 80.0 Deg`
 }
 
 func TestWriteInputMolpro(t *testing.T) {
-	mp, _ := LoadMolpro("testfiles/molpro.in")
+	load := "testfiles/load/molpro.in"
+	write := "testfiles/write/opt.inp"
+	right := "testfiles/right/opt.inp"
+	mp, _ := LoadMolpro(load)
 	mp.Geometry = FormatZmat(Input[Geometry])
-	mp.WriteInput("testfiles/opt/opt.inp", opt)
+	mp.WriteInput(write, opt)
+	if !compareFile(write, right) {
+		t.Errorf("mismatch between %s and %s\n", write, right)
+	}
 }
 
 func TestReadOut(t *testing.T) {
@@ -181,7 +190,7 @@ func TestHandleOutput(t *testing.T) {
 	// There was a problem on Sequoia where the new zmat params
 	// were inexplicably not in the frequency calculation
 	t.Run("Sequoia", func(t *testing.T) {
-		p, _ := LoadMolpro("testfiles/molpro.in")
+		p, _ := LoadMolpro("testfiles/load/molpro.in")
 		p.Geometry = FormatZmat(Input[Geometry])
 		_, zmat, _ := p.HandleOutput("testfiles/seq")
 		want := `ALX=                 1.20291856 ANG
@@ -216,6 +225,7 @@ OCN=               176.79276221 DEG
 			t.Errorf("got %v, wanted %v\n", zmat, wantZmat)
 		}
 	})
+
 	t.Run("sequoia", func(t *testing.T) {
 		cart, zmat := ReadLog("testfiles/seq.log")
 		wantCart := `AL 0.000000000 0.000000000 2.273186636
@@ -241,5 +251,24 @@ func TestReadFreqs(t *testing.T) {
 	want := []float64{805.31, 774.77, 679.79, 647.70, 524.26, 301.99}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+}
+
+func TestBuildPoints(t *testing.T) {
+	prog, _ := LoadMolpro("testfiles/load/molpro.in")
+	prog.Geometry = Input[Geometry]
+	cart, _, _ := prog.HandleOutput("testfiles/opt")
+	names := GetNames(cart)
+	os.Mkdir("testfiles/read/inp", 0755)
+	defer os.RemoveAll("testfiles/read/inp")
+	fmt.Println("dir: ", path.Dir("testfiles/read/file07"))
+	got := prog.BuildPoints("testfiles/read/file07", names, true)
+	want := []Calc{
+		Calc{"testfiles/read/inp/NHHH.00000", 0},
+		Calc{"testfiles/read/inp/NHHH.00001", 1},
+		Calc{"testfiles/read/inp/NHHH.00002", 2},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, wanted %v", got, want)
 	}
 }
