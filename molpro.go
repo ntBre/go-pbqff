@@ -122,7 +122,6 @@ func (m Molpro) ReadOut(filename string) (result float64, err error) {
 		if error.MatchString(line) {
 			return result, ErrFileContainsError
 		}
-		fmt.Println(line)
 		if energyLine.MatchString(line) &&
 			!strings.Contains(line, "gthresh") &&
 			!strings.Contains(line, "hf") {

@@ -27,10 +27,7 @@ const ptsMaple = `#!/bin/sh
 #PBS -l ncpus=8
 #PBS -l mem=64gb
 
-module load intel
-module load mvapich2
-module load pbspro
-export PATH=/usr/local/apps/molpro/2015.1.35/bin:$PATH
+module load pbspro molpro
 
 export WORKDIR=$PBS_O_WORKDIR
 export TMPDIR=/tmp/$USER/$PBS_JOBID
@@ -54,10 +51,7 @@ const pbsMaple = `#!/bin/sh
 #PBS -l ncpus=1
 #PBS -l mem=9gb
 
-module load intel
-module load mvapich2
-module load pbspro
-export PATH=/usr/local/apps/molpro/2015.1.35/bin:$PATH
+module load pbspro molpro
 
 export WORKDIR=$PBS_O_WORKDIR
 export TMPDIR=/tmp/$USER/$PBS_JOBID

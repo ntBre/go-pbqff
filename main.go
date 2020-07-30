@@ -49,7 +49,7 @@ var (
 const (
 	// these should  be in the input
 	jobLimit  = 50
-	chunkSize = 50
+	chunkSize = 100
 	resBound  = 1e-16
 	help      = `Requirements:
 - intder, anpass, and spectro executables
@@ -316,15 +316,15 @@ func Optimize(prog *Molpro) {
 
 // Frequency runs a Molpro harmonic frequency calculation in the freq
 // directory
-func Frequency(prog *Molpro) ([]float64, bool) {
+func Frequency(prog *Molpro, absPath string) ([]float64, bool) {
 	// write freq.inp and that mp.pbs
-	prog.WriteInput("freq/freq.inp", freq)
-	WritePBS("freq/mp.pbs",
-		&Job{MakeName(Input[Geometry]) + "-freq", "freq/freq.inp", 35})
+	prog.WriteInput(absPath+"/freq.inp", freq)
+	WritePBS(absPath+"/mp.pbs",
+		&Job{MakeName(Input[Geometry]) + "-freq", absPath + "/freq.inp", 35})
 	// submit freq, wait in separate goroutine
 	// doesn't matter if this finishes
-	Submit("freq/mp.pbs")
-	outfile := "freq/freq.out"
+	Submit(absPath + "/mp.pbs")
+	outfile := absPath + "/freq.out"
 	_, err := prog.ReadOut(outfile)
 	for err != nil {
 		HandleSignal(35, time.Minute)
@@ -483,7 +483,8 @@ func main() {
 		prog.Geometry = UpdateZmat(prog.Geometry, zmat)
 		// run the frequency in the background
 		go func() {
-			mpHarm, finished = Frequency(prog)
+			absPath, _ := filepath.Abs("freq")
+			mpHarm, finished = Frequency(prog, absPath)
 		}()
 	} else {
 		cart = Input[Geometry]
