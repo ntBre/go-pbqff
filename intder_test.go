@@ -338,7 +338,7 @@ func TestReadGeom(t *testing.T) {
 		cart, _ := ReadLog("testfiles/read/al2o2.log")
 		i, _ := LoadIntder("testfiles/load/intder.full")
 		i.ConvertCart(cart)
-		i.ReadGeom("testfiles/intder_geom.out")
+		i.ReadGeom("testfiles/read/intder_geom.out")
 		want := `        0.0000000000       -0.0115666469        2.4598228639
         0.0000000000       -0.0139207809        0.2726915161
         0.0000000000        0.1184234620       -2.1785371074
@@ -348,8 +348,8 @@ func TestReadGeom(t *testing.T) {
 		}
 	})
 	t.Run("dummy atoms", func(t *testing.T) {
-		cart, _ := ReadLog("testfiles/dummy.log")
-		i, _ := LoadIntder("testfiles/dummy.intder.in")
+		cart, _ := ReadLog("testfiles/read/dummy.log")
+		i, _ := LoadIntder("testfiles/read/dummy.intder.in")
 		i.ConvertCart(cart)
 		i.ReadGeom("testfiles/dummy_geom.out")
 		want := `        0.0000000000        0.0000000000        1.0109039650
@@ -367,8 +367,8 @@ func TestReadIntderOut(t *testing.T) {
 	cart, _ := ReadLog("testfiles/read/al2o2.log")
 	i, _ := LoadIntder("testfiles/load/intder.full")
 	i.ConvertCart(cart)
-	i.ReadGeom("testfiles/intder_geom.out")
-	got := i.ReadOut("testfiles/fintder.out")
+	i.ReadGeom("testfiles/read/intder_geom.out")
+	got := i.ReadOut("testfiles/read/fintder.out")
 	f := []float64{437.8, 496.8, 1086.4, 1267.6, 2337.7, 3811.4}
 	sort.Sort(sort.Reverse(sort.Float64Slice(f)))
 	want := f
@@ -381,15 +381,26 @@ func TestRead9903(t *testing.T) {
 	cart, _ := ReadLog("testfiles/read/al2o2.log")
 	i, _ := LoadIntder("testfiles/load/intder.full")
 	i.ConvertCart(cart)
-	i.ReadGeom("testfiles/intder_geom.out")
-	i.Read9903("testfiles/fort.9903")
+	i.ReadGeom("testfiles/read/intder_geom.out")
+	i.Read9903("testfiles/read/fort.9903")
+	got := i.Tail
+	bytes, _ := ioutil.ReadFile("testfiles/right/fort.9903")
+	want := string(bytes)
+	if got != want {
+		t.Errorf("got\n%v, wanted\n%v\n", got, want)
+	}
 }
 
 func TestWriteIntderFreqs(t *testing.T) {
 	cart, _ := ReadLog("testfiles/read/al2o2.log")
 	i, _ := LoadIntder("testfiles/load/intder.full")
 	order := i.ConvertCart(cart)
-	i.ReadGeom("testfiles/intder_geom.out")
-	i.Read9903("testfiles/prob.9903")
-	i.WriteFreqs("testfiles/freqs/intder.in", order)
+	i.ReadGeom("testfiles/read/intder_geom.out")
+	i.Read9903("testfiles/read/prob.9903")
+	write := "testfiles/write/intder.freqs.in"
+	right := "testfiles/right/intder.freqs.in"
+	i.WriteFreqs(write, order)
+	if !compareFile(write, right) {
+		t.Errorf("mismatch between %s and %s\n", write, right)
+	}
 }

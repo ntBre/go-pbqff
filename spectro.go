@@ -326,3 +326,13 @@ func EqnSeparate(line string) (lhs []int, rhs int) {
 	rhs = ints[last]
 	return
 }
+
+// RunSpectro takes a filename like freqs/spectro, runs spectro
+// on freqs/spectro.in and redirects the output into
+// freqs/spectro.out
+func RunSpectro(filename string) {
+	err := RunProgram(Input[SpectroCmd], filename)
+	if err != nil {
+		panic(err)
+	}
+}

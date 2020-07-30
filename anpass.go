@@ -125,3 +125,13 @@ func GetLongLine(filename string) (string, bool) {
 	}
 	return "", false
 }
+
+// RunAnpass takes a filename like freqs/anpass1, runs anpass
+// on freqs/anpass1.in and redirects the output into
+// freqs/anpass1.out
+func RunAnpass(filename string) {
+	err := RunProgram(Input[AnpassCmd], filename)
+	if err != nil {
+		panic(err)
+	}
+}

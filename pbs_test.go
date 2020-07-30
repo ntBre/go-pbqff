@@ -5,7 +5,11 @@ import (
 )
 
 func TestWritePBS(t *testing.T) {
-	Input[QueueType] = "sequoia"
+	temp := pbs
+	pbs = pbsSequoia
+	defer func() {
+		pbs = temp
+	}()
 	p := Job{MakeName(Input[Geometry]), "opt.inp", 35}
 	write := "testfiles/write/mp.pbs"
 	right := "testfiles/right/mp.pbs"

@@ -28,6 +28,13 @@ import (
 	"github.com/ntBre/chemutils/summarize"
 )
 
+// Calc holds the name of a job to be run and its result's index in
+// the output array
+type Calc struct {
+	Name  string
+	Index int
+}
+
 // Points is a wrapper for a []Calc with an embedded sync.Mutex
 type Points struct {
 	Calcs []Calc

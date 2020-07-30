@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math"
 	"os"
 	"reflect"
@@ -526,4 +527,14 @@ func (i *Intder) Read9903(filename string) {
 	fmt.Fprintf(&buf3, "%5d\n", 0)
 	fmt.Fprintf(&buf4, "%5d\n", 0)
 	i.Tail = buf2.String() + buf3.String() + buf4.String()
+}
+
+// RunIntder takes a filename like pts/intder, runs intder
+// on pts/intder.in and redirects the output into
+// pts/intder.out
+func RunIntder(filename string) {
+	err := RunProgram(Input[IntderCmd], filename)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
