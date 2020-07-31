@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path"
+	"sort"
 	"strings"
 )
 
@@ -43,4 +46,70 @@ func RunProgram(progName, filename string) error {
 			err, progName, infile, out)
 	}
 	return nil
+}
+
+// MakeName builds a molecule name from a geometry
+func MakeName(geom string) (name string) {
+	atoms := make(map[string]int)
+	split := strings.Split(geom, "\n")
+	for _, line := range split {
+		fields := strings.Fields(line)
+		// not a dummy atom and not a coordinate lol
+		if len(fields) >= 1 &&
+			!strings.Contains(strings.ToUpper(fields[0]), "X") &&
+			!strings.Contains(line, "=") {
+			atoms[strings.ToLower(fields[0])]++
+		}
+	}
+	toSort := make([]string, 0, len(atoms))
+	for k := range atoms {
+		toSort = append(toSort, k)
+	}
+	sort.Strings(toSort)
+	for _, k := range toSort {
+		v := atoms[k]
+		k = strings.ToUpper(string(k[0])) + k[1:]
+		name += fmt.Sprintf("%s", k)
+		if v > 1 {
+			name += fmt.Sprintf("%d", v)
+		}
+	}
+	return
+}
+
+// ReadFile reads a file and returns a slice of strings of the lines
+func ReadFile(filename string) (lines []string) {
+	f, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("ReadFile: error %q open file %q\n", err, filename)
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		if line := strings.TrimSpace(scanner.Text()); line != "" {
+			lines = append(lines, line)
+		}
+	}
+	return
+}
+
+// MakeDirs sets up the directory structure described by dirs
+func MakeDirs(root string) (err error) {
+	for _, dir := range dirs {
+		filename := root + "/" + dir
+		if _, err := os.Stat(filename); !os.IsNotExist(err) {
+			if *overwrite {
+				os.RemoveAll(filename)
+			} else {
+				log.Fatalf("MakeDirs: directory %q already exists "+
+					"overwrite with -o\n", dir)
+			}
+		}
+		e := os.Mkdir(filename, 0755)
+		if e != nil {
+			err = fmt.Errorf("error MakeDirs: %q on making directory %q",
+				e, dir)
+		}
+	}
+	return err
 }

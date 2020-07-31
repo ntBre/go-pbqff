@@ -262,11 +262,11 @@ func TestBuildPoints(t *testing.T) {
 	os.Mkdir("testfiles/read/inp", 0755)
 	defer os.RemoveAll("testfiles/read/inp")
 	fmt.Println("dir: ", path.Dir("testfiles/read/file07"))
-	got := prog.BuildPoints("testfiles/read/file07", names, true)
+	got := prog.BuildPoints("testfiles/read/file07", names, nil, true)
 	want := []Calc{
-		Calc{"testfiles/read/inp/NHHH.00000", 0},
-		Calc{"testfiles/read/inp/NHHH.00001", 1},
-		Calc{"testfiles/read/inp/NHHH.00002", 2},
+		Calc{Name: "testfiles/read/inp/NHHH.00000", Index: 0},
+		Calc{Name: "testfiles/read/inp/NHHH.00001", Index: 1},
+		Calc{Name: "testfiles/read/inp/NHHH.00002", Index: 2},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, wanted %v", got, want)

@@ -35,6 +35,7 @@ cd $WORKDIR
 mkdir -p $TMPDIR
 
 date
+echo $HOSTNAME
 parallel -j 8 < {{.Filename}}
 date
 

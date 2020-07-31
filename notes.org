@@ -57,6 +57,42 @@ ParseFlags -> ParseInfile -> WhichCluster
    #+RESULTS:
    [[file:main.pdf]]
    
+** New
+
+#+BEGIN_SRC dot :file figs/cart.pdf
+  digraph {
+  a [label="Mkdirs\nOptimize\nFrequency"]
+  b [label="Load geometry"]
+  c [label = "Set up intder"]
+  d [label = "Write pts intder\nRun intder\nBuild pts jobs\nSubmit pts jobs"]
+  e [label = "Build pts w/o writing"]
+  f [label = "Build cart jobs\nSubmit cart jobs"]
+  g [label = "Drain jobs"]
+  h [label = "GoCart"]
+  i [label = "Get rel. energies"]
+  { rank = same; d, e, f }
+  DoOpt, DoPts, GoCart, h [shape=diamond]
+  Start -> DoOpt
+  DoOpt -> a [label = t]
+  DoOpt -> b [label = f]
+  a, b -> GoCart
+  GoCart -> f [label = t]
+  GoCart -> c [label=f]
+  c -> DoPts
+  DoPts -> d [label = t]
+  DoPts -> e [label = f]
+  d,e,f -> g
+  g -> h
+  h -> Spectro [label = t]
+  h -> i [label = f]
+  i -> Anpass -> Intder -> Spectro
+  }
+
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/cart.pdf]]
+   
 * 7/28 fast results
   +---------+---------+---------+---------+---------+
   | Mp Harm | Id Harm | Sp Harm | Sp Fund | Sp Corr |

@@ -8,7 +8,6 @@ import (
 	"math"
 	"os"
 	"path"
-	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
@@ -255,7 +254,7 @@ func (mp *Molpro) AugmentHead() {
 // energy calculations and return an array of jobs to run. If write
 // is set to true, write the necessary files. Otherwise just return the list
 // of jobs.
-func (mp *Molpro) BuildPoints(filename string, atomNames []string, write bool) (jobs []Calc) {
+func (mp *Molpro) BuildPoints(filename string, atomNames []string, target *[]float64, ch chan Calc, write bool) {
 	lines := ReadFile(filename)
 	l := len(atomNames)
 	i := 0
@@ -268,6 +267,7 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, write bool) (
 	geom := 0
 	count := 0
 	pf := 0
+	pbs = ptsMaple
 	mp.AugmentHead()
 	for li, line := range lines {
 		if !strings.Contains(line, "#") {
@@ -283,31 +283,26 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, write bool) (
 				if write {
 					// write the molpro input file and add it to the list of commands
 					mp.WriteInput(fname, none)
-					if count == chunkSize {
+					cmdfile = fmt.Sprintf("%s/inp/commands%d.txt", dir, pf)
+					AddCommand(cmdfile, fname)
+					ch <- Calc{Name: basename, Target: target, Index: geom}
+					submitted++
+					if count == chunkSize || li == len(lines)-1 {
+						subfile := fmt.Sprintf("%s/inp/main%d.pbs", dir, pf)
+						WritePBS(subfile, &Job{"pts", cmdfile, 35})
+						Submit(subfile)
 						count = 0
 						pf++
 					}
-					cmdfile = fmt.Sprintf("%s/inp/commands%d.txt", dir, pf)
-					AddCommand(cmdfile, fname)
 					count++
+				} else {
+					ch <- Calc{Name: basename, Target: target, Index: geom}
 				}
-				jobs = append(jobs, Calc{basename, geom})
 				geom++
 				buf.Reset()
 			}
 			fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
 			i++
-		}
-	}
-	if write {
-		// TODO maple specific for now
-		pbs = ptsMaple
-		subfiles, err := filepath.Glob(dir + "/inp/commands*.txt")
-		if err != nil {
-			panic(err)
-		}
-		for i, file := range subfiles {
-			WritePBS(fmt.Sprintf("%s/inp/main%d.pbs", dir, i), &Job{"pts", file, 35})
 		}
 	}
 	return

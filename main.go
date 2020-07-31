@@ -8,18 +8,14 @@ of quartic force fields, automating as many pieces as possible.
 package main
 
 import (
-	"bufio"
 	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"os/signal"
 	"regexp"
-	"sort"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -31,25 +27,15 @@ import (
 // Calc holds the name of a job to be run and its result's index in
 // the output array
 type Calc struct {
-	Name  string
-	Index int
+	Name   string
+	Target *[]float64 // Target result array
+	Index  int
 }
-
-// Points is a wrapper for a []Calc with an embedded sync.Mutex
-type Points struct {
-	Calcs []Calc
-	sync.Mutex
-}
-
-// Globals for queue
-var (
-	points Points
-)
 
 const (
 	// these should  be in the input
-	jobLimit  = 50
 	chunkSize = 100
+	jobLimit  = 2 * chunkSize
 	resBound  = 1e-16
 	help      = `Requirements:
 - intder, anpass, and spectro executables
@@ -67,6 +53,7 @@ Flags:
 const (
 	OPT int = 1 << iota
 	PTS
+	CART
 	FREQS
 )
 
@@ -76,8 +63,13 @@ func DoOpt() bool { return flags&OPT > 0 }
 // DoPts is a helper function for checking whether the PTS flag is set
 func DoPts() bool { return flags&PTS > 0 }
 
-// DoFreqs is a helper function for checking whether the FREQS flag is set
+// DoFreqs is a helper function for checking whether the FREQS flag is
+// set
 func DoFreqs() bool { return flags&FREQS > 0 }
+
+// DoCart is a helper function for checking whether the CART flag is
+// set
+func DoCart() bool { return flags&CART > 0 }
 
 var (
 	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
@@ -99,6 +91,13 @@ var (
 	pbs              string
 )
 
+// Globals for queue
+var (
+	fc2 []float64
+	fc3 []float64
+	fc4 []float64
+)
+
 // Errors used throughout
 var (
 	ErrEnergyNotFound      = errors.New("Energy not found in Molpro output")
@@ -110,72 +109,6 @@ var (
 	ErrInputGeomNotFound   = errors.New("Geometry not found in input file")
 	ErrTimeout             = errors.New("Timeout waiting for signal")
 )
-
-// MakeName builds a molecule name from a geometry
-func MakeName(geom string) (name string) {
-	atoms := make(map[string]int)
-	split := strings.Split(geom, "\n")
-	for _, line := range split {
-		fields := strings.Fields(line)
-		// not a dummy atom and not a coordinate lol
-		if len(fields) >= 1 &&
-			!strings.Contains(strings.ToUpper(fields[0]), "X") &&
-			!strings.Contains(line, "=") {
-			atoms[strings.ToLower(fields[0])]++
-		}
-	}
-	toSort := make([]string, 0, len(atoms))
-	for k := range atoms {
-		toSort = append(toSort, k)
-	}
-	sort.Strings(toSort)
-	for _, k := range toSort {
-		v := atoms[k]
-		k = strings.ToUpper(string(k[0])) + k[1:]
-		name += fmt.Sprintf("%s", k)
-		if v > 1 {
-			name += fmt.Sprintf("%d", v)
-		}
-	}
-	return
-}
-
-// ReadFile reads a file and returns a slice of strings of the lines
-func ReadFile(filename string) (lines []string) {
-	f, err := os.Open(filename)
-	if err != nil {
-		log.Fatalf("ReadFile: error %q open file %q\n", err, filename)
-	}
-	defer f.Close()
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		if line := strings.TrimSpace(scanner.Text()); line != "" {
-			lines = append(lines, line)
-		}
-	}
-	return
-}
-
-// MakeDirs sets up the directory structure described by dirs
-func MakeDirs(root string) (err error) {
-	for _, dir := range dirs {
-		filename := root + "/" + dir
-		if _, err := os.Stat(filename); !os.IsNotExist(err) {
-			if *overwrite {
-				os.RemoveAll(filename)
-			} else {
-				log.Fatalf("MakeDirs: directory %q already exists "+
-					"overwrite with -o\n", dir)
-			}
-		}
-		e := os.Mkdir(filename, 0755)
-		if e != nil {
-			err = fmt.Errorf("error MakeDirs: %q on making directory %q",
-				e, dir)
-		}
-	}
-	return err
-}
 
 // ParseFlags parses command line flags and returns a slice of
 // the remaining arguments
@@ -380,25 +313,28 @@ func DoSpectro(spectro *Spectro, harms []float64) (float64, []float64, []float64
 }
 
 // Drain drains the queue of jobs and receives on ch when ready for more
-func Drain(prog *Molpro) (min float64, energies []float64) {
-	nJobs := len(points.Calcs)
-	energies = make([]float64, nJobs, nJobs)
-	for nJobs > 0 {
+func Drain(prog *Molpro, ch chan Calc) (min float64) {
+	points := make([]Calc, 0)
+	var nJobs int
+	var finished int
+	for {
 		shortenBy := 0
 		for i := 0; i < nJobs; i++ {
-			job := points.Calcs[i]
+			job := points[i]
 			energy, err := prog.ReadOut(job.Name + ".out")
 			if err == nil {
-				points.Lock()
-				points.Calcs[nJobs-1], points.Calcs[i] = points.Calcs[i], points.Calcs[nJobs-1]
+				points[nJobs-1], points[i] = points[i], points[nJobs-1]
 				nJobs--
-				points.Calcs = points.Calcs[:nJobs]
-				points.Unlock()
+				points = points[:nJobs]
 				if energy < min {
 					min = energy
 				}
-				energies[job.Index] = energy
+				for len(*job.Target) <= job.Index {
+					(*job.Target) = append(*job.Target, 0)
+				}
+				(*job.Target)[job.Index] = energy
 				shortenBy++
+				finished++
 			} else if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 				err == ErrFileContainsError || err == ErrBlankOutput {
 				if err == ErrFileContainsError {
@@ -416,14 +352,19 @@ func Drain(prog *Molpro) (min float64, energies []float64) {
 		}
 		// if the list is shortened by less than 10%,
 		// sleep. could play with both of these values
-		if nJobs > 0 && float64(shortenBy/nJobs) < 0.1 {
-			fmt.Fprintf(os.Stderr,
-				"only shortened by %d out of %d remaining, sleeping\n", shortenBy, nJobs)
+		if shortenBy < 1 {
+			fmt.Fprintln(os.Stderr, "Didn't shorten, sleeping")
 			time.Sleep(time.Second)
 		}
-		nJobs = len(points.Calcs)
-		fmt.Fprintf(os.Stderr, "nJobs: %d\n", nJobs)
+		fmt.Fprintf(os.Stderr, "finished: %d of %d submitted\n", finished, submitted)
+		calc, ok := <-ch
+		points = append(points, calc)
+		nJobs = len(points)
+		if !ok && finished == submitted {
+			return
+		}
 	}
+	// unreachable
 	return
 }
 
@@ -436,8 +377,14 @@ func initialize() (*Molpro, *Intder, *Anpass) {
 	}
 	ParseInfile(args[0])
 	WhichCluster()
-	if Input[Program] == "cccr" {
+	switch Input[Program] {
+	case "cccr":
 		energyLine = regexp.MustCompile(`^\s*CCCRE\s+=`)
+	case "gocart":
+		flags |= CART
+		energyLine = regexp.MustCompile(`^\s*CARTFC\s+=`)
+		// default:
+		// 	errExit(fmt.Errorf("%s not implemented as a Program", Input[Program]), "")
 	}
 	mpName := "molpro.in"
 	idName := "intder.in"
@@ -462,15 +409,21 @@ func errExit(err error, msg string) {
 	os.Exit(1)
 }
 
+var submitted int
+
 func main() {
 	prog, intder, anpass := initialize()
 	var (
-		mpHarm   []float64
-		finished bool
-		cart     string
-		zmat     string
-		err      error
+		mpHarm    []float64
+		finished  bool
+		cart      string
+		zmat      string
+		err       error
+		atomNames []string
+		energies  []float64
+		min       float64
 	)
+
 	if DoOpt() {
 		MakeDirs(".")
 		prog.Geometry = FormatZmat(Input[Geometry])
@@ -489,32 +442,30 @@ func main() {
 	} else {
 		cart = Input[Geometry]
 	}
-	var atomNames []string
-	if *irdy == "" {
-		atomNames = intder.ConvertCart(cart)
-	} else {
-		atomNames = strings.Fields(*irdy)
-	}
-	if DoPts() {
-		intder.WritePts("pts/intder.in")
-		RunIntder("pts/intder")
-		points.Calcs = prog.BuildPoints("pts/file07", atomNames, true)
-		subfiles, err := filepath.Glob("pts/inp/main*.pbs")
-		if err != nil {
-			panic(err)
+
+	ch := make(chan Calc, jobLimit)
+
+	if !DoCart() {
+		if *irdy == "" {
+			atomNames = intder.ConvertCart(cart)
+		} else {
+			atomNames = strings.Fields(*irdy)
 		}
-		for _, file := range subfiles {
-			Submit(file)
+		if DoPts() {
+			intder.WritePts("pts/intder.in")
+			RunIntder("pts/intder")
+			go func() {
+				prog.BuildPoints("pts/file07", atomNames, &energies, ch, true)
+				close(ch)
+			}()
+			// this works if no points were deleted, else need a resume from checkpoint thing
+		} else {
+			prog.BuildPoints("pts/file07", atomNames, &energies, nil, false)
 		}
-		// this works if no points were deleted, else need a resume from checkpoint thing
-	} else {
-		points.Calcs = prog.BuildPoints("pts/file07", atomNames, false)
 	}
-	var (
-		energies []float64
-		min      float64
-	)
-	min, energies = Drain(prog)
+	// Instead of returning energies, use job.Target = energies, also need a function
+	// for getting the index in the array for fc2,3,4 but do that before setting job.Index
+	min = Drain(prog, ch)
 
 	// convert to relative energies
 	for i := range energies {
