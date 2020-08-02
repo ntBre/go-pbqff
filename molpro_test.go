@@ -262,7 +262,12 @@ func TestBuildPoints(t *testing.T) {
 	os.Mkdir("testfiles/read/inp", 0755)
 	defer os.RemoveAll("testfiles/read/inp")
 	fmt.Println("dir: ", path.Dir("testfiles/read/file07"))
-	got := prog.BuildPoints("testfiles/read/file07", names, nil, true)
+	ch := make(chan Calc, 3)
+	prog.BuildPoints("testfiles/read/file07", names, nil, ch, true)
+	var got []Calc
+	for calc := range ch {
+		got = append(got, calc)
+	}
 	want := []Calc{
 		Calc{Name: "testfiles/read/inp/NHHH.00000", Index: 0},
 		Calc{Name: "testfiles/read/inp/NHHH.00001", Index: 1},

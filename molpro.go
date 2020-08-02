@@ -305,5 +305,6 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, target *[]flo
 			i++
 		}
 	}
+	close(ch)
 	return
 }

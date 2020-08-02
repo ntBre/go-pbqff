@@ -299,8 +299,8 @@ func DoIntder(intder *Intder, atomNames []string, longLine string) (string, []fl
 }
 
 // DoSpectro runs spectro
-func DoSpectro(spectro *Spectro, harms []float64) (float64, []float64, []float64, []float64) {
-	spectro.Nfreqs = len(harms)
+func DoSpectro(spectro *Spectro, nharms int) (float64, []float64, []float64, []float64) {
+	spectro.Nfreqs = nharms
 	spectro.WriteInput("freqs/spectro.in")
 	RunSpectro("freqs/spectro")
 	spectro.ReadOutput("freqs/spectro.out")
@@ -456,7 +456,6 @@ func main() {
 			RunIntder("pts/intder")
 			go func() {
 				prog.BuildPoints("pts/file07", atomNames, &energies, ch, true)
-				close(ch)
 			}()
 			// this works if no points were deleted, else need a resume from checkpoint thing
 		} else {
@@ -477,7 +476,7 @@ func main() {
 	if err != nil {
 		errExit(err, "loading spectro input")
 	}
-	zpt, spHarm, spFund, spCorr := DoSpectro(spectro, intderHarms)
+	zpt, spHarm, spFund, spCorr := DoSpectro(spectro, len(intderHarms))
 	if !finished {
 		mpHarm = make([]float64, spectro.Nfreqs)
 	}
