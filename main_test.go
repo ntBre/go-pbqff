@@ -18,6 +18,16 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func TestGHAdd(t *testing.T) {
+	heap := new(GarbageHeap)
+	heap.Add("testname")
+	got := heap.heap
+	want := []string{"testname"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+}
+
 func TestMakeDirs(t *testing.T) {
 	*overwrite = true
 	root := "testfiles"

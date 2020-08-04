@@ -32,6 +32,33 @@ type Calc struct {
 	Index  int
 }
 
+// GarbageHeap is a slice of Basenames to be deleted
+type GarbageHeap struct {
+	heap []string // list of basenames
+}
+
+// Add a filename to the heap
+func (g *GarbageHeap) Add(basename string) {
+	g.heap = append(g.heap, basename)
+}
+
+func (g *GarbageHeap) Len() int {
+	return len(g.heap)
+}
+
+// Dump deletes the globbed files in the heap using an appended *
+func (g *GarbageHeap) Dump() {
+	toDelete := make([]string, 0)
+	for _, v := range g.heap {
+		files, _ := filepath.Glob(v + "*")
+		toDelete = append(toDelete, files...)
+	}
+	for _, f := range toDelete {
+		os.Remove(f)
+	}
+	g.heap = []string{}
+}
+
 const (
 	// these should  be in the input
 	chunkSize = 100
@@ -317,6 +344,7 @@ func Drain(prog *Molpro, ch chan Calc) (min float64) {
 	points := make([]Calc, 0)
 	var nJobs int
 	var finished int
+	heap := new(GarbageHeap)
 	for {
 		shortenBy := 0
 		for i := 0; i < nJobs; i++ {
@@ -333,6 +361,7 @@ func Drain(prog *Molpro, ch chan Calc) (min float64) {
 					(*job.Target) = append(*job.Target, 0)
 				}
 				(*job.Target)[job.Index] = energy
+				heap.Add(job.Name)
 				shortenBy++
 				finished++
 			} else if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
@@ -355,6 +384,9 @@ func Drain(prog *Molpro, ch chan Calc) (min float64) {
 		if shortenBy < 1 {
 			fmt.Fprintln(os.Stderr, "Didn't shorten, sleeping")
 			time.Sleep(time.Second)
+		}
+		if heap.Len() >= chunkSize {
+			heap.Dump()
 		}
 		fmt.Fprintf(os.Stderr, "finished: %d of %d submitted\n", finished, submitted)
 		calc, ok := <-ch
