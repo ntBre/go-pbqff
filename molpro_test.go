@@ -71,6 +71,11 @@ func TestWriteInputMolpro(t *testing.T) {
 
 func TestReadOut(t *testing.T) {
 	mp := Molpro{Geometry: FormatZmat(Input[Geometry])}
+	temp := energyLine
+	energyLine = regexp.MustCompile(`energy=`)
+	defer func() {
+		energyLine = temp
+	}()
 
 	t.Run("Successful reading", func(t *testing.T) {
 		got, err := mp.ReadOut("testfiles/good.out")

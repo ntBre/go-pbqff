@@ -21,6 +21,8 @@ import (
 
 	"path/filepath"
 
+	"strconv"
+
 	"github.com/ntBre/chemutils/summarize"
 )
 
@@ -29,7 +31,7 @@ import (
 type Calc struct {
 	Name   string
 	Target *[]float64 // Target result array
-	Index  int
+	Index  int        // index in Target
 }
 
 // GarbageHeap is a slice of Basenames to be deleted
@@ -112,7 +114,7 @@ var (
 	Input            [NumKeys]string
 	dirs             = []string{"opt", "freq", "pts", "freqs", "pts/inp"}
 	brokenFloat      = math.NaN()
-	energyLine       = regexp.MustCompile(`energy=`) // default search patterns, altered for sequoia in pbs.go
+	energyLine       *regexp.Regexp
 	molproTerminated = "Molpro calculation terminated"
 	defaultOpt       = "optg,grms=1.d-8,srms=1.d-8"
 	pbs              string
@@ -252,7 +254,7 @@ func WhichCluster() {
 }
 
 // Optimize runs a Molpro optimization in the opt directory
-func Optimize(prog *Molpro) {
+func Optimize(prog *Molpro) (E0 float64) {
 	// write opt.inp and mp.pbs
 	prog.WriteInput("opt/opt.inp", opt)
 	WritePBS("opt/mp.pbs",
@@ -263,7 +265,7 @@ func Optimize(prog *Molpro) {
 	_, err := prog.ReadOut(outfile)
 	for err != nil {
 		HandleSignal(35, time.Minute)
-		_, err = prog.ReadOut(outfile)
+		E0, err = prog.ReadOut(outfile)
 		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 			err == ErrFileContainsError || err == ErrBlankOutput) ||
 			err == ErrFileNotFound {
@@ -272,6 +274,34 @@ func Optimize(prog *Molpro) {
 			Submit("opt/mp.pbs")
 		}
 	}
+	return
+}
+
+// RefEnergy runs a Molpro single point energy calculation in the
+// pts/inp directory
+func RefEnergy(prog *Molpro) (E0 float64) {
+	dir := "pts/inp/"
+	infile := "ref.inp"
+	pbsfile := "ref.pbs"
+	prog.WriteInput(dir+infile, opt)
+	WritePBS(dir+pbsfile,
+		&Job{MakeName(Input[Geometry]) + "-ref", dir + infile, 35})
+	// submit opt, wait for it to finish in main goroutine - block
+	Submit(dir + pbsfile)
+	outfile := "ref.out"
+	_, err := prog.ReadOut(dir + outfile)
+	for err != nil {
+		HandleSignal(35, time.Minute)
+		E0, err = prog.ReadOut(outfile)
+		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
+			err == ErrFileContainsError || err == ErrBlankOutput) ||
+			err == ErrFileNotFound {
+
+			fmt.Fprintln(os.Stderr, "resubmitting for", err)
+			Submit(dir + pbsfile)
+		}
+	}
+	return
 }
 
 // Frequency runs a Molpro harmonic frequency calculation in the freq
@@ -415,8 +445,10 @@ func initialize() (*Molpro, *Intder, *Anpass) {
 	case "gocart":
 		flags |= CART
 		energyLine = regexp.MustCompile(`^\s*CARTFC\s+=`)
-		// default:
-		// 	errExit(fmt.Errorf("%s not implemented as a Program", Input[Program]), "")
+	case "molpro", "": // default if not specified
+		energyLine = regexp.MustCompile(`energy=`)
+	default:
+		errExit(fmt.Errorf("%s not implemented as a Program", Input[Program]), "")
 	}
 	mpName := "molpro.in"
 	idName := "intder.in"
@@ -441,6 +473,35 @@ func errExit(err error, msg string) {
 	os.Exit(1)
 }
 
+// XYZGeom converts a string xyz style geometry into a list of atom
+// names and coords
+func XYZGeom(geom string) (names []string, coords []float64) {
+	lines := strings.Split(geom, "\n")
+	var skip int
+	for i, line := range lines {
+		if line == "" {
+			continue
+		}
+		if skip > 0 {
+			skip--
+			continue
+		}
+		fields := strings.Fields(line)
+		if i == 0 && len(fields) == 1 {
+			skip += 1
+			continue
+		}
+		if len(fields) == 4 {
+			names = append(names, fields[0])
+			for _, s := range fields[1:] {
+				f, _ := strconv.ParseFloat(s, 64)
+				coords = append(coords, f)
+			}
+		}
+	}
+	return
+}
+
 var submitted int
 
 func main() {
@@ -454,12 +515,14 @@ func main() {
 		atomNames []string
 		energies  []float64
 		min       float64
+		E0        float64
 	)
 
 	if DoOpt() {
 		MakeDirs(".")
 		prog.Geometry = FormatZmat(Input[Geometry])
-		Optimize(prog)
+		E0 = Optimize(prog)
+		fmt.Println(E0)
 		cart, zmat, err = prog.HandleOutput("opt/opt")
 		if err != nil {
 			panic(err)
@@ -493,6 +556,14 @@ func main() {
 		} else {
 			prog.BuildPoints("pts/file07", atomNames, &energies, nil, false)
 		}
+	} else {
+		names, coords := XYZGeom(Input[Geometry])
+		prog.Geometry = Input[Geometry]
+		if !DoOpt() {
+			E0 = RefEnergy(prog)
+		}
+		// TODO
+		prog.BuildCartPoints(names, coords, E0, &fc2, &fc3, &fc4, ch)
 	}
 	// Instead of returning energies, use job.Target = energies, also need a function
 	// for getting the index in the array for fc2,3,4 but do that before setting job.Index

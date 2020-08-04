@@ -308,3 +308,60 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, target *[]flo
 	close(ch)
 	return
 }
+
+// BuildCartPoints constructs the calculations needed to run a
+// Cartesian quartic force field
+func (mp *Molpro) BuildCartPoints(names []string, coords []float64, E0 float64, fc2, fc3, fc4 *[]float64, ch chan Calc) {
+	// l := len(names)
+	// i := 0
+	// var (
+	// 	buf     bytes.Buffer
+	// 	cmdfile string
+	// )
+	// dir := "pts/inp/"
+	// name := strings.Join(names, "")
+	// geom := 0
+	// count := 0
+	// pf := 0
+	pbs = ptsMaple
+	mp.AugmentHead()
+	// TODO insert go-cart code here
+	// for li, line := range lines {
+	// 	if !strings.Contains(line, "#") {
+	// 		ind := i % l
+	// 		if (ind == 0 && i > 0) || li == len(lines)-1 {
+	// 			// last line needs to write first
+	// 			if li == len(lines)-1 {
+	// 				fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
+	// 			}
+	// 			mp.Geometry = fmt.Sprint(buf.String(), "}\n")
+	// 			basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
+	// 			fname := basename + ".inp"
+	// 			if write {
+	// 				// write the molpro input file and add it to the list of commands
+	// 				mp.WriteInput(fname, none)
+	// 				cmdfile = fmt.Sprintf("%s/inp/commands%d.txt", dir, pf)
+	// 				AddCommand(cmdfile, fname)
+	// 				ch <- Calc{Name: basename, Target: target, Index: geom}
+	// 				submitted++
+	// 				if count == chunkSize || li == len(lines)-1 {
+	// 					subfile := fmt.Sprintf("%s/inp/main%d.pbs", dir, pf)
+	// 					WritePBS(subfile, &Job{"pts", cmdfile, 35})
+	// 					Submit(subfile)
+	// 					count = 0
+	// 					pf++
+	// 				}
+	// 				count++
+	// 			} else {
+	// 				ch <- Calc{Name: basename, Target: target, Index: geom}
+	// 			}
+	// 			geom++
+	// 			buf.Reset()
+	// 		}
+	// 		fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
+	// 		i++
+	// 	}
+	// }
+	close(ch)
+	return
+}

@@ -212,3 +212,47 @@ OX=                  1.26606700 ANG
 		}
 	})
 }
+
+func TestXYZGeom(t *testing.T) {
+	tests := []struct {
+		geom   string
+		coords []float64
+		names  []string
+	}{
+		{
+			geom: ` 3
+ Comment
+ H          0.0000000000        0.7574590974        0.5217905143
+ O          0.0000000000        0.0000000000       -0.0657441568
+ H          0.0000000000       -0.7574590974        0.5217905143
+`,
+			coords: []float64{
+				0.0000000000, 0.7574590974, 0.5217905143,
+				0.0000000000, 0.0000000000, -0.0657441568,
+				0.0000000000, -0.7574590974, 0.5217905143,
+			},
+			names: []string{"H", "O", "H"},
+		},
+		{
+			geom: ` H          0.0000000000        0.7574590974        0.5217905143
+ O          0.0000000000        0.0000000000       -0.0657441568
+ H          0.0000000000       -0.7574590974        0.5217905143
+`,
+			coords: []float64{
+				0.0000000000, 0.7574590974, 0.5217905143,
+				0.0000000000, 0.0000000000, -0.0657441568,
+				0.0000000000, -0.7574590974, 0.5217905143,
+			},
+			names: []string{"H", "O", "H"},
+		},
+	}
+	for _, want := range tests {
+		names, coords := XYZGeom(want.geom)
+		if !reflect.DeepEqual(coords, want.coords) {
+			t.Errorf("got %v, wanted %v\n", coords, want.coords)
+		}
+		if !reflect.DeepEqual(names, want.names) {
+			t.Errorf("got %v, wanted %v\n", names, want.names)
+		}
+	}
+}
