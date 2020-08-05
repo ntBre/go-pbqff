@@ -412,6 +412,7 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 				heap.Add(job.Name)
 				shortenBy++
 				finished++
+				// TODO Work on this
 			} else if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 				err == ErrFileContainsError || err == ErrBlankOutput {
 				if err == ErrFileContainsError {
