@@ -706,40 +706,46 @@ func Index(ncoords int, id ...int) int {
 	return -1
 }
 
+// TODO also need to write and submit if we reach the end and not at chunksize
+// -> pass end bool => if *count == chunkSize || end {
+func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc) {
+	subfile := fmt.Sprintf("%s/main%d.pbs", dir, pf)
+	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, pf)
+	for f := range files {
+		AddCommand(cmdfile, files[f])
+		ch <- calcs[f]
+		submitted++
+		if *count == chunkSize {
+			WritePBS(subfile, &Job{"pts", cmdfile, 35})
+			Submit(subfile)
+			*count = 0
+			*pf++
+		}
+		*count++
+	}
+}
+
 // BuildCartPoints constructs the calculations needed to run a
 // Cartesian quartic force field
 func (mp *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc4 *[]float64, ch chan Calc) {
 	pbs = ptsMaple // Maple parallel only
 	var (
-		count int
-		pf    int
+		count *int
+		pf    *int
 	)
 	dir := "pts/inp"
-	subfile := fmt.Sprintf("%s/main%d.pbs", dir, pf)
-	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, pf)
 	for i := 1; i <= len(coords); i++ {
 		for j := 1; j <= i; j++ {
 			files, calcs := Derivative(mp, names, coords, fc2, i, j)
-			for f := range files {
-				AddCommand(cmdfile, files[f])
-				ch <- calcs[f]
-				submitted++
-				if count == chunkSize {
-					subfile = fmt.Sprintf("%s/main%d.pbs", dir, pf)
-					cmdfile = fmt.Sprintf("%s/commands%d.txt", dir, pf)
-					WritePBS(subfile, &Job{"pts", cmdfile, 35})
-					Submit(subfile)
-					count = 0
-					pf++
-				}
-				count++
-			}
+			Push(dir, pf, count, files, calcs, ch)
 			if nDerivative > 2 {
 				for k := 1; k <= j; k++ {
-					jobs := Derivative(mp, names, coords, fc3, i, j, k)
+					files, calcs := Derivative(mp, names, coords, fc3, i, j, k)
+					Push(dir, pf, count, files, calcs, ch)
 					if nDerivative > 3 {
 						for l := 1; l <= k; l++ {
-							jobs := Derivative(mp, names, coords, fc4, i, j, k, l)
+							files, calcs := Derivative(mp, names, coords, fc4, i, j, k, l)
+							Push(dir, pf, count, files, calcs, ch)
 						}
 					}
 				}
