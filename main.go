@@ -87,6 +87,14 @@ var (
 	nDerivative      int = 4
 )
 
+// Finite differences denominators
+var (
+	angbohr          = 0.529177249
+	fc2Scale = angbohr * angbohr / (4 * delta * delta)
+	fc3Scale = angbohr * angbohr * angbohr / (8 * delta * delta * delta)
+	fc4Scale = angbohr * angbohr * angbohr * angbohr / (16 * delta * delta * delta * delta)
+)
+
 // Globals for queue
 var (
 	fc2 []float64
@@ -512,6 +520,48 @@ func XYZGeom(geom string) (names []string, coords []float64) {
 	return
 }
 
+// PrintFile15 prints the second derivative force constants in the
+// format expected by SPECTRO
+func PrintFile15(fc []float64, natoms int, filename string) int {
+	f, _ := os.Create(filename)
+	fmt.Fprintf(f, "%5d%5d", natoms, 6*natoms) // still not sure why this is just times 6
+	for i := range fc {
+		if i%3 == 0 {
+			fmt.Fprintf(f, "\n")
+		}
+		fmt.Fprintf(f, "%20.10f", fc[i]*fc2Scale)
+	}
+	return len(fc)
+}
+
+// PrintFile30 prints the third derivative force constants in the
+// format expected by SPECTRO
+func PrintFile30(fc []float64, natoms, other int, filename string) int {
+	f, _ := os.Create(filename)
+	fmt.Fprintf(f, "%5d%5d", natoms, other)
+	for i := range fc {
+		if i%3 == 0 {
+			fmt.Fprintf(f, "\n")
+		}
+		fmt.Fprintf(f, "%20.10f", fc[i]*fc3Scale)
+	}
+	return len(fc)
+}
+
+// PrintFile40 prints the fourth derivative force constants in the
+// format expected by SPECTRO
+func PrintFile40(fc []float64, natoms, other int, filename string) int {
+	f, _ := os.Create(filename)
+	fmt.Fprintf(f, "%5d%5d", natoms, other)
+	for i := range fc {
+		if i%3 == 0 {
+			fmt.Fprintf(f, "\n")
+		}
+		fmt.Fprintf(f, "%20.10f", fc[i]*fc4Scale)
+	}
+	return len(fc)
+}
+
 var submitted int
 
 func main() {
@@ -526,6 +576,7 @@ func main() {
 		energies  []float64
 		min       float64
 		E0        float64
+		natoms    int
 	)
 
 	if DoOpt() {
@@ -568,6 +619,7 @@ func main() {
 		}
 	} else {
 		names, coords := XYZGeom(Input[Geometry])
+		natoms = len(names)
 		prog.Geometry = Input[Geometry]
 		if !DoOpt() {
 			E0 = RefEnergy(prog)
@@ -579,19 +631,32 @@ func main() {
 	// for getting the index in the array for fc2,3,4 but do that before setting job.Index
 	min = Drain(prog, ch, E0)
 
-	// convert to relative energies
-	for i := range energies {
-		energies[i] -= min
+	if !DoCart() {
+		// convert to relative energies
+		for i := range energies {
+			energies[i] -= min
+		}
+		longLine := DoAnpass(anpass, energies)
+		coords, intderHarms := DoIntder(intder, atomNames, longLine)
+		spectro, err := LoadSpectro("spectro.in", atomNames, coords)
+		if err != nil {
+			errExit(err, "loading spectro input")
+		}
+		zpt, spHarm, spFund, spCorr := DoSpectro(spectro, len(intderHarms))
+		if !finished {
+			mpHarm = make([]float64, spectro.Nfreqs)
+		}
+		Summarize(zpt, mpHarm, intderHarms, spHarm, spFund, spCorr)
+	} else {
+		N3N := natoms * 3 // from spectro manual pg 12
+		other3 := N3N * (N3N + 1) * (N3N + 2) / 6
+		other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24
+		PrintFile15(fc2, natoms, "fort.15")
+		if nDerivative > 2 {
+			PrintFile30(fc3, natoms, other3, "fort.30")
+		}
+		if nDerivative > 3 {
+			PrintFile40(fc4, natoms, other4, "fort.40")
+		}
 	}
-	longLine := DoAnpass(anpass, energies)
-	coords, intderHarms := DoIntder(intder, atomNames, longLine)
-	spectro, err := LoadSpectro("spectro.in", atomNames, coords)
-	if err != nil {
-		errExit(err, "loading spectro input")
-	}
-	zpt, spHarm, spFund, spCorr := DoSpectro(spectro, len(intderHarms))
-	if !finished {
-		mpHarm = make([]float64, spectro.Nfreqs)
-	}
-	Summarize(zpt, mpHarm, intderHarms, spHarm, spFund, spCorr)
 }
