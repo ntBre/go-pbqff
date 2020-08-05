@@ -26,46 +26,12 @@ import (
 	"github.com/ntBre/chemutils/summarize"
 )
 
-// Calc holds the name of a job to be run and its result's index in
-// the output array
-type Calc struct {
-	Name   string
-	Target *[]float64 // Target result array
-	Index  int        // index in Target
-}
-
-// GarbageHeap is a slice of Basenames to be deleted
-type GarbageHeap struct {
-	heap []string // list of basenames
-}
-
-// Add a filename to the heap
-func (g *GarbageHeap) Add(basename string) {
-	g.heap = append(g.heap, basename)
-}
-
-func (g *GarbageHeap) Len() int {
-	return len(g.heap)
-}
-
-// Dump deletes the globbed files in the heap using an appended *
-func (g *GarbageHeap) Dump() {
-	toDelete := make([]string, 0)
-	for _, v := range g.heap {
-		files, _ := filepath.Glob(v + "*")
-		toDelete = append(toDelete, files...)
-	}
-	for _, f := range toDelete {
-		os.Remove(f)
-	}
-	g.heap = []string{}
-}
-
 const (
 	// these should  be in the input
 	chunkSize = 100
 	jobLimit  = 2 * chunkSize
 	resBound  = 1e-16
+	delta     = 0.005
 	help      = `Requirements:
 - intder, anpass, and spectro executables
 - template intder.in, anpass.in, spectro.in, and molpro.in files
@@ -118,6 +84,7 @@ var (
 	molproTerminated = "Molpro calculation terminated"
 	defaultOpt       = "optg,grms=1.d-8,srms=1.d-8"
 	pbs              string
+	nDerivative      int = 4
 )
 
 // Globals for queue
@@ -138,6 +105,46 @@ var (
 	ErrInputGeomNotFound   = errors.New("Geometry not found in input file")
 	ErrTimeout             = errors.New("Timeout waiting for signal")
 )
+
+// Calc holds the name of a job to be run and its result's index in
+// the output array
+type Calc struct {
+	Name    string
+	Targets []Target
+}
+
+type Target struct {
+	Coeff float64
+	Slice *[]float64
+	Index int
+}
+
+// GarbageHeap is a slice of Basenames to be deleted
+type GarbageHeap struct {
+	heap []string // list of basenames
+}
+
+// Add a filename to the heap
+func (g *GarbageHeap) Add(basename string) {
+	g.heap = append(g.heap, basename)
+}
+
+func (g *GarbageHeap) Len() int {
+	return len(g.heap)
+}
+
+// Dump deletes the globbed files in the heap using an appended *
+func (g *GarbageHeap) Dump() {
+	toDelete := make([]string, 0)
+	for _, v := range g.heap {
+		files, _ := filepath.Glob(v + "*")
+		toDelete = append(toDelete, files...)
+	}
+	for _, f := range toDelete {
+		os.Remove(f)
+	}
+	g.heap = []string{}
+}
 
 // ParseFlags parses command line flags and returns a slice of
 // the remaining arguments
@@ -370,7 +377,8 @@ func DoSpectro(spectro *Spectro, nharms int) (float64, []float64, []float64, []f
 }
 
 // Drain drains the queue of jobs and receives on ch when ready for more
-func Drain(prog *Molpro, ch chan Calc) (min float64) {
+// TODO check for job.Name == "E0" and handle accordingly
+func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 	points := make([]Calc, 0)
 	var nJobs int
 	var finished int
@@ -387,10 +395,12 @@ func Drain(prog *Molpro, ch chan Calc) (min float64) {
 				if energy < min {
 					min = energy
 				}
-				for len(*job.Target) <= job.Index {
-					(*job.Target) = append(*job.Target, 0)
+				for _, t := range job.Targets {
+					for len(*t.Slice) <= t.Index {
+						*t.Slice = append(*t.Slice, 0)
+					}
+					(*t.Slice)[t.Index] += t.Coeff * energy
 				}
-				(*job.Target)[job.Index] = energy
 				heap.Add(job.Name)
 				shortenBy++
 				finished++
@@ -400,7 +410,7 @@ func Drain(prog *Molpro, ch chan Calc) (min float64) {
 					fmt.Fprintf(os.Stderr, "error: %v on %s\n", err, job.Name)
 				}
 				fmt.Fprintf(os.Stderr,
-					"resubmitting %s for %s, with %d jobs remaining\n", job.Name, err, nJobs)
+					"resubmitting %s for %s\n", job.Name, err)
 				// delete output file to prevent rereading the same one
 				os.Remove(job.Name + ".out")
 				// if we have to resubmit, need individual submission from pbsMaple
@@ -563,11 +573,11 @@ func main() {
 			E0 = RefEnergy(prog)
 		}
 		// TODO
-		prog.BuildCartPoints(names, coords, E0, &fc2, &fc3, &fc4, ch)
+		prog.BuildCartPoints(names, coords, &fc2, &fc3, &fc4, ch)
 	}
 	// Instead of returning energies, use job.Target = energies, also need a function
 	// for getting the index in the array for fc2,3,4 but do that before setting job.Index
-	min = Drain(prog, ch)
+	min = Drain(prog, ch, E0)
 
 	// convert to relative energies
 	for i := range energies {

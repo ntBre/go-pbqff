@@ -274,11 +274,29 @@ func TestBuildPoints(t *testing.T) {
 		got = append(got, calc)
 	}
 	want := []Calc{
-		Calc{Name: "testfiles/read/inp/NHHH.00000", Index: 0},
-		Calc{Name: "testfiles/read/inp/NHHH.00001", Index: 1},
-		Calc{Name: "testfiles/read/inp/NHHH.00002", Index: 2},
+		Calc{Name: "testfiles/read/inp/NHHH.00000", Targets: []Target{{1, nil, 0}}},
+		Calc{Name: "testfiles/read/inp/NHHH.00001", Targets: []Target{{1, nil, 1}}},
+		Calc{Name: "testfiles/read/inp/NHHH.00002", Targets: []Target{{1, nil, 2}}},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, wanted %v", got, want)
+	}
+}
+
+func TestZipXYZ(t *testing.T) {
+	fcoords := []float64{
+		0.000000000, 2.391678166, 0.000000000,
+		-2.274263181, 0.000000000, 0.000000000,
+		2.274263181, 0.000000000, 0.000000000,
+		0.000000000, -2.391678166, 0.000000000,
+	}
+	got := ZipXYZ(names, fcoords)
+	want := `Al 0.0000000000 2.3916781660 0.0000000000
+O -2.2742631810 0.0000000000 0.0000000000
+O 2.2742631810 0.0000000000 0.0000000000
+Al 0.0000000000 -2.3916781660 0.0000000000
+`
+	if got != want {
+		t.Errorf("got\n%q, wanted\n%q\n", got, want)
 	}
 }

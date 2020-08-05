@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"hash/maphash"
 	"io/ioutil"
 	"math"
 	"os"
@@ -285,7 +286,7 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, target *[]flo
 					mp.WriteInput(fname, none)
 					cmdfile = fmt.Sprintf("%s/inp/commands%d.txt", dir, pf)
 					AddCommand(cmdfile, fname)
-					ch <- Calc{Name: basename, Target: target, Index: geom}
+					ch <- Calc{Name: basename, Targets: []Target{{1, target, geom}}}
 					submitted++
 					if count == chunkSize || li == len(lines)-1 {
 						subfile := fmt.Sprintf("%s/inp/main%d.pbs", dir, pf)
@@ -296,7 +297,7 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, target *[]flo
 					}
 					count++
 				} else {
-					ch <- Calc{Name: basename, Target: target, Index: geom}
+					ch <- Calc{Name: basename, Targets: []Target{{1, target, geom}}}
 				}
 				geom++
 				buf.Reset()
@@ -309,59 +310,442 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, target *[]flo
 	return
 }
 
+// Index3 returns the index in the third derivative array expected by SPECTRO
+// corresponding to x, y, and z
+func Index3(x, y, z int) int {
+	return x + (y-1)*y/2 + (z-1)*z*(z+1)/6 - 1
+}
+
+// Index4 returns the index in the fourth derivative array expected by
+// SPECTRO corresponding to x, y, z and w
+func Index4(x, y, z, w int) int {
+	return x + (y-1)*y/2 + (z-1)*z*(z+1)/6 + (w-1)*w*(w+1)*(w+2)/24 - 1
+}
+
+// HashName returns a hashed filename
+func HashName() string {
+	var h maphash.Hash
+	h.SetSeed(maphash.MakeSeed())
+	return "job" + strconv.FormatUint(h.Sum64(), 16)
+}
+
+type ProtoCalc struct {
+	Coeff float64
+	Name  string
+	Steps []int
+	Index []int
+}
+
+// Make2D makes the Job slices for finite differences second
+// derivative force constants
+func Make2D(i, j int) []ProtoCalc {
+	switch {
+	case i == j:
+		// E(+i+i) - 2*E(0) + E(-i-i) / (2d)^2
+		return []ProtoCalc{
+			{1, HashName(), []int{i, i}, []int{i, i}},
+			{-2, "E0", []int{}, []int{i, i}},
+			{1, HashName(), []int{-i, -i}, []int{i, i}},
+		}
+	case i != j:
+		// E(+i+j) - E(+i-j) - E(-i+j) + E(-i-j) / (2d)^2
+		return []ProtoCalc{
+			{1, HashName(), []int{i, j}, []int{i, j}},
+			{-1, HashName(), []int{i, -j}, []int{i, j}},
+			{-1, HashName(), []int{-i, j}, []int{i, j}},
+			{1, HashName(), []int{-i, -j}, []int{i, j}},
+		}
+	default:
+		panic("No cases matched")
+	}
+}
+
+// Make3D makes the ProtoCalc slices for finite differences third derivative
+// force constants
+func Make3D(i, j, k int) []ProtoCalc {
+	switch {
+	case i == j && i == k:
+		// E(+i+i+i) - 3*E(i) + 3*E(-i) -E(-i-i-i) / (2d)^3
+		return []ProtoCalc{
+			{1, HashName(), []int{i, i, i}, []int{i, i, i}},
+			{-3, HashName(), []int{i}, []int{i, i, i}},
+			{3, HashName(), []int{-i}, []int{i, i, i}},
+			{-1, HashName(), []int{-i, -i, -i}, []int{i, i, i}},
+		}
+	case i == j && i != k:
+		return []ProtoCalc{
+			{1, HashName(), []int{i, i, k}, []int{i, i, k}},
+			{-2, HashName(), []int{k}, []int{i, i, k}},
+			{1, HashName(), []int{-i, -i, k}, []int{i, i, k}},
+			{-1, HashName(), []int{i, i, -k}, []int{i, i, k}},
+			{2, HashName(), []int{-k}, []int{i, i, k}},
+			{-1, HashName(), []int{-i, -i, -k}, []int{i, i, k}},
+		}
+	case i == k && i != j:
+		return []ProtoCalc{
+			{1, HashName(), []int{i, i, j}, []int{i, i, j}},
+			{-2, HashName(), []int{j}, []int{i, i, j}},
+			{1, HashName(), []int{-i, -i, j}, []int{i, i, j}},
+			{-1, HashName(), []int{i, i, -j}, []int{i, i, j}},
+			{2, HashName(), []int{-j}, []int{i, i, j}},
+			{-1, HashName(), []int{-i, -i, -j}, []int{i, i, j}},
+		}
+	case j == k && i != j:
+		return []ProtoCalc{
+			{1, HashName(), []int{j, j, i}, []int{j, j, i}},
+			{-2, HashName(), []int{i}, []int{j, j, i}},
+			{1, HashName(), []int{-j, -j, i}, []int{j, j, i}},
+			{-1, HashName(), []int{j, j, -i}, []int{j, j, i}},
+			{2, HashName(), []int{-i}, []int{j, j, i}},
+			{-1, HashName(), []int{-j, -j, -i}, []int{j, j, i}},
+		}
+	case i != j && i != k && j != k:
+		return []ProtoCalc{
+			{1, HashName(), []int{i, j, k}, []int{i, j, k}},
+			{-1, HashName(), []int{i, -j, k}, []int{i, j, k}},
+			{-1, HashName(), []int{-i, j, k}, []int{i, j, k}},
+			{1, HashName(), []int{-i, -j, k}, []int{i, j, k}},
+			{-1, HashName(), []int{i, j, -k}, []int{i, j, k}},
+			{1, HashName(), []int{i, -j, -k}, []int{i, j, k}},
+			{1, HashName(), []int{-i, j, -k}, []int{i, j, k}},
+			{-1, HashName(), []int{-i, -j, -k}, []int{i, j, k}},
+		}
+	default:
+		panic("No cases matched")
+	}
+}
+
+// Make4D makes the ProtoCalc slices for finite differences fourth
+// derivative force constants
+func Make4D(i, j, k, l int) []ProtoCalc {
+	switch {
+	// all the same
+	case i == j && i == k && i == l:
+		return []ProtoCalc{
+			{1, HashName(), []int{i, i, i, i}, []int{i, i, i, i}},
+			{-4, HashName(), []int{i, i}, []int{i, i, i, i}},
+			{6, "E0", []int{}, []int{i, i, i, i}},
+			{-4, HashName(), []int{-i, -i}, []int{i, i, i, i}},
+			{1, HashName(), []int{-i, -i, -i, -i}, []int{i, i, i, i}},
+		}
+	// 3 and 1
+	case i == j && i == k && i != l:
+		return []ProtoCalc{
+			{1, HashName(), []int{i, i, i, l}, []int{i, i, i, l}},
+			{-3, HashName(), []int{i, l}, []int{i, i, i, l}},
+			{3, HashName(), []int{-i, l}, []int{i, i, i, l}},
+			{-1, HashName(), []int{-i, -i, -i, l}, []int{i, i, i, l}},
+			{-1, HashName(), []int{i, i, i, -l}, []int{i, i, i, l}},
+			{3, HashName(), []int{i, -l}, []int{i, i, i, l}},
+			{-3, HashName(), []int{-i, -l}, []int{i, i, i, l}},
+			{1, HashName(), []int{-i, -i, -i, -l}, []int{i, i, i, l}},
+		}
+	case i == j && i == l && i != k:
+		return []ProtoCalc{
+			{1, HashName(), []int{i, i, i, k}, []int{i, i, i, k}},
+			{-3, HashName(), []int{i, k}, []int{i, i, i, k}},
+			{3, HashName(), []int{-i, k}, []int{i, i, i, k}},
+			{-1, HashName(), []int{-i, -i, -i, k}, []int{i, i, i, k}},
+			{-1, HashName(), []int{i, i, i, -k}, []int{i, i, i, k}},
+			{3, HashName(), []int{i, -k}, []int{i, i, i, k}},
+			{-3, HashName(), []int{-i, -k}, []int{i, i, i, k}},
+			{1, HashName(), []int{-i, -i, -i, -k}, []int{i, i, i, k}},
+		}
+	case i == k && i == l && i != j:
+		return []ProtoCalc{
+			{1, HashName(), []int{i, i, i, j}, []int{i, i, i, j}},
+			{-3, HashName(), []int{i, j}, []int{i, i, i, j}},
+			{3, HashName(), []int{-i, j}, []int{i, i, i, j}},
+			{-1, HashName(), []int{-i, -i, -i, j}, []int{i, i, i, j}},
+			{-1, HashName(), []int{i, i, i, -j}, []int{i, i, i, j}},
+			{3, HashName(), []int{i, -j}, []int{i, i, i, j}},
+			{-3, HashName(), []int{-i, -j}, []int{i, i, i, j}},
+			{1, HashName(), []int{-i, -i, -i, -j}, []int{i, i, i, j}},
+		}
+	case j == k && j == l && j != i:
+		return []ProtoCalc{
+			{1, HashName(), []int{j, j, j, i}, []int{j, j, j, i}},
+			{-3, HashName(), []int{j, i}, []int{j, j, j, i}},
+			{3, HashName(), []int{-j, i}, []int{j, j, j, i}},
+			{-1, HashName(), []int{-j, -j, -j, i}, []int{j, j, j, i}},
+			{-1, HashName(), []int{j, j, j, -i}, []int{j, j, j, i}},
+			{3, HashName(), []int{j, -i}, []int{j, j, j, i}},
+			{-3, HashName(), []int{-j, -i}, []int{j, j, j, i}},
+			{1, HashName(), []int{-j, -j, -j, -i}, []int{j, j, j, i}},
+		}
+	// 2 and 1 and 1
+	case i == j && i != k && i != l && k != l:
+		// x -> i, y -> k, z -> l
+		return []ProtoCalc{
+			{1, HashName(), []int{i, i, k, l}, []int{i, i, k, l}},
+			{-2, HashName(), []int{k, l}, []int{i, i, k, l}},
+			{1, HashName(), []int{-i, -i, k, l}, []int{i, i, k, l}},
+			{-1, HashName(), []int{i, i, -k, l}, []int{i, i, k, l}},
+			{2, HashName(), []int{-k, l}, []int{i, i, k, l}},
+			{-1, HashName(), []int{-i, -i, -k, l}, []int{i, i, k, l}},
+			{-1, HashName(), []int{i, i, k, -l}, []int{i, i, k, l}},
+			{2, HashName(), []int{k, -l}, []int{i, i, k, l}},
+			{-1, HashName(), []int{-i, -i, k, -l}, []int{i, i, k, l}},
+			{1, HashName(), []int{i, i, -k, -l}, []int{i, i, k, l}},
+			{-2, HashName(), []int{-k, -l}, []int{i, i, k, l}},
+			{1, HashName(), []int{-i, -i, -k, -l}, []int{i, i, k, l}},
+		}
+	case i == k && i != j && i != l && j != l:
+		// x -> i, y -> j, z -> l
+		return []ProtoCalc{
+			{1, HashName(), []int{i, i, j, l}, []int{i, i, j, l}},
+			{-2, HashName(), []int{j, l}, []int{i, i, j, l}},
+			{1, HashName(), []int{-i, -i, j, l}, []int{i, i, j, l}},
+			{-1, HashName(), []int{i, i, -j, l}, []int{i, i, j, l}},
+			{2, HashName(), []int{-j, l}, []int{i, i, j, l}},
+			{-1, HashName(), []int{-i, -i, -j, l}, []int{i, i, j, l}},
+			{-1, HashName(), []int{i, i, j, -l}, []int{i, i, j, l}},
+			{2, HashName(), []int{j, -l}, []int{i, i, j, l}},
+			{-1, HashName(), []int{-i, -i, j, -l}, []int{i, i, j, l}},
+			{1, HashName(), []int{i, i, -j, -l}, []int{i, i, j, l}},
+			{-2, HashName(), []int{-j, -l}, []int{i, i, j, l}},
+			{1, HashName(), []int{-i, -i, -j, -l}, []int{i, i, j, l}},
+		}
+	case i == l && i != j && i != k && j != k:
+		// x -> i, y -> k, z -> j
+		return []ProtoCalc{
+			{1, HashName(), []int{i, i, k, j}, []int{i, i, k, j}},
+			{-2, HashName(), []int{k, j}, []int{i, i, k, j}},
+			{1, HashName(), []int{-i, -i, k, j}, []int{i, i, k, j}},
+			{-1, HashName(), []int{i, i, -k, j}, []int{i, i, k, j}},
+			{2, HashName(), []int{-k, j}, []int{i, i, k, j}},
+			{-1, HashName(), []int{-i, -i, -k, j}, []int{i, i, k, j}},
+			{-1, HashName(), []int{i, i, k, -j}, []int{i, i, k, j}},
+			{2, HashName(), []int{k, -j}, []int{i, i, k, j}},
+			{-1, HashName(), []int{-i, -i, k, -j}, []int{i, i, k, j}},
+			{1, HashName(), []int{i, i, -k, -j}, []int{i, i, k, j}},
+			{-2, HashName(), []int{-k, -j}, []int{i, i, k, j}},
+			{1, HashName(), []int{-i, -i, -k, -j}, []int{i, i, k, j}},
+		}
+	case j == k && j != i && j != l && i != l:
+		// x -> j, y -> i, z -> l
+		return []ProtoCalc{
+			{1, HashName(), []int{j, j, i, l}, []int{j, j, i, l}},
+			{-2, HashName(), []int{i, l}, []int{j, j, i, l}},
+			{1, HashName(), []int{-j, -j, i, l}, []int{j, j, i, l}},
+			{-1, HashName(), []int{j, j, -i, l}, []int{j, j, i, l}},
+			{2, HashName(), []int{-i, l}, []int{j, j, i, l}},
+			{-1, HashName(), []int{-j, -j, -i, l}, []int{j, j, i, l}},
+			{-1, HashName(), []int{j, j, i, -l}, []int{j, j, i, l}},
+			{2, HashName(), []int{i, -l}, []int{j, j, i, l}},
+			{-1, HashName(), []int{-j, -j, i, -l}, []int{j, j, i, l}},
+			{1, HashName(), []int{j, j, -i, -l}, []int{j, j, i, l}},
+			{-2, HashName(), []int{-i, -l}, []int{j, j, i, l}},
+			{1, HashName(), []int{-j, -j, -i, -l}, []int{j, j, i, l}},
+		}
+	case j == l && j != i && j != k && i != k:
+		// x -> j, y -> i, z -> k
+		return []ProtoCalc{
+			{1, HashName(), []int{j, j, i, k}, []int{j, j, i, k}},
+			{-2, HashName(), []int{i, k}, []int{j, j, i, k}},
+			{1, HashName(), []int{-j, -j, i, k}, []int{j, j, i, k}},
+			{-1, HashName(), []int{j, j, -i, k}, []int{j, j, i, k}},
+			{2, HashName(), []int{-i, k}, []int{j, j, i, k}},
+			{-1, HashName(), []int{-j, -j, -i, k}, []int{j, j, i, k}},
+			{-1, HashName(), []int{j, j, i, -k}, []int{j, j, i, k}},
+			{2, HashName(), []int{i, -k}, []int{j, j, i, k}},
+			{-1, HashName(), []int{-j, -j, i, -k}, []int{j, j, i, k}},
+			{1, HashName(), []int{j, j, -i, -k}, []int{j, j, i, k}},
+			{-2, HashName(), []int{-i, -k}, []int{j, j, i, k}},
+			{1, HashName(), []int{-j, -j, -i, -k}, []int{j, j, i, k}},
+		}
+	case k == l && k != i && k != j && i != j:
+		// x -> k, y -> i, z -> j
+		return []ProtoCalc{
+			{1, HashName(), []int{k, k, i, j}, []int{k, k, i, j}},
+			{-2, HashName(), []int{i, j}, []int{k, k, i, j}},
+			{1, HashName(), []int{-k, -k, i, j}, []int{k, k, i, j}},
+			{-1, HashName(), []int{k, k, -i, j}, []int{k, k, i, j}},
+			{2, HashName(), []int{-i, j}, []int{k, k, i, j}},
+			{-1, HashName(), []int{-k, -k, -i, j}, []int{k, k, i, j}},
+			{-1, HashName(), []int{k, k, i, -j}, []int{k, k, i, j}},
+			{2, HashName(), []int{i, -j}, []int{k, k, i, j}},
+			{-1, HashName(), []int{-k, -k, i, -j}, []int{k, k, i, j}},
+			{1, HashName(), []int{k, k, -i, -j}, []int{k, k, i, j}},
+			{-2, HashName(), []int{-i, -j}, []int{k, k, i, j}},
+			{1, HashName(), []int{-k, -k, -i, -j}, []int{k, k, i, j}},
+		}
+	// 2 and 2
+	case i == j && k == l && i != k:
+		return []ProtoCalc{
+			{1, HashName(), []int{i, i, k, k}, []int{i, i, k, k}},
+			{1, HashName(), []int{-i, -i, -k, -k}, []int{i, i, k, k}},
+			{1, HashName(), []int{-i, -i, k, k}, []int{i, i, k, k}},
+			{1, HashName(), []int{i, i, -k, -k}, []int{i, i, k, k}},
+			{-2, HashName(), []int{i, i}, []int{i, i, k, k}},
+			{-2, HashName(), []int{k, k}, []int{i, i, k, k}},
+			{-2, HashName(), []int{-i, -i}, []int{i, i, k, k}},
+			{-2, HashName(), []int{-k, -k}, []int{i, i, k, k}},
+			{4, "E0", []int{}, []int{i, i, k, k}},
+		}
+	case i == k && j == l && i != j:
+		return []ProtoCalc{
+			{1, HashName(), []int{i, i, j, j}, []int{i, i, j, j}},
+			{1, HashName(), []int{-i, -i, -j, -j}, []int{i, i, j, j}},
+			{1, HashName(), []int{-i, -i, j, j}, []int{i, i, j, j}},
+			{1, HashName(), []int{i, i, -j, -j}, []int{i, i, j, j}},
+			{-2, HashName(), []int{i, i}, []int{i, i, j, j}},
+			{-2, HashName(), []int{j, j}, []int{i, i, j, j}},
+			{-2, HashName(), []int{-i, -i}, []int{i, i, j, j}},
+			{-2, HashName(), []int{-j, -j}, []int{i, i, j, j}},
+			{4, "E0", []int{}, []int{i, i, j, j}},
+		}
+	case i == l && j == k && i != j:
+		return []ProtoCalc{
+			{1, HashName(), []int{i, i, j, j}, []int{i, i, j, j}},
+			{1, HashName(), []int{-i, -i, -j, -j}, []int{i, i, j, j}},
+			{1, HashName(), []int{-i, -i, j, j}, []int{i, i, j, j}},
+			{1, HashName(), []int{i, i, -j, -j}, []int{i, i, j, j}},
+			{-2, HashName(), []int{i, i}, []int{i, i, j, j}},
+			{-2, HashName(), []int{j, j}, []int{i, i, j, j}},
+			{-2, HashName(), []int{-i, -i}, []int{i, i, j, j}},
+			{-2, HashName(), []int{-j, -j}, []int{i, i, j, j}},
+			{4, "E0", []int{}, []int{i, i, j, j}},
+		}
+	// all different
+	case i != j && i != k && i != l && j != k && j != l && k != l:
+		return []ProtoCalc{
+			{1, HashName(), []int{i, j, k, l}, []int{i, j, k, l}},
+			{-1, HashName(), []int{i, -j, k, l}, []int{i, j, k, l}},
+			{-1, HashName(), []int{-i, j, k, l}, []int{i, j, k, l}},
+			{1, HashName(), []int{-i, -j, k, l}, []int{i, j, k, l}},
+			{-1, HashName(), []int{i, j, -k, l}, []int{i, j, k, l}},
+			{1, HashName(), []int{i, -j, -k, l}, []int{i, j, k, l}},
+			{1, HashName(), []int{-i, j, -k, l}, []int{i, j, k, l}},
+			{-1, HashName(), []int{-i, -j, -k, l}, []int{i, j, k, l}},
+			{-1, HashName(), []int{i, j, k, -l}, []int{i, j, k, l}},
+			{1, HashName(), []int{i, -j, k, -l}, []int{i, j, k, l}},
+			{1, HashName(), []int{-i, j, k, -l}, []int{i, j, k, l}},
+			{-1, HashName(), []int{-i, -j, k, -l}, []int{i, j, k, l}},
+			{1, HashName(), []int{i, j, -k, -l}, []int{i, j, k, l}},
+			{-1, HashName(), []int{i, -j, -k, -l}, []int{i, j, k, l}},
+			{-1, HashName(), []int{-i, j, -k, -l}, []int{i, j, k, l}},
+			{1, HashName(), []int{-i, -j, -k, -l}, []int{i, j, k, l}},
+		}
+	default:
+		panic("No cases matched")
+	}
+}
+
+// Step adjusts coords by delta in the steps indices
+func Step(coords []float64, steps ...int) []float64 {
+	var c = make([]float64, len(coords))
+	copy(c, coords)
+	for _, v := range steps {
+		if v < 0 {
+			v = -1 * v
+			c[v-1] = c[v-1] - delta
+		} else {
+			c[v-1] += delta
+		}
+	}
+	return c
+}
+
+// type ProtoCalc struct {Coeff float64, Name string, Steps []int, Index []int}
+// type Calc struct {Name string, Targets []Target}
+// type Target struct {Coeff float64, Slice *[]float64, Index int}
+
+// Derivative is a helper for calling Make(2|3|4)D in the same way
+func Derivative(prog *Molpro, names []string, coords []float64, target *[]float64, dims ...int) (fnames []string, calcs []Calc) {
+	var protos []ProtoCalc
+	dir := "pts/inp/"
+	switch len(dims) {
+	case 2:
+		protos = Make2D(dims[0], dims[1])
+	case 3:
+		protos = Make3D(dims[0], dims[1], dims[2])
+	case 4:
+		protos = Make4D(dims[0], dims[1], dims[2], dims[3])
+	}
+	for _, p := range protos {
+		if p.Name != "E0" {
+			coords := Step(coords, p.Steps...)
+			prog.Geometry = ZipXYZ(names, coords) + "}\n"
+			fname := dir + p.Name + ".inp"
+			fnames = append(fnames, fname)
+			prog.WriteInput(fname, none)
+			// TODO handle multiple targets
+			calcs = append(calcs, Calc{Name: dir + p.Name, Targets: []Target{{p.Coeff, target, Index(len(coords), p.Index...)}}})
+		} else {
+			// TODO E0 case
+		}
+	}
+	return
+}
+
+func ZipXYZ(names []string, coords []float64) string {
+	var buf bytes.Buffer
+	if len(names) != len(coords)/3 {
+		panic("ZipXYZ: dimension mismatch on names and coords")
+	} else if len(coords)%3 != 0 {
+		panic("ZipXYZ: coords not divisible by 3")
+	}
+	for i := range names {
+		fmt.Fprintf(&buf, "%s %.10f %.10f %.10f\n", names[i], coords[3*i], coords[3*i+1], coords[3*i+2])
+	}
+	return buf.String()
+}
+
+func Index(ncoords int, id ...int) int {
+	sort.Ints(id)
+	switch ncoords {
+	case 2:
+		return 3*id[0] + id[1] // TODO actually need to return two here
+	case 3:
+		return Index3(id[0], id[1], id[2])
+	case 4:
+		return Index4(id[0], id[1], id[2], id[3])
+	}
+	panic("wrong number of coords in call to Index")
+	return -1
+}
+
 // BuildCartPoints constructs the calculations needed to run a
 // Cartesian quartic force field
-func (mp *Molpro) BuildCartPoints(names []string, coords []float64, E0 float64, fc2, fc3, fc4 *[]float64, ch chan Calc) {
-	// l := len(names)
-	// i := 0
-	// var (
-	// 	buf     bytes.Buffer
-	// 	cmdfile string
-	// )
-	// dir := "pts/inp/"
-	// name := strings.Join(names, "")
-	// geom := 0
-	// count := 0
-	// pf := 0
-	pbs = ptsMaple
-	mp.AugmentHead()
-	// TODO insert go-cart code here
-	// for li, line := range lines {
-	// 	if !strings.Contains(line, "#") {
-	// 		ind := i % l
-	// 		if (ind == 0 && i > 0) || li == len(lines)-1 {
-	// 			// last line needs to write first
-	// 			if li == len(lines)-1 {
-	// 				fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
-	// 			}
-	// 			mp.Geometry = fmt.Sprint(buf.String(), "}\n")
-	// 			basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
-	// 			fname := basename + ".inp"
-	// 			if write {
-	// 				// write the molpro input file and add it to the list of commands
-	// 				mp.WriteInput(fname, none)
-	// 				cmdfile = fmt.Sprintf("%s/inp/commands%d.txt", dir, pf)
-	// 				AddCommand(cmdfile, fname)
-	// 				ch <- Calc{Name: basename, Target: target, Index: geom}
-	// 				submitted++
-	// 				if count == chunkSize || li == len(lines)-1 {
-	// 					subfile := fmt.Sprintf("%s/inp/main%d.pbs", dir, pf)
-	// 					WritePBS(subfile, &Job{"pts", cmdfile, 35})
-	// 					Submit(subfile)
-	// 					count = 0
-	// 					pf++
-	// 				}
-	// 				count++
-	// 			} else {
-	// 				ch <- Calc{Name: basename, Target: target, Index: geom}
-	// 			}
-	// 			geom++
-	// 			buf.Reset()
-	// 		}
-	// 		fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
-	// 		i++
-	// 	}
-	// }
+func (mp *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc4 *[]float64, ch chan Calc) {
+	pbs = ptsMaple // Maple parallel only
+	var (
+		count int
+		pf    int
+	)
+	dir := "pts/inp"
+	subfile := fmt.Sprintf("%s/main%d.pbs", dir, pf)
+	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, pf)
+	for i := 1; i <= len(coords); i++ {
+		for j := 1; j <= i; j++ {
+			files, calcs := Derivative(mp, names, coords, fc2, i, j)
+			for f := range files {
+				AddCommand(cmdfile, files[f])
+				ch <- calcs[f]
+				submitted++
+				if count == chunkSize {
+					subfile = fmt.Sprintf("%s/main%d.pbs", dir, pf)
+					cmdfile = fmt.Sprintf("%s/commands%d.txt", dir, pf)
+					WritePBS(subfile, &Job{"pts", cmdfile, 35})
+					Submit(subfile)
+					count = 0
+					pf++
+				}
+				count++
+			}
+			if nDerivative > 2 {
+				for k := 1; k <= j; k++ {
+					jobs := Derivative(mp, names, coords, fc3, i, j, k)
+					if nDerivative > 3 {
+						for l := 1; l <= k; l++ {
+							jobs := Derivative(mp, names, coords, fc4, i, j, k, l)
+						}
+					}
+				}
+			}
+		}
+	}
 	close(ch)
 	return
 }
