@@ -52,6 +52,10 @@ func RunProgram(progName, filename string) error {
 func MakeName(geom string) (name string) {
 	atoms := make(map[string]int)
 	split := strings.Split(geom, "\n")
+	// TODO handle no comment/natom lines in xyz
+	if Input[GeomType] == "xyz" {
+		split = split[2:]
+	}
 	for _, line := range split {
 		fields := strings.Fields(line)
 		// not a dummy atom and not a coordinate lol
@@ -78,10 +82,10 @@ func MakeName(geom string) (name string) {
 }
 
 // ReadFile reads a file and returns a slice of strings of the lines
-func ReadFile(filename string) (lines []string) {
+func ReadFile(filename string) (lines []string, err error) {
 	f, err := os.Open(filename)
 	if err != nil {
-		log.Fatalf("ReadFile: error %q open file %q\n", err, filename)
+		return nil, err
 	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
@@ -90,11 +94,14 @@ func ReadFile(filename string) (lines []string) {
 			lines = append(lines, line)
 		}
 	}
-	return
+	return lines, nil
 }
 
 // MakeDirs sets up the directory structure described by dirs
 func MakeDirs(root string) (err error) {
+	if DoCart() {
+		dirs = []string{"pts/inp"}
+	}
 	for _, dir := range dirs {
 		filename := root + "/" + dir
 		if _, err := os.Stat(filename); !os.IsNotExist(err) {

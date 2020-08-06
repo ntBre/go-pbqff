@@ -312,7 +312,7 @@ func RefEnergy(prog *Molpro) (E0 float64) {
 	_, err := prog.ReadOut(dir + outfile)
 	for err != nil {
 		HandleSignal(35, time.Minute)
-		E0, err = prog.ReadOut(outfile)
+		E0, err = prog.ReadOut(dir + outfile)
 		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 			err == ErrFileContainsError || err == ErrBlankOutput) ||
 			err == ErrFileNotFound {
@@ -492,7 +492,7 @@ func queueClear() error {
 	return err
 }
 
-func initialize() (*Molpro, *Intder, *Anpass) {
+func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	// parse flags for overwrite before mkdirs
 	args := ParseFlags()
 	if len(args) < 1 {
@@ -500,13 +500,16 @@ func initialize() (*Molpro, *Intder, *Anpass) {
 		os.Exit(1)
 	}
 	ParseInfile(args[0])
+	if Input[Flags] == "noopt" {
+		flags = flags &^ OPT
+	}
 	WhichCluster()
 	switch Input[Program] {
 	case "cccr":
 		energyLine = regexp.MustCompile(`^\s*CCCRE\s+=`)
 	case "gocart":
 		flags |= CART
-		energyLine = regexp.MustCompile(`^\s*CARTFC\s+=`)
+		energyLine = regexp.MustCompile(`energy=`)
 	case "molpro", "": // default if not specified
 		energyLine = regexp.MustCompile(`energy=`)
 	default:
@@ -519,14 +522,17 @@ func initialize() (*Molpro, *Intder, *Anpass) {
 	if err != nil {
 		errExit(err, fmt.Sprintf("loading molpro input %q", mpName))
 	}
-	intder, err := LoadIntder("intder.in")
-	if err != nil {
-		errExit(err, fmt.Sprintf("loading intder input %q", idName))
+	if !DoCart() {
+		intder, err = LoadIntder("intder.in")
+		if err != nil {
+			errExit(err, fmt.Sprintf("loading intder input %q", idName))
+		}
+		anpass, err = LoadAnpass("anpass.in")
+		if err != nil {
+			errExit(err, fmt.Sprintf("loading anpass input %q", apName))
+		}
 	}
-	anpass, err := LoadAnpass("anpass.in")
-	if err != nil {
-		errExit(err, fmt.Sprintf("loading anpass input %q", apName))
-	}
+	MakeDirs(".")
 	return prog, intder, anpass
 }
 
@@ -624,7 +630,6 @@ func main() {
 	)
 
 	if DoOpt() {
-		MakeDirs(".")
 		prog.Geometry = FormatZmat(Input[Geometry])
 		E0 = Optimize(prog)
 		cart, zmat, err = prog.HandleOutput("opt/opt")
@@ -663,11 +668,13 @@ func main() {
 	} else {
 		names, coords := XYZGeom(Input[Geometry])
 		natoms = len(names)
-		prog.Geometry = Input[Geometry]
+		prog.Geometry = Input[Geometry] + "\n}\n"
 		if !DoOpt() {
 			E0 = RefEnergy(prog)
 		}
-		prog.BuildCartPoints(names, coords, &fc2, &fc3, &fc4, ch)
+		go func() {
+			prog.BuildCartPoints(names, coords, &fc2, &fc3, &fc4, ch)
+		}()
 	}
 	// Instead of returning energies, use job.Target = energies, also need a function
 	// for getting the index in the array for fc2,3,4 but do that before setting job.Index

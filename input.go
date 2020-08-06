@@ -12,6 +12,7 @@ const (
 	Program
 	Geometry
 	GeomType
+	Flags
 	IntderCmd
 	AnpassCmd
 	SpectroCmd
@@ -24,11 +25,15 @@ type Regexp struct {
 }
 
 func ParseInfile(filename string) {
-	lines := ReadFile(filename)
+	lines, err := ReadFile(filename)
+	if err != nil {
+		panic(err)
+	}
 	Keywords := []Regexp{
 		Regexp{regexp.MustCompile(`(?i)queuetype=`), QueueType},
 		Regexp{regexp.MustCompile(`(?i)program=`), Program},
 		Regexp{regexp.MustCompile(`(?i)geomtype=`), GeomType},
+		Regexp{regexp.MustCompile(`(?i)flags=`), Flags},
 		Regexp{regexp.MustCompile(`(?i)intder=`), IntderCmd},
 		Regexp{regexp.MustCompile(`(?i)anpass=`), AnpassCmd},
 		Regexp{regexp.MustCompile(`(?i)spectro=`), SpectroCmd},

@@ -47,7 +47,7 @@ func TestMakeDirs(t *testing.T) {
 }
 
 func TestReadFile(t *testing.T) {
-	got := ReadFile("testfiles/read.this")
+	got, _ := ReadFile("testfiles/read.this")
 	want := []string{
 		"this is a sample file",
 		"to test ReadFile",
@@ -61,23 +61,50 @@ func TestReadFile(t *testing.T) {
 }
 
 func TestMakeName(t *testing.T) {
-	t.Run("original", func(t *testing.T) {
-		got := MakeName(Input[Geometry])
-		want := "Al2O2"
+	tests := []struct {
+		geom string
+		want string
+	}{
+		{
+			geom: ` X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 XXO  3 90.0
+O  1 OX  2 XXO  4 90.0
+
+AlX = 0.85 Ang
+OX = 1.1 Ang
+XXO = 80.0 Deg
+`,
+			want: "Al2O2",
+		},
+		{
+			geom: ` X
+C 1 1.0
+O 2 co 1 90.0
+H 2 ch 1 90.0 3 180.0
+
+co=                  1.10797263 ANG
+ch=                  1.09346324 ANG
+`,
+			want: "CHO",
+		},
+		{
+			geom: ` H          0.0000000000        0.7574590974        0.5217905143
+ O          0.0000000000        0.0000000000       -0.0657441568
+ H          0.0000000000       -0.7574590974        0.5217905143
+`,
+			want: "H2O",
+		},
+	}
+	for _, test := range tests {
+		got := MakeName(test.geom)
+		want := test.want
 		if got != want {
 			t.Errorf("got %v, wanted %v\n", got, want)
 		}
-	})
-	t.Run("no dummy atoms", func(t *testing.T) {
-		keep := Input
-		defer func() { Input = keep }()
-		ParseInfile("testfiles/prob.in")
-		got := MakeName(Input[Geometry])
-		want := "CHO"
-		if got != want {
-			t.Errorf("got %v, wanted %v\n", got, want)
-		}
-	})
+	}
 }
 
 func TestHandleSignal(t *testing.T) {
@@ -258,7 +285,7 @@ func TestXYZGeom(t *testing.T) {
 }
 
 func TestLookAround(t *testing.T) {
-	tests := []struct{
+	tests := []struct {
 		name string
 		want bool
 	}{

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"hash/maphash"
 	"io/ioutil"
 	"math"
 	"os"
@@ -104,9 +103,12 @@ func (m Molpro) ReadOut(filename string) (result float64, err error) {
 		return brokenFloat, ErrFileNotFound
 	}
 	error := regexp.MustCompile(`(?i)[^_]error`)
+	lines, err := ReadFile(filename)
+	if err != nil {
+		return brokenFloat, ErrFileNotFound
+	}
 	err = ErrEnergyNotFound
 	result = brokenFloat
-	lines := ReadFile(filename)
 	// ASSUME blank file is only created when PBS runs
 	// blank file has a single newline - which is stripped by this ReadLines
 	if len(lines) == 1 {
@@ -154,7 +156,10 @@ func (m Molpro) ReadOut(filename string) (result float64, err error) {
 func (m Molpro) HandleOutput(filename string) (string, string, error) {
 	outfile := filename + ".out"
 	logfile := filename + ".log"
-	lines := ReadFile(outfile)
+	lines, err := ReadFile(outfile)
+	if err != nil {
+		panic(err)
+	}
 	warn := regexp.MustCompile(`(?i)warning`)
 	error := regexp.MustCompile(`(?i)[^_]error`)
 	warned := false
@@ -183,7 +188,10 @@ func (m Molpro) HandleOutput(filename string) (string, string, error) {
 // ReadLog reads a molpro log file and returns the optimized Cartesian geometry
 // (in Bohr) and the zmat variables
 func ReadLog(filename string) (string, string) {
-	lines := ReadFile(filename)
+	lines, err := ReadFile(filename)
+	if err != nil {
+		panic(err)
+	}
 	var cart, zmat bytes.Buffer
 	for i := 0; i < len(lines); i++ {
 		if strings.Contains(lines[i], "ATOMIC COORDINATES") {
@@ -256,7 +264,10 @@ func (mp *Molpro) AugmentHead() {
 // is set to true, write the necessary files. Otherwise just return the list
 // of jobs.
 func (mp *Molpro) BuildPoints(filename string, atomNames []string, target *[]float64, ch chan Calc, write bool) {
-	lines := ReadFile(filename)
+	lines, err := ReadFile(filename)
+	if err != nil {
+		panic(err)
+	}
 	l := len(atomNames)
 	i := 0
 	var (
@@ -267,6 +278,8 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, target *[]flo
 	)
 	count = new(int)
 	pf = new(int)
+	*count = 0
+	*pf = 0
 	dir := path.Dir(filename)
 	name := strings.Join(atomNames, "")
 	pbs = ptsMaple
@@ -313,11 +326,17 @@ func Index4(x, y, z, w int) int {
 	return x + (y-1)*y/2 + (z-1)*z*(z+1)/6 + (w-1)*w*(w+1)*(w+2)/24 - 1
 }
 
+var jobNum int
+
 // HashName returns a hashed filename
 func HashName() string {
-	var h maphash.Hash
-	h.SetSeed(maphash.MakeSeed())
-	return "job" + strconv.FormatUint(h.Sum64(), 16)
+	// var h maphash.Hash
+	// h.SetSeed(maphash.MakeSeed())
+	// return "job" + strconv.FormatUint(h.Sum64(), 16)
+	defer func() {
+		jobNum++
+	}()
+	return fmt.Sprintf("job.%010d", jobNum)
 }
 
 type ProtoCalc struct {
@@ -365,10 +384,22 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]float6
 			fname := dir + p.Name + ".inp"
 			fnames = append(fnames, fname)
 			prog.WriteInput(fname, none)
-			// TODO handle multiple targets
-			calcs = append(calcs, Calc{Name: dir + p.Name, Targets: []Target{{p.Coeff, target, Index(len(coords), p.Index...)}}})
+			// TODO handle multiple targets - need to pass multiple targets in func call => []*[]float64?
+			calcs = append(calcs, Calc{Name: dir + p.Name, Targets: []Target{
+				Target{
+					Coeff: p.Coeff,
+					Slice: target,
+					Index: Index(len(coords), p.Index...),
+				},
+			}})
 		} else {
-			// TODO E0 case
+			calcs = append(calcs, Calc{Name: p.Name, Targets: []Target{
+				Target{
+					Coeff: p.Coeff,
+					Slice: target,
+					Index: Index(len(coords), p.Index...),
+				},
+			}})
 		}
 	}
 	return
@@ -389,7 +420,7 @@ func ZipXYZ(names []string, coords []float64) string {
 
 func Index(ncoords int, id ...int) int {
 	sort.Ints(id)
-	switch ncoords {
+	switch len(id) {
 	case 2:
 		return 3*id[0] + id[1] // TODO actually need to return two here
 	case 3:
@@ -397,8 +428,7 @@ func Index(ncoords int, id ...int) int {
 	case 4:
 		return Index4(id[0], id[1], id[2], id[3])
 	}
-	panic("wrong number of coords in call to Index")
-	return -1
+	panic("wrong number of indices in call to Index")
 }
 
 // Push
@@ -425,7 +455,6 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 // BuildCartPoints constructs the calculations needed to run a
 // Cartesian quartic force field
 func (mp *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc4 *[]float64, ch chan Calc) {
-	pbs = ptsMaple // Maple parallel only
 	var (
 		count *int
 		pf    *int
@@ -433,6 +462,8 @@ func (mp *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc
 	)
 	count = new(int)
 	pf = new(int)
+	*count = 0
+	*pf = 0
 	dir := "pts/inp"
 	ncoords := len(coords)
 	for i := 1; i <= ncoords; i++ {
