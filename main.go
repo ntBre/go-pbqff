@@ -400,46 +400,53 @@ func Resubmit(name string, err error) string {
 // Drain drains the queue of jobs and receives on ch when ready for more
 // TODO check for job.Name == "E0" and handle accordingly
 func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
+	start := time.Now()
 	points := make([]Calc, 0)
 	var (
 		nJobs    int
 		finished int
 		resubs   int
+		success  bool
+		energy   float64
+		err      error
 	)
 	heap := new(GarbageHeap)
 	for {
 		shortenBy := 0
 		for i := 0; i < nJobs; i++ {
 			job := points[i]
-			energy, err := prog.ReadOut(job.Name + ".out")
-			if err == nil {
-				points[nJobs-1], points[i] = points[i], points[nJobs-1]
-				nJobs--
-				points = points[:nJobs]
+			if job.Name == "E0" {
+				energy = E0
+				success = true
+			} else if energy, err = prog.ReadOut(job.Name + ".out"); err == nil {
+				success = true
 				if energy < min {
 					min = energy
 				}
-				for _, t := range job.Targets {
-					for len(*t.Slice) <= t.Index {
-						*t.Slice = append(*t.Slice, 0)
-					}
-					(*t.Slice)[t.Index] += t.Coeff * energy
-				}
 				heap.Add(job.Name)
-				shortenBy++
-				finished++
 			} else if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
-				err == ErrFileContainsError || err == ErrBlankOutput {
+				err == ErrFileContainsError || err == ErrBlankOutput ||
+				(err == ErrFileNotFound && LookAround(job.Name)) {
 				if err == ErrFileContainsError {
 					fmt.Fprintf(os.Stderr, "error: %v on %s\n", err, job.Name)
 				}
 				jobid := Resubmit(job.Name, err)
 				resubs++
 				ptsJobs = append(ptsJobs, jobid)
-			} else if err == ErrFileNotFound && LookAround(job.Name) {
-				jobid := Resubmit(job.Name, err)
-				resubs++
-				ptsJobs = append(ptsJobs, jobid)
+			}
+			if success {
+				points[nJobs-1], points[i] = points[i], points[nJobs-1]
+				nJobs--
+				points = points[:nJobs]
+				for _, t := range job.Targets {
+					for len(*t.Slice) <= t.Index {
+						*t.Slice = append(*t.Slice, 0)
+					}
+					(*t.Slice)[t.Index] += t.Coeff * energy
+				}
+				shortenBy++
+				finished++
+				success = false
 			}
 		}
 		if shortenBy < 1 {
@@ -454,8 +461,8 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 		if nJobs < jobLimit {
 			calc, ok := <-ch
 			if !ok && finished == submitted {
-				fmt.Fprintf(os.Stderr, "resubmitted %d/%d (%.1f%%)\n",
-					resubs, submitted, float64(resubs)/float64(submitted)*100)
+				fmt.Fprintf(os.Stderr, "resubmitted %d/%d (%.1f%%), points execution time: %v\n",
+					resubs, submitted, float64(resubs)/float64(submitted)*100, time.Since(start))
 				return
 			} else if ok {
 				points = append(points, calc)
@@ -660,16 +667,12 @@ func main() {
 		if !DoOpt() {
 			E0 = RefEnergy(prog)
 		}
-		// TODO
 		prog.BuildCartPoints(names, coords, &fc2, &fc3, &fc4, ch)
 	}
 	// Instead of returning energies, use job.Target = energies, also need a function
 	// for getting the index in the array for fc2,3,4 but do that before setting job.Index
 	min = Drain(prog, ch, E0)
-	err = queueClear()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v clearing queue\n", err)
-	}
+	queueClear()
 
 	if !DoCart() {
 		// convert to relative energies
