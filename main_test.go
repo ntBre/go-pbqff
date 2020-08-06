@@ -256,3 +256,22 @@ func TestXYZGeom(t *testing.T) {
 		}
 	}
 }
+
+func TestLookAround(t *testing.T) {
+	tests := []struct{
+		name string
+		want bool
+	}{
+		{
+			name: "pts/inp/OALALO.00227",
+			want: false,
+		},
+	}
+	for _, test := range tests {
+		got := LookAround(test.name)
+		want := test.want
+		if got != want {
+			t.Errorf("got %v, wanted %v\n", got, want)
+		}
+	}
+}

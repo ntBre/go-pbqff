@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"text/template"
 	"time"
+	"strings"
+	"path/filepath"
 )
 
 // Job holds the information for a pbs job
@@ -104,7 +106,7 @@ func AddCommand(cmdfile, infile string) {
 
 // WritePBS writes a pbs infile based on the queue type and
 // the templates above, with job information from job
-func WritePBS(infile string, job *Job) {
+func WritePBS(infile string, job *Job, pbs string) {
 	var t *template.Template
 	f, err := os.Create(infile)
 	if err != nil {
@@ -117,13 +119,15 @@ func WritePBS(infile string, job *Job) {
 	t.Execute(f, job)
 }
 
-// Submit submits the pbs script defined by filename to the queue
-func Submit(filename string) error {
+// Submit submits the pbs script defined by filename to the queue and
+// returns the jobid
+func Submit(filename string) string {
 	// -f option to run qsub in foreground
-	_, err := exec.Command("qsub", "-f", filename).Output()
+	out, err := exec.Command("qsub", "-f", filename).Output()
 	for err != nil {
 		time.Sleep(time.Second)
-		_, err = exec.Command("qsub", "-f", filename).Output()
+		out, err = exec.Command("qsub", "-f", filename).Output()
 	}
-	return nil
+	jobid := string(out)
+	return strings.TrimSuffix(jobid, filepath.Ext(jobid))
 }

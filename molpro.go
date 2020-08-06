@@ -401,6 +401,7 @@ func Index(ncoords int, id ...int) int {
 	return -1
 }
 
+// Push
 func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc, end bool) {
 	subfile := fmt.Sprintf("%s/main%d.pbs", dir, pf)
 	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, pf)
@@ -409,8 +410,9 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 		ch <- calcs[f]
 		submitted++
 		if *count == chunkSize || (f == len(files)-1 && end) {
-			WritePBS(subfile, &Job{"pts", cmdfile, 35})
-			Submit(subfile)
+			WritePBS(subfile, &Job{"pts", cmdfile, 35}, ptsMaple)
+			jobid := Submit(subfile)
+			ptsJobs = append(ptsJobs, jobid)
 			*count = 0
 			*pf++
 			subfile = fmt.Sprintf("%s/main%d.pbs", dir, pf)

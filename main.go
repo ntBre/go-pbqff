@@ -3,6 +3,8 @@ Push-button QFF
 ---------------
 The goal of this program is to streamline the generation
 of quartic force fields, automating as many pieces as possible.
+(setq compile-command "go build . && scp pbqff woods:Programs/pbqff/.")
+(recompile)
 */
 
 package main
@@ -22,6 +24,8 @@ import (
 	"path/filepath"
 
 	"strconv"
+
+	"os/exec"
 
 	"github.com/ntBre/chemutils/summarize"
 )
@@ -85,11 +89,12 @@ var (
 	defaultOpt       = "optg,grms=1.d-8,srms=1.d-8"
 	pbs              string
 	nDerivative      int = 4
+	ptsJobs          []string
 )
 
 // Finite differences denominators
 var (
-	angbohr          = 0.529177249
+	angbohr  = 0.529177249
 	fc2Scale = angbohr * angbohr / (4 * delta * delta)
 	fc3Scale = angbohr * angbohr * angbohr / (8 * delta * delta * delta)
 	fc4Scale = angbohr * angbohr * angbohr * angbohr / (16 * delta * delta * delta * delta)
@@ -273,7 +278,7 @@ func Optimize(prog *Molpro) (E0 float64) {
 	// write opt.inp and mp.pbs
 	prog.WriteInput("opt/opt.inp", opt)
 	WritePBS("opt/mp.pbs",
-		&Job{MakeName(Input[Geometry]) + "-opt", "opt/opt.inp", 35})
+		&Job{MakeName(Input[Geometry]) + "-opt", "opt/opt.inp", 35}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit("opt/mp.pbs")
 	outfile := "opt/opt.out"
@@ -300,7 +305,7 @@ func RefEnergy(prog *Molpro) (E0 float64) {
 	pbsfile := "ref.pbs"
 	prog.WriteInput(dir+infile, opt)
 	WritePBS(dir+pbsfile,
-		&Job{MakeName(Input[Geometry]) + "-ref", dir + infile, 35})
+		&Job{MakeName(Input[Geometry]) + "-ref", dir + infile, 35}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit(dir + pbsfile)
 	outfile := "ref.out"
@@ -325,7 +330,7 @@ func Frequency(prog *Molpro, absPath string) ([]float64, bool) {
 	// write freq.inp and that mp.pbs
 	prog.WriteInput(absPath+"/freq.inp", freq)
 	WritePBS(absPath+"/mp.pbs",
-		&Job{MakeName(Input[Geometry]) + "-freq", absPath + "/freq.inp", 35})
+		&Job{MakeName(Input[Geometry]) + "-freq", absPath + "/freq.inp", 35}, pbsMaple)
 	// submit freq, wait in separate goroutine
 	// doesn't matter if this finishes
 	Submit(absPath + "/mp.pbs")
@@ -384,12 +389,23 @@ func DoSpectro(spectro *Spectro, nharms int) (float64, []float64, []float64, []f
 	return zpt, spHarm, spFund, spCorr
 }
 
+func Resubmit(name string, err error) string {
+	fmt.Fprintf(os.Stderr,
+		"resubmitting %s for %s\n", name, err)
+	os.Remove(name + ".out")
+	WritePBS(name+".pbs", &Job{"redo", name + ".inp", 35}, pbsMaple)
+	return Submit(name + ".pbs")
+}
+
 // Drain drains the queue of jobs and receives on ch when ready for more
 // TODO check for job.Name == "E0" and handle accordingly
 func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 	points := make([]Calc, 0)
-	var nJobs int
-	var finished int
+	var (
+		nJobs    int
+		finished int
+		resubs   int
+	)
 	heap := new(GarbageHeap)
 	for {
 		shortenBy := 0
@@ -412,24 +428,20 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 				heap.Add(job.Name)
 				shortenBy++
 				finished++
-				// TODO Work on this
 			} else if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 				err == ErrFileContainsError || err == ErrBlankOutput {
 				if err == ErrFileContainsError {
 					fmt.Fprintf(os.Stderr, "error: %v on %s\n", err, job.Name)
 				}
-				fmt.Fprintf(os.Stderr,
-					"resubmitting %s for %s\n", job.Name, err)
-				// delete output file to prevent rereading the same one
-				os.Remove(job.Name + ".out")
-				// if we have to resubmit, need individual submission from pbsMaple
-				pbs = pbsMaple
-				WritePBS(job.Name+".pbs", &Job{"redo", job.Name + ".inp", 35})
-				Submit(job.Name + ".pbs")
+				jobid := Resubmit(job.Name, err)
+				resubs++
+				ptsJobs = append(ptsJobs, jobid)
+			} else if err == ErrFileNotFound && LookAround(job.Name) {
+				jobid := Resubmit(job.Name, err)
+				resubs++
+				ptsJobs = append(ptsJobs, jobid)
 			}
 		}
-		// if the list is shortened by less than 10%,
-		// sleep. could play with both of these values
 		if shortenBy < 1 {
 			fmt.Fprintln(os.Stderr, "Didn't shorten, sleeping")
 			time.Sleep(time.Second)
@@ -438,15 +450,39 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 			heap.Dump()
 		}
 		fmt.Fprintf(os.Stderr, "finished: %d of %d submitted\n", finished, submitted)
-		calc, ok := <-ch
-		points = append(points, calc)
-		nJobs = len(points)
-		if !ok && finished == submitted {
-			return
+		// only receive more jobs if there is room
+		if nJobs < jobLimit {
+			calc, ok := <-ch
+			if !ok && finished == submitted {
+				fmt.Fprintf(os.Stderr, "resubmitted %d/%d (%.1f%%)\n",
+					resubs, submitted, float64(resubs)/float64(submitted)*100)
+				return
+			} else if ok {
+				points = append(points, calc)
+				nJobs = len(points)
+			}
 		}
 	}
 	// unreachable
 	return
+}
+
+// LookAround looks at jobs around the given one to see if they have
+// run yet
+func LookAround(jobname string) bool {
+	ext := filepath.Ext(jobname)
+	endex := len(jobname) - len(ext) + 1
+	strNum := jobname[endex:]
+	num, _ := strconv.Atoi(strNum)
+	nextFile := fmt.Sprintf("next: %s%05d.out\n", jobname[:endex], num+1)
+	_, err := os.Stat(nextFile)
+	return os.IsExist(err)
+}
+
+// Clear the PBS queue of the pts jobs
+func queueClear() error {
+	err := exec.Command("qdel", ptsJobs...).Run()
+	return err
 }
 
 func initialize() (*Molpro, *Intder, *Anpass) {
@@ -584,7 +620,6 @@ func main() {
 		MakeDirs(".")
 		prog.Geometry = FormatZmat(Input[Geometry])
 		E0 = Optimize(prog)
-		fmt.Println(E0)
 		cart, zmat, err = prog.HandleOutput("opt/opt")
 		if err != nil {
 			panic(err)
@@ -631,6 +666,10 @@ func main() {
 	// Instead of returning energies, use job.Target = energies, also need a function
 	// for getting the index in the array for fc2,3,4 but do that before setting job.Index
 	min = Drain(prog, ch, E0)
+	err = queueClear()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v clearing queue\n", err)
+	}
 
 	if !DoCart() {
 		// convert to relative energies
