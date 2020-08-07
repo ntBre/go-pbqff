@@ -314,12 +314,42 @@ func TestIndex(t *testing.T) {
 		},
 		{9, []int{1, 2}, []int{1, 9}},
 		{9, []int{2, 2}, []int{10}},
+		{9, []int{1, 1, 1}, []int{0}},
 	}
 	for _, test := range tests {
 		got := Index(test.ncoords, test.ids...)
 		want := test.want
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, wanted %v\n", got, want)
+		}
+	}
+}
+
+// water example:
+// options for steps:
+// 1 2 3 4 5 6 7 8 9 -1 -2 -3 -4 -5 -6 -7 -8 -9
+// indices:
+// 0 1 2 3 4 5 6 7 8  9 10 11 12 13 14 15 16 17
+// grid is then 17x17 = 2ncoords-1 x 2ncoords-1
+func TestE2dIndex(t *testing.T) {
+	tests := []struct {
+		ncoords int
+		ids     []int
+		want    []int
+	}{
+		{9, []int{1, 1}, []int{0}},
+		{9, []int{1, 2}, []int{1, 18}},
+		{9, []int{1, 8}, []int{7, 126}},
+		{9, []int{2, 2}, []int{19}},
+		{9, []int{1, -9}, []int{17, 306}},
+		{9, []int{-9, -9}, []int{323}},
+	}
+	for _, test := range tests {
+		got := E2dIndex(test.ncoords, test.ids...)
+		want := test.want
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("E2dIndex(%d, %v): got %v, wanted %v\n",
+				test.ncoords, test.ids, got, want)
 		}
 	}
 }

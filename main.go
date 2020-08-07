@@ -105,6 +105,7 @@ var (
 	fc2 []float64
 	fc3 []float64
 	fc4 []float64
+	e2d []float64
 )
 
 // Errors used throughout
@@ -398,7 +399,6 @@ func Resubmit(name string, err error) string {
 }
 
 // Drain drains the queue of jobs and receives on ch when ready for more
-// TODO check for job.Name == "E0" and handle accordingly
 func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 	start := time.Now()
 	points := make([]Calc, 0)
@@ -432,6 +432,8 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 				}
 				// TODO seems to be resubmitting for FinishedButNoEnergy way too often
 				// -> save the files if this happens instead of removing
+				// lookaround is possibly too simplistic, could fan out more
+				// however also doesnt work if the last job fails, circle back?
 				jobid := Resubmit(job.Name, err)
 				resubs++
 				ptsJobs = append(ptsJobs, jobid)
@@ -481,7 +483,6 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 func LookAround(jobname string) bool {
 	ext := filepath.Ext(jobname)
 	endex := len(jobname) - len(ext) + 1
-	fmt.Println(jobname, len(jobname), endex)
 	strNum := jobname[endex:]
 	num, _ := strconv.Atoi(strNum)
 	nextFile := fmt.Sprintf("next: %s%05d.out\n", jobname[:endex], num+1)
@@ -718,5 +719,11 @@ func main() {
 		if nDerivative > 3 {
 			PrintFile40(fc4, natoms, other4, "fort.40")
 		}
+	}
+	for i := 0; i < len(e2d); i++ {
+		if i%3 == 0 && i > 0 {
+			fmt.Print("\n")
+		}
+		fmt.Printf("%20.12f", e2d[i])
 	}
 }

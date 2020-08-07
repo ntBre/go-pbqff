@@ -316,16 +316,6 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, target *[]flo
 
 // Index3 returns the index in the third derivative array expected by SPECTRO
 // corresponding to x, y, and z
-func Index3(x, y, z int) int {
-	return x + (y-1)*y/2 + (z-1)*z*(z+1)/6 - 1
-}
-
-// Index4 returns the index in the fourth derivative array expected by
-// SPECTRO corresponding to x, y, z and w
-func Index4(x, y, z, w int) int {
-	return x + (y-1)*y/2 + (z-1)*z*(z+1)/6 + (w-1)*w*(w+1)*(w+2)/24 - 1
-}
-
 var jobNum int
 
 // HashName returns a hashed filename
@@ -369,6 +359,7 @@ func Step(coords []float64, steps ...int) []float64 {
 func Derivative(prog *Molpro, names []string, coords []float64, target *[]float64, dims ...int) (fnames []string, calcs []Calc) {
 	var protos []ProtoCalc
 	dir := "pts/inp/"
+	ncoords := len(coords)
 	switch len(dims) {
 	case 2:
 		protos = Make2D(dims[0], dims[1])
@@ -384,14 +375,63 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]float6
 		fnames = append(fnames, fname)
 		prog.WriteInput(fname, none)
 		// TODO handle multiple targets - need to pass multiple targets in func call => []*[]float64?
+		// -> for second derivatives for example, need 2nd derivative energy array as a second target
+		// just using global for now lol
 		temp := Calc{Name: dir + p.Name}
-		for _, v := range Index(len(coords), p.Index...) {
+		for _, v := range Index(ncoords, p.Index...) {
 			temp.Targets = append(temp.Targets,
 				Target{Coeff: p.Coeff, Slice: target, Index: v})
+		}
+		if len(p.Steps) == 2 {
+			for _, v := range E2dIndex(ncoords, p.Steps...) {
+				fmt.Println(v, p.Steps)
+				temp.Targets = append(temp.Targets,
+					Target{Coeff: 1, Slice: &e2d, Index: v})
+			}
 		}
 		calcs = append(calcs, temp)
 	}
 	return
+}
+
+// E2dIndex converts n to an index in E2d
+func E2dIndex(ncoords int, ns ...int) []int {
+	out := make([]int, 0)
+	for _, n := range ns {
+		if n < 0 {
+			out = append(out, IntAbs(n)+ncoords)
+		} else {
+			out = append(out, n)
+		}
+	}
+	return Index(2*ncoords, out...)
+}
+
+// Index returns the 1-dimensional array index of force constants in
+// 2,3,4-D arrays
+func Index(ncoords int, id ...int) []int {
+	sort.Ints(id)
+	switch len(id) {
+	case 2:
+		if id[0] == id[1] {
+			return []int{ncoords*(id[0]-1) + id[1] - 1}
+		} else {
+			return []int{ncoords*(id[0]-1) + id[1] - 1, ncoords*(id[1]-1) + id[0] - 1}
+		}
+	case 3:
+		return []int{id[0] + (id[1]-1)*id[1]/2 + (id[2]-1)*id[2]*(id[2]+1)/6 - 1}
+	case 4:
+		return []int{id[0] + (id[1]-1)*id[1]/2 + (id[2]-1)*id[2]*(id[2]+1)/6 + (id[3]-1)*id[3]*(id[3]+1)*(id[3]+2)/24 - 1}
+	}
+	panic("wrong number of indices in call to Index")
+}
+
+// IntAbs returns the absolute value of n
+func IntAbs(n int) int {
+	if n < 0 {
+		return -1 * n
+	}
+	return n
 }
 
 // ZipXYZ puts slices of atom names and Cartesian coordinates together
@@ -407,25 +447,6 @@ func ZipXYZ(names []string, coords []float64) string {
 		fmt.Fprintf(&buf, "%s %.10f %.10f %.10f\n", names[i], coords[3*i], coords[3*i+1], coords[3*i+2])
 	}
 	return buf.String()
-}
-
-// Index returns the 1-dimensional array index of force constants in
-// 2,3,4-D arrays
-func Index(ncoords int, id ...int) []int {
-	sort.Ints(id)
-	switch len(id) {
-	case 2:
-		if id[0] == id[1] {
-			return []int{ncoords*(id[0]-1) + id[1] - 1}
-		} else {
-			return []int{ncoords*(id[0]-1) + id[1] - 1, ncoords*(id[1]-1) + id[0] - 1}
-		}
-	case 3:
-		return []int{Index3(id[0], id[1], id[2])}
-	case 4:
-		return []int{Index4(id[0], id[1], id[2], id[3])}
-	}
-	panic("wrong number of indices in call to Index")
 }
 
 // Push sends calculations to the queue
