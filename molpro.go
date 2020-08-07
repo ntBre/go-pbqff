@@ -378,33 +378,24 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]float6
 		protos = Make4D(dims[0], dims[1], dims[2], dims[3])
 	}
 	for _, p := range protos {
-		if p.Name != "E0" {
-			coords := Step(coords, p.Steps...)
-			prog.Geometry = ZipXYZ(names, coords) + "}\n"
-			fname := dir + p.Name + ".inp"
-			fnames = append(fnames, fname)
-			prog.WriteInput(fname, none)
-			// TODO handle multiple targets - need to pass multiple targets in func call => []*[]float64?
-			calcs = append(calcs, Calc{Name: dir + p.Name, Targets: []Target{
-				Target{
-					Coeff: p.Coeff,
-					Slice: target,
-					Index: Index(len(coords), p.Index...),
-				},
-			}})
-		} else {
-			calcs = append(calcs, Calc{Name: p.Name, Targets: []Target{
-				Target{
-					Coeff: p.Coeff,
-					Slice: target,
-					Index: Index(len(coords), p.Index...),
-				},
-			}})
+		coords := Step(coords, p.Steps...)
+		prog.Geometry = ZipXYZ(names, coords) + "}\n"
+		fname := dir + p.Name + ".inp"
+		fnames = append(fnames, fname)
+		prog.WriteInput(fname, none)
+		// TODO handle multiple targets - need to pass multiple targets in func call => []*[]float64?
+		temp := Calc{Name: dir + p.Name}
+		for _, v := range Index(len(coords), p.Index...) {
+			temp.Targets = append(temp.Targets,
+				Target{Coeff: p.Coeff, Slice: target, Index: v})
 		}
+		calcs = append(calcs, temp)
 	}
 	return
 }
 
+// ZipXYZ puts slices of atom names and Cartesian coordinates together
+// into a single string
 func ZipXYZ(names []string, coords []float64) string {
 	var buf bytes.Buffer
 	if len(names) != len(coords)/3 {
@@ -418,37 +409,45 @@ func ZipXYZ(names []string, coords []float64) string {
 	return buf.String()
 }
 
-func Index(ncoords int, id ...int) int {
+// Index returns the 1-dimensional array index of force constants in
+// 2,3,4-D arrays
+func Index(ncoords int, id ...int) []int {
 	sort.Ints(id)
 	switch len(id) {
 	case 2:
-		return 3*id[0] + id[1] // TODO actually need to return two here
+		if id[0] == id[1] {
+			return []int{ncoords*(id[0]-1) + id[1] - 1}
+		} else {
+			return []int{ncoords*(id[0]-1) + id[1] - 1, ncoords*(id[1]-1) + id[0] - 1}
+		}
 	case 3:
-		return Index3(id[0], id[1], id[2])
+		return []int{Index3(id[0], id[1], id[2])}
 	case 4:
-		return Index4(id[0], id[1], id[2], id[3])
+		return []int{Index4(id[0], id[1], id[2], id[3])}
 	}
 	panic("wrong number of indices in call to Index")
 }
 
-// Push
+// Push sends calculations to the queue
 func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc, end bool) {
 	subfile := fmt.Sprintf("%s/main%d.pbs", dir, pf)
 	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, pf)
-	for f := range files {
-		AddCommand(cmdfile, files[f])
+	for f := range calcs {
 		ch <- calcs[f]
 		submitted++
-		if *count == chunkSize || (f == len(files)-1 && end) {
-			WritePBS(subfile, &Job{"pts", cmdfile, 35}, ptsMaple)
-			jobid := Submit(subfile)
-			ptsJobs = append(ptsJobs, jobid)
-			*count = 0
-			*pf++
-			subfile = fmt.Sprintf("%s/main%d.pbs", dir, pf)
-			cmdfile = fmt.Sprintf("%s/commands%d.txt", dir, pf)
+		if calcs[f].Name != "E0" {
+			AddCommand(cmdfile, files[f])
+			if *count == chunkSize || (f == len(files)-1 && end) {
+				WritePBS(subfile, &Job{"pts", cmdfile, 35}, ptsMaple)
+				jobid := Submit(subfile)
+				ptsJobs = append(ptsJobs, jobid)
+				*count = 0
+				*pf++
+				subfile = fmt.Sprintf("%s/main%d.pbs", dir, pf)
+				cmdfile = fmt.Sprintf("%s/commands%d.txt", dir, pf)
+			}
+			*count++
 		}
-		*count++
 	}
 }
 

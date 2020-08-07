@@ -32,8 +32,8 @@ import (
 
 const (
 	// these should  be in the input
-	chunkSize = 100
-	jobLimit  = 2 * chunkSize
+	chunkSize = 64
+	jobLimit  = 1000
 	resBound  = 1e-16
 	delta     = 0.005
 	help      = `Requirements:
@@ -415,7 +415,7 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 		shortenBy := 0
 		for i := 0; i < nJobs; i++ {
 			job := points[i]
-			if job.Name == "E0" {
+			if strings.Contains(job.Name, "E0") {
 				energy = E0
 				success = true
 			} else if energy, err = prog.ReadOut(job.Name + ".out"); err == nil {
@@ -430,6 +430,8 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 				if err == ErrFileContainsError {
 					fmt.Fprintf(os.Stderr, "error: %v on %s\n", err, job.Name)
 				}
+				// TODO seems to be resubmitting for FinishedButNoEnergy way too often
+				// -> save the files if this happens instead of removing
 				jobid := Resubmit(job.Name, err)
 				resubs++
 				ptsJobs = append(ptsJobs, jobid)
@@ -479,6 +481,7 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 func LookAround(jobname string) bool {
 	ext := filepath.Ext(jobname)
 	endex := len(jobname) - len(ext) + 1
+	fmt.Println(jobname, len(jobname), endex)
 	strNum := jobname[endex:]
 	num, _ := strconv.Atoi(strNum)
 	nextFile := fmt.Sprintf("next: %s%05d.out\n", jobname[:endex], num+1)
@@ -502,6 +505,13 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	ParseInfile(args[0])
 	if Input[Flags] == "noopt" {
 		flags = flags &^ OPT
+	}
+	if Input[Deriv] != "" {
+		d, err := strconv.Atoi(Input[Deriv])
+		if err != nil {
+			panic(fmt.Sprintf("%v parsing derivative level input: %q\n", err, Input[Deriv]))
+		}
+		nDerivative = d
 	}
 	WhichCluster()
 	switch Input[Program] {

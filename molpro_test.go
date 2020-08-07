@@ -300,3 +300,26 @@ Al 0.0000000000 -2.3916781660 0.0000000000
 		t.Errorf("got\n%q, wanted\n%q\n", got, want)
 	}
 }
+
+func TestIndex(t *testing.T) {
+	tests := []struct {
+		ncoords int
+		ids     []int
+		want    []int
+	}{
+		{
+			ncoords: 9,
+			ids:     []int{1, 1},
+			want:    []int{0},
+		},
+		{9, []int{1, 2}, []int{1, 9}},
+		{9, []int{2, 2}, []int{10}},
+	}
+	for _, test := range tests {
+		got := Index(test.ncoords, test.ids...)
+		want := test.want
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, wanted %v\n", got, want)
+		}
+	}
+}
