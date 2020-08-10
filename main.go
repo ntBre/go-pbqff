@@ -90,6 +90,7 @@ var (
 	pbs              string
 	nDerivative      int = 4
 	ptsJobs          []string
+	errMap           map[error]int
 )
 
 // Finite differences denominators
@@ -125,6 +126,7 @@ var (
 type Calc struct {
 	Name    string
 	Targets []Target
+	Result  float64
 }
 
 type Target struct {
@@ -418,22 +420,24 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 			if strings.Contains(job.Name, "E0") {
 				energy = E0
 				success = true
+			} else if job.Result != 0 {
+				energy = job.Result
+				success = true
 			} else if energy, err = prog.ReadOut(job.Name + ".out"); err == nil {
 				success = true
 				if energy < min {
 					min = energy
 				}
 				heap.Add(job.Name)
+				// } else if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
+				// 	err == ErrFileContainsError || err == ErrBlankOutput ||
+				// 	(err == ErrFileNotFound && nJobs == submitted-finished) {
 			} else if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
-				err == ErrFileContainsError || err == ErrBlankOutput ||
-				(err == ErrFileNotFound && LookAround(job.Name)) {
+				err == ErrFileContainsError || err == ErrBlankOutput {
 				if err == ErrFileContainsError {
 					fmt.Fprintf(os.Stderr, "error: %v on %s\n", err, job.Name)
 				}
-				// TODO seems to be resubmitting for FinishedButNoEnergy way too often
-				// -> save the files if this happens instead of removing
-				// lookaround is possibly too simplistic, could fan out more
-				// however also doesnt work if the last job fails, circle back?
+				errMap[err]++
 				jobid := Resubmit(job.Name, err)
 				resubs++
 				ptsJobs = append(ptsJobs, jobid)
@@ -478,16 +482,25 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 	return
 }
 
-// LookAround looks at jobs around the given one to see if they have
+// LookAhead looks at jobs around the given one to see if they have
 // run yet
-func LookAround(jobname string) bool {
+func LookAhead(jobname string, maxdepth int) bool {
 	ext := filepath.Ext(jobname)
 	endex := len(jobname) - len(ext) + 1
+	out, err := exec.Command("ls", jobname+"*").Output()
+	fmt.Printf("ls %s*: %s, %v\n", jobname, out, err)
 	strNum := jobname[endex:]
 	num, _ := strconv.Atoi(strNum)
-	nextFile := fmt.Sprintf("next: %s%05d.out\n", jobname[:endex], num+1)
-	_, err := os.Stat(nextFile)
-	return os.IsExist(err)
+	if num+maxdepth > submitted {
+		maxdepth = submitted
+	}
+	for i := num; i <= maxdepth; i++ {
+		nextFile := fmt.Sprintf("%s%010d.out", jobname[:endex], i)
+		if _, err := os.Stat(nextFile); !os.IsNotExist(err) {
+			return true
+		}
+	}
+	return false
 }
 
 // Clear the PBS queue of the pts jobs
@@ -544,6 +557,7 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 		}
 	}
 	MakeDirs(".")
+	errMap = make(map[error]int)
 	return prog, intder, anpass
 }
 
@@ -725,5 +739,9 @@ func main() {
 			fmt.Print("\n")
 		}
 		fmt.Printf("%20.12f", e2d[i])
+	}
+	fmt.Print("\n")
+	for k, v := range errMap {
+		fmt.Printf("%v: %d occurrences\n", k, v)
 	}
 }

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"text/template"
 	"time"
-	"strings"
-	"path/filepath"
 )
 
 // Job holds the information for a pbs job
@@ -62,7 +62,7 @@ cd $WORKDIR
 mkdir -p $TMPDIR
 
 date
-molpro -t 1 {{.Filename}}
+molpro -t 1 {{.Filename}} --no-xml-output
 date
 
 rm -rf $TMPDIR
@@ -101,7 +101,7 @@ func AddCommand(cmdfile, infile string) {
 	if err != nil {
 		panic("Cannot open commands file")
 	}
-	fmt.Fprintf(f, "%s %s\n", mapleCmd, infile)
+	fmt.Fprintf(f, "%s %s --no-xml-output\n", mapleCmd, infile)
 }
 
 // WritePBS writes a pbs infile based on the queue type and
@@ -123,11 +123,12 @@ func WritePBS(infile string, job *Job, pbs string) {
 // returns the jobid
 func Submit(filename string) string {
 	// -f option to run qsub in foreground
-	out, err := exec.Command("qsub", "-f", filename).Output()
+	out, err := exec.Command("qsub", filename).Output()
 	for err != nil {
 		time.Sleep(time.Second)
-		out, err = exec.Command("qsub", "-f", filename).Output()
+		out, err = exec.Command("qsub", filename).Output()
 	}
 	jobid := string(out)
+	fmt.Printf("submitting %s, jobid %s\n", filename, jobid)
 	return strings.TrimSuffix(jobid, filepath.Ext(jobid))
 }

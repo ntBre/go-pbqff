@@ -360,7 +360,8 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]float6
 	var protos []ProtoCalc
 	dir := "pts/inp/"
 	ncoords := len(coords)
-	switch len(dims) {
+	ndims := len(dims)
+	switch ndims {
 	case 2:
 		protos = Make2D(dims[0], dims[1])
 	case 3:
@@ -374,19 +375,20 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]float6
 		fname := dir + p.Name + ".inp"
 		fnames = append(fnames, fname)
 		prog.WriteInput(fname, none)
-		// TODO handle multiple targets - need to pass multiple targets in func call => []*[]float64?
-		// -> for second derivatives for example, need 2nd derivative energy array as a second target
-		// just using global for now lol
 		temp := Calc{Name: dir + p.Name}
 		for _, v := range Index(ncoords, p.Index...) {
 			temp.Targets = append(temp.Targets,
 				Target{Coeff: p.Coeff, Slice: target, Index: v})
 		}
-		if len(p.Steps) == 2 {
+		if len(p.Steps) == 2 && ndims == 2 {
 			for _, v := range E2dIndex(ncoords, p.Steps...) {
-				fmt.Println(v, p.Steps)
 				temp.Targets = append(temp.Targets,
 					Target{Coeff: 1, Slice: &e2d, Index: v})
+			}
+		} else if len(p.Steps) == 2 && ndims == 4 {
+			if id := E2dIndex(ncoords, p.Steps...)[0]; e2d[id] != 0 {
+				temp.Result = e2d[id]
+				fmt.Println("got fourth from twoth")
 			}
 		}
 		calcs = append(calcs, temp)
@@ -451,12 +453,12 @@ func ZipXYZ(names []string, coords []float64) string {
 
 // Push sends calculations to the queue
 func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc, end bool) {
-	subfile := fmt.Sprintf("%s/main%d.pbs", dir, pf)
-	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, pf)
+	subfile := fmt.Sprintf("%s/main%d.pbs", dir, *pf)
+	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, *pf)
 	for f := range calcs {
 		ch <- calcs[f]
 		submitted++
-		if calcs[f].Name != "E0" {
+		if !strings.Contains(calcs[f].Name, "E0") {
 			AddCommand(cmdfile, files[f])
 			if *count == chunkSize || (f == len(files)-1 && end) {
 				WritePBS(subfile, &Job{"pts", cmdfile, 35}, ptsMaple)
@@ -464,8 +466,8 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 				ptsJobs = append(ptsJobs, jobid)
 				*count = 0
 				*pf++
-				subfile = fmt.Sprintf("%s/main%d.pbs", dir, pf)
-				cmdfile = fmt.Sprintf("%s/commands%d.txt", dir, pf)
+				subfile = fmt.Sprintf("%s/main%d.pbs", dir, *pf)
+				cmdfile = fmt.Sprintf("%s/commands%d.txt", dir, *pf)
 			}
 			*count++
 		}
