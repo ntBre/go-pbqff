@@ -91,6 +91,7 @@ var (
 	nDerivative      int = 4
 	ptsJobs          []string
 	errMap           map[error]int
+	nodes            []string
 )
 
 // Finite differences denominators
@@ -127,6 +128,8 @@ type Calc struct {
 	Name    string
 	Targets []Target
 	Result  float64
+	ID      string
+	noRun   bool
 }
 
 type Target struct {
@@ -281,7 +284,7 @@ func Optimize(prog *Molpro) (E0 float64) {
 	// write opt.inp and mp.pbs
 	prog.WriteInput("opt/opt.inp", opt)
 	WritePBS("opt/mp.pbs",
-		&Job{MakeName(Input[Geometry]) + "-opt", "opt/opt.inp", 35}, pbsMaple)
+		&Job{MakeName(Input[Geometry]) + "-opt", "opt/opt.inp", 35, ""}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit("opt/mp.pbs")
 	outfile := "opt/opt.out"
@@ -308,7 +311,7 @@ func RefEnergy(prog *Molpro) (E0 float64) {
 	pbsfile := "ref.pbs"
 	prog.WriteInput(dir+infile, opt)
 	WritePBS(dir+pbsfile,
-		&Job{MakeName(Input[Geometry]) + "-ref", dir + infile, 35}, pbsMaple)
+		&Job{MakeName(Input[Geometry]) + "-ref", dir + infile, 35, ""}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit(dir + pbsfile)
 	outfile := "ref.out"
@@ -333,7 +336,7 @@ func Frequency(prog *Molpro, absPath string) ([]float64, bool) {
 	// write freq.inp and that mp.pbs
 	prog.WriteInput(absPath+"/freq.inp", freq)
 	WritePBS(absPath+"/mp.pbs",
-		&Job{MakeName(Input[Geometry]) + "-freq", absPath + "/freq.inp", 35}, pbsMaple)
+		&Job{MakeName(Input[Geometry]) + "-freq", absPath + "/freq.inp", 35, ""}, pbsMaple)
 	// submit freq, wait in separate goroutine
 	// doesn't matter if this finishes
 	Submit(absPath + "/mp.pbs")
@@ -396,7 +399,7 @@ func Resubmit(name string, err error) string {
 	fmt.Fprintf(os.Stderr,
 		"resubmitting %s for %s\n", name, err)
 	os.Remove(name + ".out")
-	WritePBS(name+".pbs", &Job{"redo", name + ".inp", 35}, pbsMaple)
+	WritePBS(name+".pbs", &Job{"redo", name + ".inp", 35, ""}, pbsMaple)
 	return Submit(name + ".pbs")
 }
 
@@ -429,18 +432,18 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 					min = energy
 				}
 				heap.Add(job.Name)
-				// } else if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
-				// 	err == ErrFileContainsError || err == ErrBlankOutput ||
-				// 	(err == ErrFileNotFound && nJobs == submitted-finished) {
 			} else if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
-				err == ErrFileContainsError || err == ErrBlankOutput {
+				err == ErrFileContainsError || err == ErrBlankOutput ||
+				// impossible condition, job cannot get an id without being resubmitted
+				(err == ErrFileNotFound && job.ID != "" && !Qstat(job.ID)) {
 				if err == ErrFileContainsError {
 					fmt.Fprintf(os.Stderr, "error: %v on %s\n", err, job.Name)
 				}
+				// TODO resubmit under _redo name but then need to check both names
 				errMap[err]++
-				jobid := Resubmit(job.Name, err)
+				job.ID = Resubmit(job.Name, err)
 				resubs++
-				ptsJobs = append(ptsJobs, jobid)
+				ptsJobs = append(ptsJobs, job.ID)
 			}
 			if success {
 				points[nJobs-1], points[i] = points[i], points[nJobs-1]
@@ -453,7 +456,9 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 					(*t.Slice)[t.Index] += t.Coeff * energy
 				}
 				shortenBy++
-				finished++
+				if !job.noRun {
+					finished++
+				}
 				success = false
 			}
 		}
@@ -471,6 +476,10 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 			if !ok && finished == submitted {
 				fmt.Fprintf(os.Stderr, "resubmitted %d/%d (%.1f%%), points execution time: %v\n",
 					resubs, submitted, float64(resubs)/float64(submitted)*100, time.Since(start))
+				if nDerivative == 4 {
+					fmt.Fprintf(os.Stderr, "saved %d/%d (%.f%%) fourth derivative components from e2d\n",
+						saved, fourTwos, float64(saved)/float64(fourTwos)*100)
+				}
 				return
 			} else if ok {
 				points = append(points, calc)
@@ -480,6 +489,17 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 	}
 	// unreachable
 	return
+}
+
+func Qstat(jobid string) bool {
+	out, _ := exec.Command("qstat", jobid).Output()
+	fields := strings.Fields(string(out))
+	status := fields[len(fields)-2]
+	fmt.Println(jobid, status)
+	if status == "R" || status == "Q" {
+		return true
+	}
+	return false
 }
 
 // LookAhead looks at jobs around the given one to see if they have
@@ -558,6 +578,8 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	}
 	MakeDirs(".")
 	errMap = make(map[error]int)
+	nodes = PBSnodes()
+	fmt.Printf("nodes: %q\n", nodes)
 	return prog, intder, anpass
 }
 

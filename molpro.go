@@ -278,12 +278,14 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, target *[]flo
 	)
 	count = new(int)
 	pf = new(int)
-	*count = 0
+	*count = 1
 	*pf = 0
 	dir := path.Dir(filename)
 	name := strings.Join(atomNames, "")
 	pbs = ptsMaple
 	mp.AugmentHead()
+	nodes := PBSnodes()
+	fmt.Println(nodes)
 	for li, line := range lines {
 		if !strings.Contains(line, "#") {
 			ind := i % l
@@ -355,6 +357,10 @@ func Step(coords []float64, steps ...int) []float64 {
 // type Calc struct {Name string, Targets []Target}
 // type Target struct {Coeff float64, Slice *[]float64, Index int}
 
+var (
+	fourTwos, saved int
+)
+
 // Derivative is a helper for calling Make(2|3|4)D in the same way
 func Derivative(prog *Molpro, names []string, coords []float64, target *[]float64, dims ...int) (fnames []string, calcs []Calc) {
 	var protos []ProtoCalc
@@ -372,9 +378,6 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]float6
 	for _, p := range protos {
 		coords := Step(coords, p.Steps...)
 		prog.Geometry = ZipXYZ(names, coords) + "}\n"
-		fname := dir + p.Name + ".inp"
-		fnames = append(fnames, fname)
-		prog.WriteInput(fname, none)
 		temp := Calc{Name: dir + p.Name}
 		for _, v := range Index(ncoords, p.Index...) {
 			temp.Targets = append(temp.Targets,
@@ -386,10 +389,21 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]float6
 					Target{Coeff: 1, Slice: &e2d, Index: v})
 			}
 		} else if len(p.Steps) == 2 && ndims == 4 {
+			fourTwos++
 			if id := E2dIndex(ncoords, p.Steps...)[0]; e2d[id] != 0 {
 				temp.Result = e2d[id]
-				fmt.Println("got fourth from twoth")
+				temp.noRun = true
+				saved++
 			}
+			// else will be run like normal
+		}
+		fname := dir + p.Name + ".inp"
+		fnames = append(fnames, fname)
+		if strings.Contains(p.Name, "E0") {
+			temp.noRun = true
+		}
+		if !temp.noRun {
+			prog.WriteInput(fname, none)
 		}
 		calcs = append(calcs, temp)
 	}
@@ -455,21 +469,29 @@ func ZipXYZ(names []string, coords []float64) string {
 func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc, end bool) {
 	subfile := fmt.Sprintf("%s/main%d.pbs", dir, *pf)
 	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, *pf)
+	var node string
 	for f := range calcs {
 		ch <- calcs[f]
-		submitted++
-		if !strings.Contains(calcs[f].Name, "E0") {
+		if !calcs[f].noRun {
+			submitted++
 			AddCommand(cmdfile, files[f])
 			if *count == chunkSize || (f == len(files)-1 && end) {
-				WritePBS(subfile, &Job{"pts", cmdfile, 35}, ptsMaple)
+				if len(nodes) > 0 {
+					node = nodes[0]
+					nodes = nodes[1:]
+				} else {
+					node = ""
+				}
+				WritePBS(subfile, &Job{"pts", cmdfile, 35, node}, ptsMaple)
 				jobid := Submit(subfile)
 				ptsJobs = append(ptsJobs, jobid)
-				*count = 0
+				*count = 1
 				*pf++
 				subfile = fmt.Sprintf("%s/main%d.pbs", dir, *pf)
 				cmdfile = fmt.Sprintf("%s/commands%d.txt", dir, *pf)
+			} else {
+				*count++
 			}
-			*count++
 		}
 	}
 }
@@ -484,7 +506,7 @@ func (mp *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc
 	)
 	count = new(int)
 	pf = new(int)
-	*count = 0
+	*count = 1
 	*pf = 0
 	dir := "pts/inp"
 	ncoords := len(coords)
@@ -498,12 +520,19 @@ func (mp *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc
 					files, calcs := Derivative(mp, names, coords, fc3, i, j, k)
 					end = i == ncoords && j == i && k == j && nDerivative == 3
 					Push(dir, pf, count, files, calcs, ch, end)
-					if nDerivative > 3 {
-						for l := 1; l <= k; l++ {
-							files, calcs := Derivative(mp, names, coords, fc4, i, j, k, l)
-							end = i == ncoords && j == i && k == j && l == k && nDerivative == 4
-							Push(dir, pf, count, files, calcs, ch, end)
-						}
+				}
+			}
+		}
+	}
+	// Run fourths separately to ensure seconds already ran
+	if nDerivative > 3 {
+		for i := 1; i <= ncoords; i++ {
+			for j := 1; j <= i; j++ {
+				for k := 1; k <= j; k++ {
+					for l := 1; l <= k; l++ {
+						files, calcs := Derivative(mp, names, coords, fc4, i, j, k, l)
+						end = i == ncoords && j == i && k == j && l == k && nDerivative == 4
+						Push(dir, pf, count, files, calcs, ch, end)
 					}
 				}
 			}

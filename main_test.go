@@ -284,7 +284,7 @@ func TestXYZGeom(t *testing.T) {
 	}
 }
 
-func TestLookAround(t *testing.T) {
+func TestLookAhead(t *testing.T) {
 	tests := []struct {
 		name string
 		want bool
@@ -295,7 +295,7 @@ func TestLookAround(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		got := LookAround(test.name)
+		got := LookAhead(test.name, 1)
 		want := test.want
 		if got != want {
 			t.Errorf("got %v, wanted %v\n", got, want)

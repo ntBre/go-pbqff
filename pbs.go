@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,6 +17,7 @@ type Job struct {
 	Name     string
 	Filename string
 	Signal   int
+	Host     string
 }
 
 const mapleCmd = `molpro -t 1 `
@@ -28,6 +31,7 @@ const ptsMaple = `#!/bin/sh
 #PBS -l walltime=5000:00:00
 #PBS -l ncpus=8
 #PBS -l mem=64gb
+#PBS -l host={{.Host}}
 
 module load pbspro molpro
 
@@ -129,6 +133,56 @@ func Submit(filename string) string {
 		out, err = exec.Command("qsub", filename).Output()
 	}
 	jobid := string(out)
-	fmt.Printf("submitting %s, jobid %s\n", filename, jobid)
 	return strings.TrimSuffix(jobid, filepath.Ext(jobid))
+}
+
+// PBSnodes runs the pbsnodes -a command and returns a list of free
+// nodes
+func PBSnodes() []string {
+	out, _ := exec.Command("pbsnodes", "-a").Output()
+	return readPBSnodes(strings.NewReader(string(out)))
+}
+
+type cnode struct {
+	name  string
+	queue string
+	busy  bool
+}
+
+func readPBSnodes(r io.Reader) (nodes []string) {
+	scanner := bufio.NewScanner(r)
+	var (
+		line string
+		init bool = true
+		node *cnode
+	)
+	for scanner.Scan() {
+		line = scanner.Text()
+		switch {
+		case line == "" || init:
+			if node != nil && node.queue == "workq" && !node.busy {
+				nodes = append(nodes, node.name)
+			}
+			node = new(cnode)
+			init = false
+		case strings.Contains(line, "resources_available.host"):
+			f := strings.Fields(line)
+			node.name = f[len(f)-1]
+		case strings.Contains(line, "resources_available.Qlist"):
+			f := strings.Fields(line)
+			node.queue = f[len(f)-1]
+		case strings.Contains(line, "jobs = "):
+			node.busy = true
+		case strings.Contains(line, "state = "):
+			f := strings.Fields(line)
+			if f[len(f)-1] != "free" {
+				node.busy = true
+			}
+		}
+	}
+	// process last file at the end
+	if node != nil && node.queue == "workq" && !node.busy {
+		nodes = append(nodes, node.name)
+	}
+	return
 }
