@@ -288,10 +288,10 @@ func Optimize(prog *Molpro) (E0 float64) {
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit("opt/mp.pbs")
 	outfile := "opt/opt.out"
-	_, err := prog.ReadOut(outfile)
+	_, _, err := prog.ReadOut(outfile)
 	for err != nil {
 		HandleSignal(35, time.Minute)
-		E0, err = prog.ReadOut(outfile)
+		E0, _, err = prog.ReadOut(outfile)
 		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 			err == ErrFileContainsError || err == ErrBlankOutput) ||
 			err == ErrFileNotFound {
@@ -315,10 +315,10 @@ func RefEnergy(prog *Molpro) (E0 float64) {
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit(dir + pbsfile)
 	outfile := "ref.out"
-	_, err := prog.ReadOut(dir + outfile)
+	_, _, err := prog.ReadOut(dir + outfile)
 	for err != nil {
 		HandleSignal(35, time.Minute)
-		E0, err = prog.ReadOut(dir + outfile)
+		E0, _, err = prog.ReadOut(dir + outfile)
 		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 			err == ErrFileContainsError || err == ErrBlankOutput) ||
 			err == ErrFileNotFound {
@@ -341,10 +341,10 @@ func Frequency(prog *Molpro, absPath string) ([]float64, bool) {
 	// doesn't matter if this finishes
 	Submit(absPath + "/mp.pbs")
 	outfile := absPath + "/freq.out"
-	_, err := prog.ReadOut(outfile)
+	_, _, err := prog.ReadOut(outfile)
 	for err != nil {
 		HandleSignal(35, time.Minute)
-		_, err = prog.ReadOut(outfile)
+		_, _, err = prog.ReadOut(outfile)
 		// dont resubmit freq
 		if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 			err == ErrFileContainsError {
@@ -404,7 +404,7 @@ func Resubmit(name string, err error) string {
 }
 
 // Drain drains the queue of jobs and receives on ch when ready for more
-func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
+func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 	start := time.Now()
 	points := make([]Calc, 0)
 	var (
@@ -414,6 +414,7 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 		success  bool
 		energy   float64
 		err      error
+		t        float64
 	)
 	heap := new(GarbageHeap)
 	for {
@@ -426,11 +427,12 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 			} else if job.Result != 0 {
 				energy = job.Result
 				success = true
-			} else if energy, err = prog.ReadOut(job.Name + ".out"); err == nil {
+			} else if energy, t, err = prog.ReadOut(job.Name + ".out"); err == nil {
 				success = true
 				if energy < min {
 					min = energy
 				}
+				realTime += t
 				heap.Add(job.Name)
 			} else if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 				err == ErrFileContainsError || err == ErrBlankOutput ||
@@ -476,6 +478,9 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min float64) {
 			if !ok && finished == submitted {
 				fmt.Fprintf(os.Stderr, "resubmitted %d/%d (%.1f%%), points execution time: %v\n",
 					resubs, submitted, float64(resubs)/float64(submitted)*100, time.Since(start))
+				minutes := int(realTime) / 60
+				secRem := realTime - 60*float64(minutes)
+				fmt.Fprintf(os.Stderr, "total job time (wall): %.2f sec = %dm%.2fs\n", realTime, minutes, secRem)
 				if nDerivative == 4 {
 					fmt.Fprintf(os.Stderr, "saved %d/%d (%.f%%) fourth derivative components from e2d\n",
 						saved, fourTwos, float64(saved)/float64(fourTwos)*100)
@@ -725,7 +730,7 @@ func main() {
 	}
 	// Instead of returning energies, use job.Target = energies, also need a function
 	// for getting the index in the array for fc2,3,4 but do that before setting job.Index
-	min = Drain(prog, ch, E0)
+	min, _ = Drain(prog, ch, E0)
 	queueClear()
 
 	if !DoCart() {

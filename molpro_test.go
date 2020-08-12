@@ -78,66 +78,97 @@ func TestReadOut(t *testing.T) {
 	}()
 
 	t.Run("Successful reading", func(t *testing.T) {
-		got, err := mp.ReadOut("testfiles/good.out")
+		got, time, err := mp.ReadOut("testfiles/good.out")
 		want := -168.463747095015
+		wtime := 10372.08
 		if got != want {
 			t.Errorf("got %v, wanted %v\n", got, want)
-		} else if err != nil {
+		}
+		if time != wtime {
+			t.Errorf("got %v, wanted %v\n", time, wtime)
+		}
+		if err != nil {
 			t.Error("got an error, didn't want one")
 		}
 	})
 
 	t.Run("Error in output", func(t *testing.T) {
-		got, err := mp.ReadOut("testfiles/error.out")
+		got, time, err := mp.ReadOut("testfiles/error.out")
+		wtime := 119.29
 		if !math.IsNaN(got) {
 			t.Errorf("got %v, wanted %v\n", got, math.NaN())
-		} else if err != ErrFileContainsError {
+		}
+		if time != wtime {
+			t.Errorf("got %v, wanted %v\n", time, wtime)
+		}
+		if err != ErrFileContainsError {
 			t.Error("didn't get an error, wanted one")
 		}
 	})
 
 	t.Run("File not found", func(t *testing.T) {
-		got, err := mp.ReadOut("nonexistent/file")
+		got, time, err := mp.ReadOut("nonexistent/file")
+		wtime := 0.
 		if !math.IsNaN(got) {
 			t.Errorf("got %v, wanted %v\n", got, math.NaN())
-		} else if err != ErrFileNotFound {
+		}
+		if time != wtime {
+			t.Errorf("got %v, wanted %v\n", time, wtime)
+		}
+		if err != ErrFileNotFound {
 			t.Error("didn't get an error, wanted one")
 		}
 	})
 
 	t.Run("One-line error", func(t *testing.T) {
-		got, err := mp.ReadOut("testfiles/shortcircuit.out")
+		got, time, err := mp.ReadOut("testfiles/shortcircuit.out")
+		wtime := 0.
 		if !math.IsNaN(got) {
 			t.Errorf("got %v, wanted %v\n", got, math.NaN())
 		} else if err != ErrFileContainsError {
 			t.Errorf("got %q, wanted %q", err, ErrFileContainsError)
 		}
+		if time != wtime {
+			t.Errorf("got %v, wanted %v\n", time, wtime)
+		}
 	})
 
 	t.Run("blank", func(t *testing.T) {
-		got, err := mp.ReadOut("testfiles/blank.out")
+		got, time, err := mp.ReadOut("testfiles/blank.out")
+		wtime := 0.
 		if !math.IsNaN(got) {
 			t.Errorf("got %v, wanted %v\n", got, math.NaN())
 		} else if err != ErrBlankOutput {
 			t.Errorf("got %q, wanted %q", err, ErrBlankOutput)
 		}
+		if time != wtime {
+			t.Errorf("got %v, wanted %v\n", time, wtime)
+		}
 	})
 
 	t.Run("parse error", func(t *testing.T) {
-		got, err := mp.ReadOut("testfiles/parse.out")
+		got, time, err := mp.ReadOut("testfiles/parse.out")
+		wtime := 10372.08
 		if !math.IsNaN(got) {
 			t.Errorf("got %v, wanted %v\n", got, math.NaN())
 		} else if err != ErrFinishedButNoEnergy {
 			t.Errorf("got %q, wanted %q", err, ErrFinishedButNoEnergy)
 		}
+		if time != wtime {
+			t.Errorf("got %v, wanted %v\n", time, wtime)
+		}
 	})
 
 	t.Run("sequoia, partial", func(t *testing.T) {
-		got, err := mp.ReadOut("testfiles/seq.part")
+		got, time, err := mp.ReadOut("testfiles/seq.part")
+		wtime := 67.94
 		if !math.IsNaN(got) {
 			t.Errorf("got %v, wanted %v\n", got, math.NaN())
 		} else if err != ErrEnergyNotFound {
 			t.Errorf("got %q, wanted %q", err, ErrFinishedButNoEnergy)
+		}
+		if time != wtime {
+			t.Errorf("got %v, wanted %v\n", time, wtime)
 		}
 	})
 
@@ -147,12 +178,16 @@ func TestReadOut(t *testing.T) {
 		defer func() {
 			energyLine = e
 		}()
-		got, err := mp.ReadOut("testfiles/seq.out")
+		got, time, err := mp.ReadOut("testfiles/seq.out")
 		want := -634.43134170
+		wtime := 1075.84
 		if got != want {
 			t.Errorf("got %v and %v, wanted %v\n", got, err, want)
 		} else if err != nil {
 			t.Error("got an error, didn't want one")
+		}
+		if time != wtime {
+			t.Errorf("got %v, wanted %v\n", time, wtime)
 		}
 	})
 
@@ -162,12 +197,16 @@ func TestReadOut(t *testing.T) {
 		defer func() {
 			energyLine = e
 		}()
-		got, err := mp.ReadOut("testfiles/cccr.out")
+		got, time, err := mp.ReadOut("testfiles/cccr.out")
 		want := -56.591603910177
+		wtime := 567.99
 		if got != want {
 			t.Errorf("got %v and %v, wanted %v\n", got, err, want)
 		} else if err != nil {
 			t.Error("got an error, didn't want one")
+		}
+		if time != wtime {
+			t.Errorf("got %v, wanted %v\n", time, wtime)
 		}
 	})
 }

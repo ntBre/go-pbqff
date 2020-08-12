@@ -105,6 +105,8 @@ ParseFlags -> ParseInfile -> WhichCluster
   |     0.0 |   345.7 |   345.7 |   344.5 |   344.5 |
   +---------+---------+---------+---------+---------+
 
+
+* For sure a mistake to run parallel without -j flag for number of jobs
    
 * Notes
   - main difference for go-cart is build points, I guess that makes go-cart a program?

@@ -96,33 +96,34 @@ func FormatZmat(geom string) string {
 
 // ReadOut reads a molpro output file and returns the resulting energy
 // and an error describing the status of the output
-func (m Molpro) ReadOut(filename string) (result float64, err error) {
+func (m Molpro) ReadOut(filename string) (result, time float64, err error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	if _, err = os.Stat(filename); os.IsNotExist(err) {
-		return brokenFloat, ErrFileNotFound
+		return brokenFloat, 0, ErrFileNotFound
 	}
 	error := regexp.MustCompile(`(?i)[^_]error`)
 	lines, err := ReadFile(filename)
 	if err != nil {
-		return brokenFloat, ErrFileNotFound
+		return brokenFloat, 0, ErrFileNotFound
 	}
 	err = ErrEnergyNotFound
+	time = 0
 	result = brokenFloat
 	// ASSUME blank file is only created when PBS runs
 	// blank file has a single newline - which is stripped by this ReadLines
 	if len(lines) == 1 {
 		if strings.Contains(strings.ToUpper(lines[0]), "ERROR") {
-			return result, ErrFileContainsError
+			return result, time, ErrFileContainsError
 		}
-		return result, ErrBlankOutput
+		return result, time, ErrBlankOutput
 	} else if len(lines) == 0 {
-		return result, ErrBlankOutput
+		return result, time, ErrBlankOutput
 	}
 
 	for _, line := range lines {
 		if error.MatchString(line) {
-			return result, ErrFileContainsError
+			return result, time, ErrFileContainsError
 		}
 		if energyLine.MatchString(line) &&
 			!strings.Contains(line, "gthresh") &&
@@ -143,12 +144,16 @@ func (m Molpro) ReadOut(filename string) (result float64, err error) {
 					}
 				}
 			}
+		} else if strings.Contains(line, "REAL TIME") {
+			fields := strings.Fields(line)
+			timeStr := fields[len(fields)-2]
+			time, _ = strconv.ParseFloat(timeStr, 64)
 		}
 		if strings.Contains(line, molproTerminated) && err != nil {
 			err = ErrFinishedButNoEnergy
 		}
 	}
-	return result, err
+	return result, time, err
 }
 
 // HandleOutput reads .out and .log files for filename, assumes no extension

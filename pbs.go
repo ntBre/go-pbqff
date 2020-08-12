@@ -42,12 +42,13 @@ mkdir -p $TMPDIR
 
 date
 echo $HOSTNAME
-parallel -j 8 < {{.Filename}}
+parallel -j 8 --joblog {{.Filename}}.pl.log < {{.Filename}}
 date
 
 rm -rf $TMPDIR
 `
-
+// try --progress instead of joblog, looking for real time progress to base resubs on
+// need to put this into a file
 const pbsMaple = `#!/bin/sh
 #PBS -N {{.Name}}
 #PBS -S /bin/bash
