@@ -209,3 +209,51 @@ ParseFlags -> ParseInfile -> WhichCluster
 * TODO automate internal coordinate generation                         :HARD:
 
 * TODO replace intder, anpass, and spectro entirely                    :HARD:
+
+* ErrFileNotFound brainstorming and eventual fix
+ErrFileNotFound just means the file doesn't exist
+
+valid reasons for no existence:
+- parallel job submitted but in queue -> could check this with qstat on parallel jobid
+- parallel has not run that job yet -> could check this from log file
+
+reasons to resubmit:
+- parallel job is running (confirmed by jobid)
+- parallel log contains job => job ran but didn't write output
+- parallel log does not contain job => job has not run yet or is running
+
+so we may want to resubmit whether or not the log contains the job
+- either it's currently running but taking forever || it ran but failed
+I guess if it ran but failed we definitely want to resubmit
+Is taking forever a good reason to resubmit?
+
+to resubmit for taking forever:
+- parallel job is running
+- job is not in the log file
+
+but these conditions are met by every job at the beginning <- herein lies the problem
+
+even if you wait for one job to finish, all the other jobs meet this condition
+
+how to differentiate between jobs that have yet to run and those that are taking too long or won't run
+
+with --progress can see the number of jobs submitted
+so if job is not in the log and #running < #numjobs some jobs have not been submitted
+
+does this offer any additional insight?
+
+identity of unsubmitted jobs is unknown as is when they may be submitted
+
+is the "average completion time" part of the log different in the lingering file? could be something to check
+
+as jobs fail to finish the average completion time does continue to increase
+
+however, it starts at 0 and increases when the first jobs start to finish too
+
+how to tell if job is stuck or just running?
+
+if ErrFileNotFound && file is not in logfile && numjobs in prog is less than maxjobs, ie 3 < 8
+
+file not in logfile => job is not finished == job is running or not started
+numjobs < maxjobs in progfile => all jobs have been started => job is running
+ErrFileNotFound => job is not actually running so we need to resubmit

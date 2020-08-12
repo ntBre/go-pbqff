@@ -33,11 +33,10 @@ import (
 )
 
 const (
-	// these should  be in the input
-	chunkSize = 64
-	resBound  = 1e-16
-	delta     = 0.005
-	help      = `Requirements:
+	resBound = 1e-16 // warn if anpass residuals above this
+	// this could  be in the input
+	delta = 0.005
+	help  = `Requirements:
 - intder, anpass, and spectro executables
 - template intder.in, anpass.in, spectro.in, and molpro.in files
   - intder.in should be a pts intder input and have the old geometry to serve as template
@@ -94,6 +93,7 @@ var (
 	errMap           map[error]int
 	nodes            []string
 	jobLimit         int = 1000
+	chunkSize        int = 64
 )
 
 // Finite differences denominators
@@ -581,6 +581,12 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 		v, err := strconv.Atoi(Input[JobLimit])
 		if err == nil {
 			jobLimit = v
+		}
+	}
+	if Input[ChunkSize] != "" {
+		v, err := strconv.Atoi(Input[JobLimit])
+		if err == nil {
+			chunkSize = v
 		}
 	}
 	if Input[Deriv] != "" {

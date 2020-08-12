@@ -15,6 +15,7 @@ const (
 	Flags
 	Deriv
 	JobLimit
+	ChunkSize
 	IntderCmd
 	AnpassCmd
 	SpectroCmd
@@ -38,6 +39,7 @@ func ParseInfile(filename string) {
 		Regexp{regexp.MustCompile(`(?i)flags=`), Flags},
 		Regexp{regexp.MustCompile(`(?i)deriv=`), Deriv},
 		Regexp{regexp.MustCompile(`(?i)joblimit=`), JobLimit},
+		Regexp{regexp.MustCompile(`(?i)chunksize=`), ChunkSize},
 		Regexp{regexp.MustCompile(`(?i)intder=`), IntderCmd},
 		Regexp{regexp.MustCompile(`(?i)anpass=`), AnpassCmd},
 		Regexp{regexp.MustCompile(`(?i)spectro=`), SpectroCmd},
