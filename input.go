@@ -14,6 +14,7 @@ const (
 	GeomType
 	Flags
 	Deriv
+	JobLimit
 	IntderCmd
 	AnpassCmd
 	SpectroCmd
@@ -36,6 +37,7 @@ func ParseInfile(filename string) {
 		Regexp{regexp.MustCompile(`(?i)geomtype=`), GeomType},
 		Regexp{regexp.MustCompile(`(?i)flags=`), Flags},
 		Regexp{regexp.MustCompile(`(?i)deriv=`), Deriv},
+		Regexp{regexp.MustCompile(`(?i)joblimit=`), JobLimit},
 		Regexp{regexp.MustCompile(`(?i)intder=`), IntderCmd},
 		Regexp{regexp.MustCompile(`(?i)anpass=`), AnpassCmd},
 		Regexp{regexp.MustCompile(`(?i)spectro=`), SpectroCmd},

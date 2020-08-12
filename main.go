@@ -35,7 +35,6 @@ import (
 const (
 	// these should  be in the input
 	chunkSize = 64
-	jobLimit  = 1000
 	resBound  = 1e-16
 	delta     = 0.005
 	help      = `Requirements:
@@ -94,6 +93,7 @@ var (
 	ptsJobs          []string
 	errMap           map[error]int
 	nodes            []string
+	jobLimit         int = 1000
 )
 
 // Finite differences denominators
@@ -134,6 +134,12 @@ type Calc struct {
 	noRun   bool
 	cmdfile string
 	Resub   *Calc
+	Src     *Source
+}
+
+type Source struct {
+	Slice *[]float64
+	Index int
 }
 
 type Target struct {
@@ -437,6 +443,11 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 			} else if job.Result != 0 {
 				energy = job.Result
 				success = true
+			} else if job.Src != nil {
+				if len(*job.Src.Slice) > job.Src.Index && (*job.Src.Slice)[job.Src.Index] != 0 {
+					energy = (*job.Src.Slice)[job.Src.Index]
+					success = true
+				}
 			} else if energy, t, err = prog.ReadOut(job.Name + ".out"); err == nil {
 				success = true
 				if energy < min {
@@ -565,6 +576,12 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	ParseInfile(args[0])
 	if Input[Flags] == "noopt" {
 		flags = flags &^ OPT
+	}
+	if Input[JobLimit] != "" {
+		v, err := strconv.Atoi(Input[JobLimit])
+		if err == nil {
+			jobLimit = v
+		}
 	}
 	if Input[Deriv] != "" {
 		d, err := strconv.Atoi(Input[Deriv])

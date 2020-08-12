@@ -395,12 +395,13 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]float6
 			}
 		} else if len(p.Steps) == 2 && ndims == 4 {
 			fourTwos++
-			if id := E2dIndex(ncoords, p.Steps...)[0]; e2d[id] != 0 {
+			if id := E2dIndex(ncoords, p.Steps...)[0]; len(e2d) > id && e2d[id] != 0 {
 				temp.Result = e2d[id]
-				temp.noRun = true
-				saved++
+			} else {
+				temp.Src = &Source{&e2d, id}
 			}
-			// else will be run like normal
+			temp.noRun = true
+			saved++
 		}
 		fname := dir + p.Name + ".inp"
 		fnames = append(fnames, fname)
