@@ -107,6 +107,13 @@ ParseFlags -> ParseInfile -> WhichCluster
 
 
 * For sure a mistake to run parallel without -j flag for number of jobs
+
+* --progress writes to stderr apparently so should have used 2> but joblog updates realtime too
+  - doesn't really seem to have more information than log besides the average time per job
+    
+* turned --progress back on, just log as much info as possible and see what is useful
+  - vim :e ++ff=dos to handle dos line endings in prog file
+  - or C-Q C-M to insert that character for find and replace
    
 * Notes
   - main difference for go-cart is build points, I guess that makes go-cart a program?

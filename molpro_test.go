@@ -313,12 +313,12 @@ func TestBuildPoints(t *testing.T) {
 		got = append(got, calc)
 	}
 	want := []Calc{
-		Calc{Name: "testfiles/read/inp/NHHH.00000", Targets: []Target{{1, nil, 0}}},
-		Calc{Name: "testfiles/read/inp/NHHH.00001", Targets: []Target{{1, nil, 1}}},
-		Calc{Name: "testfiles/read/inp/NHHH.00002", Targets: []Target{{1, nil, 2}}},
+		Calc{Name: "testfiles/read/inp/NHHH.00000", Targets: []Target{{1, nil, 0}}, cmdfile: "testfiles/read/inp/commands0.txt"},
+		Calc{Name: "testfiles/read/inp/NHHH.00001", Targets: []Target{{1, nil, 1}}, cmdfile: "testfiles/read/inp/commands0.txt"},
+		Calc{Name: "testfiles/read/inp/NHHH.00002", Targets: []Target{{1, nil, 2}}, cmdfile: "testfiles/read/inp/commands0.txt"},
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %v, wanted %v", got, want)
+		t.Errorf("got\n%v, wanted\n%v", got, want)
 	}
 }
 

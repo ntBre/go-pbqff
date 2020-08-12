@@ -42,13 +42,13 @@ mkdir -p $TMPDIR
 
 date
 echo $HOSTNAME
-parallel -j 8 --joblog {{.Filename}}.pl.log < {{.Filename}}
+parallel -j 8 --joblog {{.Filename}}.pl.log --memfree 8g --progress < {{.Filename}} 2> {{.Filename}}.prog
 date
 
 rm -rf $TMPDIR
 `
-// try --progress instead of joblog, looking for real time progress to base resubs on
-// need to put this into a file
+// trying --memfree, seemed to have no time cost on 2nd derivatives with plenty of nodes
+// now check --progress
 const pbsMaple = `#!/bin/sh
 #PBS -N {{.Name}}
 #PBS -S /bin/bash

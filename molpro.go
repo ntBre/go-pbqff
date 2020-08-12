@@ -476,6 +476,7 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, *pf)
 	var node string
 	for f := range calcs {
+		calcs[f].cmdfile = cmdfile
 		ch <- calcs[f]
 		if !calcs[f].noRun {
 			submitted++

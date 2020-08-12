@@ -27,6 +27,8 @@ import (
 
 	"os/exec"
 
+	"io"
+
 	"github.com/ntBre/chemutils/summarize"
 )
 
@@ -130,6 +132,8 @@ type Calc struct {
 	Result  float64
 	ID      string
 	noRun   bool
+	cmdfile string
+	Resub   *Calc
 }
 
 type Target struct {
@@ -396,13 +400,19 @@ func DoSpectro(spectro *Spectro, nharms int) (float64, []float64, []float64, []f
 }
 
 func Resubmit(name string, err error) string {
-	fmt.Fprintf(os.Stderr,
-		"resubmitting %s for %s\n", name, err)
-	os.Remove(name + ".out")
-	WritePBS(name+".pbs", &Job{"redo", name + ".inp", 35, ""}, pbsMaple)
-	return Submit(name + ".pbs")
+	fmt.Fprintf(os.Stderr, "resubmitting %s for %s\n", name, err)
+	src, _ := os.Open(name + ".inp")
+	dst, _ := os.Create(name + "_redo.inp")
+	io.Copy(dst, src)
+	defer func() {
+		src.Close()
+		dst.Close()
+	}()
+	WritePBS(name+"_redo.pbs", &Job{"redo", name + "_redo.inp", 35, ""}, pbsMaple)
+	return Submit(name + "_redo.pbs")
 }
 
+// type Calc struct {Name string, Targets []Target, Result float64, ID string, noRun bool, cmdfile string, Resub *Calc}
 // Drain drains the queue of jobs and receives on ch when ready for more
 func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 	start := time.Now()
@@ -434,18 +444,29 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 				}
 				realTime += t
 				heap.Add(job.Name)
-			} else if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
+				// job has not been resubmitted && there is an error
+			} else if job.Resub == nil && (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 				err == ErrFileContainsError || err == ErrBlankOutput ||
-				// impossible condition, job cannot get an id without being resubmitted
-				(err == ErrFileNotFound && job.ID != "" && !Qstat(job.ID)) {
+				(err == ErrFileNotFound && CheckLog(job.cmdfile, job.Name) && CheckProg(job.cmdfile))) {
 				if err == ErrFileContainsError {
 					fmt.Fprintf(os.Stderr, "error: %v on %s\n", err, job.Name)
 				}
-				// TODO resubmit under _redo name but then need to check both names
 				errMap[err]++
-				job.ID = Resubmit(job.Name, err)
+				// can't use job.whatever if you want to modify the thing
+				points[i].Resub = &Calc{Name: job.Name + "_redo", ID: Resubmit(job.Name, err)}
 				resubs++
-				ptsJobs = append(ptsJobs, job.ID)
+				ptsJobs = append(ptsJobs, points[i].Resub.ID)
+			} else if job.Resub != nil {
+				// should DRY this up, inside if is same as case 3 above
+				// should also check if resubmitted job has finished with qsub and set pointer to nil if it has without success
+				if energy, t, err = prog.ReadOut(job.Resub.Name + ".out"); err == nil {
+					success = true
+					if energy < min {
+						min = energy
+					}
+					realTime += t
+					heap.Add(job.Name)
+				}
 			}
 			if success {
 				points[nJobs-1], points[i] = points[i], points[nJobs-1]
