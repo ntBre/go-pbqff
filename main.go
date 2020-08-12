@@ -106,10 +106,10 @@ var (
 
 // Globals for queue
 var (
-	fc2 []float64
-	fc3 []float64
-	fc4 []float64
-	e2d []float64
+	fc2 []CountFloat
+	fc3 []CountFloat
+	fc4 []CountFloat
+	e2d []CountFloat
 )
 
 // Errors used throughout
@@ -137,14 +137,40 @@ type Calc struct {
 	Src     *Source
 }
 
+type CountFloat struct {
+	val   float64
+	count int
+}
+
+func (c *CountFloat) Add(plus float64) {
+	c.val += plus
+	c.count--
+	if c.count < 0 {
+		panic("added to CountFloat too many times")
+	}
+}
+
+func FloatsFromCountFloats(cfs []CountFloat) (floats []float64) {
+	for _, cf := range cfs {
+		floats = append(floats, cf.val)
+	}
+	return
+}
+
 type Source struct {
-	Slice *[]float64
+	Slice *[]CountFloat
 	Index int
+}
+
+func (s *Source) Len() int { return len(*s.Slice) }
+
+func (s *Source) Value() float64 {
+	return (*s.Slice)[s.Index].val
 }
 
 type Target struct {
 	Coeff float64
-	Slice *[]float64
+	Slice *[]CountFloat
 	Index int
 }
 
@@ -444,8 +470,8 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 				energy = job.Result
 				success = true
 			} else if job.Src != nil {
-				if len(*job.Src.Slice) > job.Src.Index && (*job.Src.Slice)[job.Src.Index] != 0 {
-					energy = (*job.Src.Slice)[job.Src.Index]
+				if job.Src.Len() > job.Src.Index && job.Src.Value() != 0 {
+					energy = job.Src.Value()
 					success = true
 				}
 			} else if energy, t, err = prog.ReadOut(job.Name + ".out"); err == nil {
@@ -484,10 +510,7 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 				nJobs--
 				points = points[:nJobs]
 				for _, t := range job.Targets {
-					for len(*t.Slice) <= t.Index {
-						*t.Slice = append(*t.Slice, 0)
-					}
-					(*t.Slice)[t.Index] += t.Coeff * energy
+					(*t.Slice)[t.Index].Add(t.Coeff * energy)
 				}
 				shortenBy++
 				if !job.noRun {
@@ -668,43 +691,46 @@ func XYZGeom(geom string) (names []string, coords []float64) {
 
 // PrintFile15 prints the second derivative force constants in the
 // format expected by SPECTRO
-func PrintFile15(fc []float64, natoms int, filename string) int {
+func PrintFile15(fc []CountFloat, natoms int, filename string) int {
 	f, _ := os.Create(filename)
 	fmt.Fprintf(f, "%5d%5d", natoms, 6*natoms) // still not sure why this is just times 6
 	for i := range fc {
 		if i%3 == 0 {
 			fmt.Fprintf(f, "\n")
 		}
-		fmt.Fprintf(f, "%20.10f", fc[i]*fc2Scale)
+		fmt.Fprintf(f, "%20.10f", fc[i].val*fc2Scale)
 	}
+	fmt.Fprint(f, "\n")
 	return len(fc)
 }
 
 // PrintFile30 prints the third derivative force constants in the
 // format expected by SPECTRO
-func PrintFile30(fc []float64, natoms, other int, filename string) int {
+func PrintFile30(fc []CountFloat, natoms, other int, filename string) int {
 	f, _ := os.Create(filename)
 	fmt.Fprintf(f, "%5d%5d", natoms, other)
 	for i := range fc {
 		if i%3 == 0 {
 			fmt.Fprintf(f, "\n")
 		}
-		fmt.Fprintf(f, "%20.10f", fc[i]*fc3Scale)
+		fmt.Fprintf(f, "%20.10f", fc[i].val*fc3Scale)
 	}
+	fmt.Fprint(f, "\n")
 	return len(fc)
 }
 
 // PrintFile40 prints the fourth derivative force constants in the
 // format expected by SPECTRO
-func PrintFile40(fc []float64, natoms, other int, filename string) int {
+func PrintFile40(fc []CountFloat, natoms, other int, filename string) int {
 	f, _ := os.Create(filename)
 	fmt.Fprintf(f, "%5d%5d", natoms, other)
 	for i := range fc {
 		if i%3 == 0 {
 			fmt.Fprintf(f, "\n")
 		}
-		fmt.Fprintf(f, "%20.10f", fc[i]*fc4Scale)
+		fmt.Fprintf(f, "%20.10f", fc[i].val*fc4Scale)
 	}
+	fmt.Fprint(f, "\n")
 	return len(fc)
 }
 
@@ -720,6 +746,7 @@ func main() {
 		err       error
 		atomNames []string
 		energies  []float64
+		cenergies []CountFloat
 		min       float64
 		E0        float64
 		natoms    int
@@ -755,11 +782,11 @@ func main() {
 			intder.WritePts("pts/intder.in")
 			RunIntder("pts/intder")
 			go func() {
-				prog.BuildPoints("pts/file07", atomNames, &energies, ch, true)
+				prog.BuildPoints("pts/file07", atomNames, &cenergies, ch, true)
 			}()
 			// this works if no points were deleted, else need a resume from checkpoint thing
 		} else {
-			prog.BuildPoints("pts/file07", atomNames, &energies, nil, false)
+			prog.BuildPoints("pts/file07", atomNames, &cenergies, nil, false)
 		}
 	} else {
 		names, coords := XYZGeom(Input[Geometry])
@@ -778,6 +805,7 @@ func main() {
 	queueClear()
 
 	if !DoCart() {
+		energies = FloatsFromCountFloats(cenergies)
 		// convert to relative energies
 		for i := range energies {
 			energies[i] -= min
@@ -809,7 +837,7 @@ func main() {
 		if i%3 == 0 && i > 0 {
 			fmt.Print("\n")
 		}
-		fmt.Printf("%20.12f", e2d[i])
+		fmt.Printf("%20.12f", e2d[i].val)
 	}
 	fmt.Print("\n")
 	for k, v := range errMap {

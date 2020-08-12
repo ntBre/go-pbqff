@@ -268,7 +268,7 @@ func (mp *Molpro) AugmentHead() {
 // energy calculations and return an array of jobs to run. If write
 // is set to true, write the necessary files. Otherwise just return the list
 // of jobs.
-func (mp *Molpro) BuildPoints(filename string, atomNames []string, target *[]float64, ch chan Calc, write bool) {
+func (mp *Molpro) BuildPoints(filename string, atomNames []string, target *[]CountFloat, ch chan Calc, write bool) {
 	lines, err := ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -367,7 +367,7 @@ var (
 )
 
 // Derivative is a helper for calling Make(2|3|4)D in the same way
-func Derivative(prog *Molpro, names []string, coords []float64, target *[]float64, dims ...int) (fnames []string, calcs []Calc) {
+func Derivative(prog *Molpro, names []string, coords []float64, target *[]CountFloat, dims ...int) (fnames []string, calcs []Calc) {
 	var protos []ProtoCalc
 	dir := "pts/inp/"
 	ncoords := len(coords)
@@ -385,18 +385,26 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]float6
 		prog.Geometry = ZipXYZ(names, coords) + "}\n"
 		temp := Calc{Name: dir + p.Name}
 		for _, v := range Index(ncoords, p.Index...) {
+			for len(*target) <= v {
+				*target = append(*target, CountFloat{0, 0})
+			}
+			(*target)[v].count = len(protos)
 			temp.Targets = append(temp.Targets,
 				Target{Coeff: p.Coeff, Slice: target, Index: v})
 		}
 		if len(p.Steps) == 2 && ndims == 2 {
 			for _, v := range E2dIndex(ncoords, p.Steps...) {
+				// also have to append to e2d, but count is always 1 there
+				for len(e2d) <= v {
+					e2d = append(e2d, CountFloat{0, 1})
+				}
 				temp.Targets = append(temp.Targets,
 					Target{Coeff: 1, Slice: &e2d, Index: v})
 			}
 		} else if len(p.Steps) == 2 && ndims == 4 {
 			fourTwos++
-			if id := E2dIndex(ncoords, p.Steps...)[0]; len(e2d) > id && e2d[id] != 0 {
-				temp.Result = e2d[id]
+			if id := E2dIndex(ncoords, p.Steps...)[0]; len(e2d) > id && e2d[id].val != 0 {
+				temp.Result = e2d[id].val
 			} else {
 				temp.Src = &Source{&e2d, id}
 			}
@@ -505,7 +513,7 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 
 // BuildCartPoints constructs the calculations needed to run a
 // Cartesian quartic force field
-func (mp *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc4 *[]float64, ch chan Calc) {
+func (mp *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc4 *[]CountFloat, ch chan Calc) {
 	var (
 		count *int
 		pf    *int
