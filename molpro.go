@@ -388,7 +388,9 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]CountF
 			for len(*target) <= v {
 				*target = append(*target, CountFloat{Val: 0, Count: 0})
 			}
-			(*target)[v].Count = len(protos)
+			if !(*target)[v].Loaded {
+				(*target)[v].Count = len(protos)
+			}
 			temp.Targets = append(temp.Targets,
 				Target{Coeff: p.Coeff, Slice: target, Index: v})
 		}
@@ -397,6 +399,9 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]CountF
 				// also have to append to e2d, but count is always 1 there
 				for len(e2d) <= v {
 					e2d = append(e2d, CountFloat{Val: 0, Count: 1})
+				}
+				if !e2d[v].Loaded {
+					e2d[v].Count = 1
 				}
 				temp.Targets = append(temp.Targets,
 					Target{Coeff: 1, Slice: &e2d, Index: v})
@@ -411,18 +416,30 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]CountF
 			temp.noRun = true
 			saved++
 		}
-		fname := dir + p.Name + ".inp"
-		if *debug {
-			fmt.Println(ndims, len(protos), fname)
+		// if target was loaded, remove it from list of targets
+		// then only submit if len(Targets) > 0
+		for t := 0; t < len(temp.Targets); {
+			targ := temp.Targets[t]
+			if (*targ.Slice)[targ.Index].Loaded {
+				temp.Targets = append(temp.Targets[:t], temp.Targets[t+1:]...)
+			} else {
+				t++
+			}
 		}
-		fnames = append(fnames, fname)
-		if strings.Contains(p.Name, "E0") {
-			temp.noRun = true
+		if len(temp.Targets) > 0 {
+			fname := dir + p.Name + ".inp"
+			if *debug {
+				fmt.Println(ndims, len(protos), fname)
+			}
+			fnames = append(fnames, fname)
+			if strings.Contains(p.Name, "E0") {
+				temp.noRun = true
+			}
+			if !temp.noRun {
+				prog.WriteInput(fname, none)
+			}
+			calcs = append(calcs, temp)
 		}
-		if !temp.noRun {
-			prog.WriteInput(fname, none)
-		}
-		calcs = append(calcs, temp)
 	}
 	return
 }

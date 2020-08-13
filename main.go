@@ -223,6 +223,9 @@ func ParseFlags() []string {
 	default:
 		flags = OPT | PTS | FREQS
 	}
+	if *checkpoint {
+		LoadCheckpoint()
+	}
 	return flag.Args()
 }
 

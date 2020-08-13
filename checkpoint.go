@@ -33,7 +33,7 @@ func MakeCheckpoint() {
 func LoadCheckpoint() {
 	for a := range arrs {
 		lines, _ := ioutil.ReadFile(fnames[a])
-		err := json.Unmarshal(lines, &arrs[a])
+		err := json.Unmarshal(lines, arrs[a])
 		if err != nil {
 			errExit(err, fmt.Sprintf("loading %s for checkpoint", fnames[a]))
 		}
