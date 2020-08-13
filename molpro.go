@@ -386,9 +386,9 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]CountF
 		temp := Calc{Name: dir + p.Name}
 		for _, v := range Index(ncoords, p.Index...) {
 			for len(*target) <= v {
-				*target = append(*target, CountFloat{0, 0})
+				*target = append(*target, CountFloat{Val: 0, Count: 0})
 			}
-			(*target)[v].count = len(protos)
+			(*target)[v].Count = len(protos)
 			temp.Targets = append(temp.Targets,
 				Target{Coeff: p.Coeff, Slice: target, Index: v})
 		}
@@ -396,15 +396,15 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]CountF
 			for _, v := range E2dIndex(ncoords, p.Steps...) {
 				// also have to append to e2d, but count is always 1 there
 				for len(e2d) <= v {
-					e2d = append(e2d, CountFloat{0, 1})
+					e2d = append(e2d, CountFloat{Val: 0, Count: 1})
 				}
 				temp.Targets = append(temp.Targets,
 					Target{Coeff: 1, Slice: &e2d, Index: v})
 			}
 		} else if len(p.Steps) == 2 && ndims == 4 {
 			fourTwos++
-			if id := E2dIndex(ncoords, p.Steps...)[0]; len(e2d) > id && e2d[id].val != 0 {
-				temp.Result = e2d[id].val
+			if id := E2dIndex(ncoords, p.Steps...)[0]; len(e2d) > id && e2d[id].Val != 0 {
+				temp.Result = e2d[id].Val
 			} else {
 				temp.Src = &Source{&e2d, id}
 			}
@@ -412,6 +412,9 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]CountF
 			saved++
 		}
 		fname := dir + p.Name + ".inp"
+		if *debug {
+			fmt.Println(ndims, len(protos), fname)
+		}
 		fnames = append(fnames, fname)
 		if strings.Contains(p.Name, "E0") {
 			temp.noRun = true

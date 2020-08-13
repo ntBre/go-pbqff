@@ -75,6 +75,8 @@ var (
 	overwrite  = flag.Bool("o", false, "overwrite existing inp directory")
 	pts        = flag.Bool("pts", false, "start by running pts on optimized geometry from opt")
 	freqs      = flag.Bool("freqs", false, "start from running anpass on the pts output")
+	debug      = flag.Bool("debug", false, "for debugging, print 2nd derivative energies array")
+	checkpoint = flag.Bool("c", false, "resume from checkpoint")
 	irdy       = flag.String("irdy", "", "intder file is ready to be used in pts; specify the atom order")
 	flags      int
 )
@@ -94,6 +96,7 @@ var (
 	nodes            []string
 	jobLimit         int = 1000
 	chunkSize        int = 64
+	checkAfter       int = 100
 )
 
 // Finite differences denominators
@@ -138,21 +141,24 @@ type Calc struct {
 }
 
 type CountFloat struct {
-	val   float64
-	count int
+	Val   float64
+	Count int
+	Loaded bool
 }
 
 func (c *CountFloat) Add(plus float64) {
-	c.val += plus
-	c.count--
-	if c.count < 0 {
+	c.Val += plus
+	c.Count--
+	if c.Count < 0 {
 		panic("added to CountFloat too many times")
 	}
 }
 
+func (c *CountFloat) Done() bool { return c.Count == 0 }
+
 func FloatsFromCountFloats(cfs []CountFloat) (floats []float64) {
 	for _, cf := range cfs {
-		floats = append(floats, cf.val)
+		floats = append(floats, cf.Val)
 	}
 	return
 }
@@ -165,7 +171,7 @@ type Source struct {
 func (s *Source) Len() int { return len(*s.Slice) }
 
 func (s *Source) Value() float64 {
-	return (*s.Slice)[s.Index].val
+	return (*s.Slice)[s.Index].Val
 }
 
 type Target struct {
@@ -457,6 +463,7 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 		energy   float64
 		err      error
 		t        float64
+		check    int = 1
 	)
 	heap := new(GarbageHeap)
 	for {
@@ -515,6 +522,7 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 				shortenBy++
 				if !job.noRun {
 					finished++
+					check++
 				}
 				success = false
 			}
@@ -522,6 +530,10 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 		if shortenBy < 1 {
 			fmt.Fprintln(os.Stderr, "Didn't shorten, sleeping")
 			time.Sleep(time.Second)
+		}
+		if check >= checkAfter {
+			MakeCheckpoint()
+			check = 1
 		}
 		if heap.Len() >= chunkSize {
 			heap.Dump()
@@ -536,9 +548,13 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 				minutes := int(realTime) / 60
 				secRem := realTime - 60*float64(minutes)
 				fmt.Fprintf(os.Stderr, "total job time (wall): %.2f sec = %dm%.2fs\n", realTime, minutes, secRem)
+				// this is deprecated now that all should be saved but leave to check
 				if nDerivative == 4 {
 					fmt.Fprintf(os.Stderr, "saved %d/%d (%.f%%) fourth derivative components from e2d\n",
 						saved, fourTwos, float64(saved)/float64(fourTwos)*100)
+				}
+				for k, v := range errMap {
+					fmt.Fprintf(os.Stderr, "%v: %d occurrences\n", k, v)
 				}
 				return
 			} else if ok {
@@ -698,7 +714,7 @@ func PrintFile15(fc []CountFloat, natoms int, filename string) int {
 		if i%3 == 0 {
 			fmt.Fprintf(f, "\n")
 		}
-		fmt.Fprintf(f, "%20.10f", fc[i].val*fc2Scale)
+		fmt.Fprintf(f, "%20.10f", fc[i].Val*fc2Scale)
 	}
 	fmt.Fprint(f, "\n")
 	return len(fc)
@@ -713,7 +729,7 @@ func PrintFile30(fc []CountFloat, natoms, other int, filename string) int {
 		if i%3 == 0 {
 			fmt.Fprintf(f, "\n")
 		}
-		fmt.Fprintf(f, "%20.10f", fc[i].val*fc3Scale)
+		fmt.Fprintf(f, "%20.10f", fc[i].Val*fc3Scale)
 	}
 	fmt.Fprint(f, "\n")
 	return len(fc)
@@ -728,10 +744,20 @@ func PrintFile40(fc []CountFloat, natoms, other int, filename string) int {
 		if i%3 == 0 {
 			fmt.Fprintf(f, "\n")
 		}
-		fmt.Fprintf(f, "%20.10f", fc[i].val*fc4Scale)
+		fmt.Fprintf(f, "%20.10f", fc[i].Val*fc4Scale)
 	}
 	fmt.Fprint(f, "\n")
 	return len(fc)
+}
+
+func PrintE2D() {
+	for i := 0; i < len(e2d); i++ {
+		if i%3 == 0 && i > 0 {
+			fmt.Print("\n")
+		}
+		fmt.Printf("%20.12f", e2d[i].Val)
+	}
+	fmt.Print("\n")
 }
 
 var submitted int
@@ -833,14 +859,7 @@ func main() {
 			PrintFile40(fc4, natoms, other4, "fort.40")
 		}
 	}
-	for i := 0; i < len(e2d); i++ {
-		if i%3 == 0 && i > 0 {
-			fmt.Print("\n")
-		}
-		fmt.Printf("%20.12f", e2d[i].val)
-	}
-	fmt.Print("\n")
-	for k, v := range errMap {
-		fmt.Printf("%v: %d occurrences\n", k, v)
+	if *debug {
+		PrintE2D()
 	}
 }
