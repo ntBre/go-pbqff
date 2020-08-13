@@ -112,7 +112,7 @@ func MakeDirs(root string) (err error) {
 					"overwrite with -o\n", dir)
 			}
 		}
-		e := os.Mkdir(filename, 0755)
+		e := os.MkdirAll(filename, 0755)
 		if e != nil {
 			err = fmt.Errorf("error MakeDirs: %q on making directory %q",
 				e, dir)
