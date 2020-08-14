@@ -538,3 +538,30 @@ func RunIntder(filename string) {
 		log.Fatal(err)
 	}
 }
+
+// Tennis moves intder output files to the filenames expected by spectro
+func Tennis() {
+	err := os.Rename("freqs/file15", "freqs/fort.15")
+	if err == nil {
+		err = os.Rename("freqs/file20", "freqs/fort.30")
+	}
+	if err == nil {
+		err = os.Rename("freqs/file24", "freqs/fort.40")
+	}
+	if err != nil {
+		panic(err)
+	}
+}
+
+// DoIntder runs freqs intder
+func DoIntder(intder *Intder, atomNames []string, longLine string) (string, []float64) {
+	intder.WriteGeom("freqs/intder_geom.in", longLine)
+	RunIntder("freqs/intder_geom")
+	coords := intder.ReadGeom("freqs/intder_geom.out")
+	intder.Read9903("freqs/fort.9903")
+	intder.WriteFreqs("freqs/intder.in", atomNames)
+	RunIntder("freqs/intder")
+	intderHarms := intder.ReadOut("freqs/intder.out")
+	Tennis()
+	return coords, intderHarms
+}

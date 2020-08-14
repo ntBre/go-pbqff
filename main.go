@@ -28,8 +28,6 @@ import (
 	"os/exec"
 
 	"io"
-
-	"github.com/ntBre/chemutils/summarize"
 )
 
 const (
@@ -70,6 +68,7 @@ func DoFreqs() bool { return flags&FREQS > 0 }
 // set
 func DoCart() bool { return flags&CART > 0 }
 
+// Flags
 var (
 	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	overwrite  = flag.Bool("o", false, "overwrite existing inp directory")
@@ -78,7 +77,6 @@ var (
 	debug      = flag.Bool("debug", false, "for debugging, print 2nd derivative energies array")
 	checkpoint = flag.Bool("c", false, "resume from checkpoint")
 	irdy       = flag.String("irdy", "", "intder file is ready to be used in pts; specify the atom order")
-	flags      int
 )
 
 // Global variables
@@ -97,6 +95,7 @@ var (
 	jobLimit         int = 1000
 	chunkSize        int = 64
 	checkAfter       int = 100
+	flags            int
 )
 
 // Finite differences denominators
@@ -107,7 +106,7 @@ var (
 	fc4Scale = angbohr * angbohr * angbohr * angbohr / (16 * delta * delta * delta * delta)
 )
 
-// Globals for queue
+// Cartesian arrays
 var (
 	fc2 []CountFloat
 	fc3 []CountFloat
@@ -141,8 +140,8 @@ type Calc struct {
 }
 
 type CountFloat struct {
-	Val   float64
-	Count int
+	Val    float64
+	Count  int
 	Loaded bool
 }
 
@@ -254,20 +253,6 @@ func GetNames(cart string) (names []string) {
 		}
 	}
 	return
-}
-
-// Tennis moves intder output files to the filenames expected by spectro
-func Tennis() {
-	err := os.Rename("freqs/file15", "freqs/fort.15")
-	if err == nil {
-		err = os.Rename("freqs/file20", "freqs/fort.30")
-	}
-	if err == nil {
-		err = os.Rename("freqs/file24", "freqs/fort.40")
-	}
-	if err != nil {
-		panic(err)
-	}
 }
 
 // Summarize prints a summary table of the vibrational frequency data
@@ -398,46 +383,6 @@ func Frequency(prog *Molpro, absPath string) ([]float64, bool) {
 		}
 	}
 	return prog.ReadFreqs(outfile), true
-}
-
-// DoAnpass runs anpass
-func DoAnpass(anp *Anpass, energies []float64) string {
-	anp.WriteAnpass("freqs/anpass1.in", energies)
-	RunAnpass("freqs/anpass1")
-	longLine, ok := GetLongLine("freqs/anpass1.out")
-	if !ok {
-		panic("Problem getting long line from anpass1.out")
-	}
-	anp.WriteAnpass2("freqs/anpass2.in", longLine, energies)
-	RunAnpass("freqs/anpass2")
-	return longLine
-}
-
-// DoIntder runs freqs intder
-func DoIntder(intder *Intder, atomNames []string, longLine string) (string, []float64) {
-	intder.WriteGeom("freqs/intder_geom.in", longLine)
-	RunIntder("freqs/intder_geom")
-	coords := intder.ReadGeom("freqs/intder_geom.out")
-	intder.Read9903("freqs/fort.9903")
-	intder.WriteFreqs("freqs/intder.in", atomNames)
-	RunIntder("freqs/intder")
-	intderHarms := intder.ReadOut("freqs/intder.out")
-	Tennis()
-	return coords, intderHarms
-}
-
-// DoSpectro runs spectro
-func DoSpectro(spectro *Spectro, nharms int) (float64, []float64, []float64, []float64) {
-	spectro.Nfreqs = nharms
-	spectro.WriteInput("freqs/spectro.in")
-	RunSpectro("freqs/spectro")
-	spectro.ReadOutput("freqs/spectro.out")
-	spectro.WriteInput("freqs/spectro2.in")
-	RunSpectro("freqs/spectro2")
-	// have rotational constants from FreqReport, but need to incorporate them
-	zpt, spHarm, spFund, spCorr,
-		_, _, _ := summarize.Spectro("freqs/spectro2.out", spectro.Nfreqs)
-	return zpt, spHarm, spFund, spCorr
 }
 
 func Resubmit(name string, err error) string {
@@ -574,7 +519,6 @@ func Qstat(jobid string) bool {
 	out, _ := exec.Command("qstat", jobid).Output()
 	fields := strings.Fields(string(out))
 	status := fields[len(fields)-2]
-	fmt.Println(jobid, status)
 	if status == "R" || status == "Q" {
 		return true
 	}
@@ -586,8 +530,6 @@ func Qstat(jobid string) bool {
 func LookAhead(jobname string, maxdepth int) bool {
 	ext := filepath.Ext(jobname)
 	endex := len(jobname) - len(ext) + 1
-	out, err := exec.Command("ls", jobname+"*").Output()
-	fmt.Printf("ls %s*: %s, %v\n", jobname, out, err)
 	strNum := jobname[endex:]
 	num, _ := strconv.Atoi(strNum)
 	if num+maxdepth > submitted {
@@ -766,6 +708,23 @@ func PrintE2D() {
 var submitted int
 
 func main() {
+	// clear the queue if panicking
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("running queueClear before panic")
+			queueClear()
+			panic(r)
+		}
+	}()
+	// clear the queue if killed
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Signal(syscall.SIGTERM))
+	go func() {
+		<-c
+		fmt.Println("running queueClear before SIGTERM")
+		queueClear()
+		errExit(fmt.Errorf("received SIGTERM"), "")
+	}()
 	prog, intder, anpass := initialize()
 	var (
 		mpHarm    []float64

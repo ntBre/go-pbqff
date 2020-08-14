@@ -555,19 +555,12 @@ func (mp *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc
 					files, calcs := Derivative(mp, names, coords, fc3, i, j, k)
 					end = i == ncoords && j == i && k == j && nDerivative == 3
 					Push(dir, pf, count, files, calcs, ch, end)
-				}
-			}
-		}
-	}
-	// Run fourths separately to ensure seconds already ran
-	if nDerivative > 3 {
-		for i := 1; i <= ncoords; i++ {
-			for j := 1; j <= i; j++ {
-				for k := 1; k <= j; k++ {
-					for l := 1; l <= k; l++ {
-						files, calcs := Derivative(mp, names, coords, fc4, i, j, k, l)
-						end = i == ncoords && j == i && k == j && l == k && nDerivative == 4
-						Push(dir, pf, count, files, calcs, ch, end)
+					if nDerivative > 3 {
+						for l := 1; l <= k; l++ {
+							files, calcs := Derivative(mp, names, coords, fc4, i, j, k, l)
+							end = i == ncoords && j == i && k == j && l == k && nDerivative == 4
+							Push(dir, pf, count, files, calcs, ch, end)
+						}
 					}
 				}
 			}

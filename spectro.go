@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/ntBre/chemutils/summarize"
 )
 
 var (
@@ -335,4 +337,18 @@ func RunSpectro(filename string) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// DoSpectro runs spectro
+func DoSpectro(spectro *Spectro, nharms int) (float64, []float64, []float64, []float64) {
+	spectro.Nfreqs = nharms
+	spectro.WriteInput("freqs/spectro.in")
+	RunSpectro("freqs/spectro")
+	spectro.ReadOutput("freqs/spectro.out")
+	spectro.WriteInput("freqs/spectro2.in")
+	RunSpectro("freqs/spectro2")
+	// have rotational constants from FreqReport, but need to incorporate them
+	zpt, spHarm, spFund, spCorr,
+		_, _, _ := summarize.Spectro("freqs/spectro2.out", spectro.Nfreqs)
+	return zpt, spHarm, spFund, spCorr
 }

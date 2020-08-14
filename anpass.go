@@ -135,3 +135,16 @@ func RunAnpass(filename string) {
 		panic(err)
 	}
 }
+
+// DoAnpass runs anpass
+func DoAnpass(anp *Anpass, energies []float64) string {
+	anp.WriteAnpass("freqs/anpass1.in", energies)
+	RunAnpass("freqs/anpass1")
+	longLine, ok := GetLongLine("freqs/anpass1.out")
+	if !ok {
+		panic("Problem getting long line from anpass1.out")
+	}
+	anp.WriteAnpass2("freqs/anpass2.in", longLine, energies)
+	RunAnpass("freqs/anpass2")
+	return longLine
+}
