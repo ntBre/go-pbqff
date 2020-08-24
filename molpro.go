@@ -506,6 +506,7 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 	var node string
 	for f := range calcs {
 		calcs[f].cmdfile = cmdfile
+		calcs[f].chunkNum = *pf
 		ch <- calcs[f]
 		if !calcs[f].noRun {
 			submitted++
@@ -520,6 +521,8 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 				WritePBS(subfile, &Job{"pts", cmdfile, 35, node}, ptsMaple)
 				jobid := Submit(subfile)
 				ptsJobs = append(ptsJobs, jobid)
+				paraJobs = append(paraJobs, jobid)
+				paraCount[jobid] = chunkSize
 				*count = 1
 				*pf++
 				subfile = fmt.Sprintf("%s/main%d.pbs", dir, *pf)

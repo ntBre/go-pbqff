@@ -90,6 +90,8 @@ var (
 	pbs              string
 	nDerivative      int = 4
 	ptsJobs          []string
+	paraJobs         []string
+	paraCount        map[string]int
 	errMap           map[error]int
 	nodes            []string
 	jobLimit         int = 1000
@@ -129,14 +131,15 @@ var (
 // Calc holds the name of a job to be run and its result's index in
 // the output array
 type Calc struct {
-	Name    string
-	Targets []Target
-	Result  float64
-	ID      string
-	noRun   bool
-	cmdfile string
-	Resub   *Calc
-	Src     *Source
+	Name     string
+	Targets  []Target
+	Result   float64
+	ID       string
+	noRun    bool
+	cmdfile  string
+	chunkNum int
+	Resub    *Calc
+	Src      *Source
 }
 
 type CountFloat struct {
@@ -471,6 +474,13 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 				if !job.noRun {
 					finished++
 					check++
+					paraCount[paraJobs[job.chunkNum]]--
+					if paraCount[paraJobs[job.chunkNum]] == 0 {
+						queueClear([]string{paraJobs[job.chunkNum]})
+						if *debug {
+							fmt.Printf("clearing paracount of chunk %d, jobid %s\n", job.chunkNum, paraJobs[job.chunkNum])
+						}
+					}
 				}
 				success = false
 			}
@@ -545,8 +555,25 @@ func LookAhead(jobname string, maxdepth int) bool {
 }
 
 // Clear the PBS queue of the pts jobs
-func queueClear() error {
-	err := exec.Command("qdel", ptsJobs...).Run()
+func queueClear(jobs []string) error {
+	for _, job := range jobs {
+		var host string
+		status, _ := exec.Command("qstat", "-f", job).Output()
+		fields := strings.Fields(string(status))
+		for f := range fields {
+			if strings.Contains(fields[f], "exec_host") {
+				host = strings.Split(fields[f+2], "/")[0]
+				break
+			}
+		}
+		if host != "" {
+			out, err := exec.Command("ssh", host, "-t", "rm -rf /tmp/$USER/"+job+".maple").CombinedOutput()
+			if *debug {
+				fmt.Println("CombinedOutput and error from queueClear: ", string(out), err)
+			}
+		}
+	}
+	err := exec.Command("qdel", jobs...).Run()
 	return err
 }
 
@@ -611,6 +638,7 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	}
 	MakeDirs(".")
 	errMap = make(map[error]int)
+	paraCount = make(map[string]int)
 	nodes = PBSnodes()
 	fmt.Printf("nodes: %q\n", nodes)
 	return prog, intder, anpass
@@ -712,7 +740,7 @@ func main() {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("running queueClear before panic")
-			queueClear()
+			queueClear(ptsJobs)
 			panic(r)
 		}
 	}()
@@ -722,7 +750,7 @@ func main() {
 	go func() {
 		<-c
 		fmt.Println("running queueClear before SIGTERM")
-		queueClear()
+		queueClear(ptsJobs)
 		errExit(fmt.Errorf("received SIGTERM"), "")
 	}()
 	prog, intder, anpass := initialize()
@@ -790,7 +818,7 @@ func main() {
 	// Instead of returning energies, use job.Target = energies, also need a function
 	// for getting the index in the array for fc2,3,4 but do that before setting job.Index
 	min, _ = Drain(prog, ch, E0)
-	queueClear()
+	queueClear(ptsJobs)
 
 	if !DoCart() {
 		energies = FloatsFromCountFloats(cenergies)
