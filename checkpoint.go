@@ -11,6 +11,7 @@ var (
 	fnames = []string{"e2d.json", "fc2.json", "fc3.json", "fc4.json"}
 )
 
+// MakeCheckpoint makes a checkpoint
 func MakeCheckpoint() {
 	for a, arr := range arrs {
 		temp := make([]CountFloat, 0, len(*arrs[a]))
@@ -30,6 +31,7 @@ func MakeCheckpoint() {
 	}
 }
 
+// LoadCheckpoint restores the result arrays from a checkpoint
 func LoadCheckpoint() {
 	for a := range arrs {
 		lines, _ := ioutil.ReadFile(fnames[a])

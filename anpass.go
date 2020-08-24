@@ -10,6 +10,7 @@ import (
 	"strings"
 )
 
+// Anpass is a type for storing the information for an Anpass run
 type Anpass struct {
 	Head string
 	Fmt1 string
@@ -18,7 +19,7 @@ type Anpass struct {
 	Tail string
 }
 
-// Helper for building anpass file body
+// BuildBody is a helper for building anpass file body
 func (a *Anpass) BuildBody(buf *bytes.Buffer, energies []float64) {
 	for i, line := range strings.Split(a.Body, "\n") {
 		if line != "" {
@@ -31,6 +32,7 @@ func (a *Anpass) BuildBody(buf *bytes.Buffer, energies []float64) {
 	}
 }
 
+// WriteAnpass writes an anpass input file
 func (a *Anpass) WriteAnpass(filename string, energies []float64) {
 	var buf bytes.Buffer
 	buf.WriteString(a.Head)
@@ -39,6 +41,7 @@ func (a *Anpass) WriteAnpass(filename string, energies []float64) {
 	ioutil.WriteFile(filename, []byte(buf.String()), 0755)
 }
 
+// WriteAnpass2 writes an anpass input file for a stationary point
 func (a *Anpass) WriteAnpass2(filename, longLine string, energies []float64) {
 	var buf bytes.Buffer
 	buf.WriteString(a.Head)
@@ -55,6 +58,8 @@ func (a *Anpass) WriteAnpass2(filename, longLine string, energies []float64) {
 	ioutil.WriteFile(filename, []byte(buf.String()), 0755)
 }
 
+// LoadAnpass reads a template anpass input file and stores the
+// results in an Anpass
 func LoadAnpass(filename string) (*Anpass, error) {
 	file, _ := ioutil.ReadFile(filename)
 	lines := strings.Split(string(file), "\n")
@@ -100,7 +105,7 @@ func LoadAnpass(filename string) (*Anpass, error) {
 	return &a, nil
 }
 
-// Scan an anpass output file and return the "long line"
+// GetLongLine scans an anpass output file and return the "long line"
 func GetLongLine(filename string) (string, bool) {
 	f, err := os.Open(filename)
 	if err != nil {

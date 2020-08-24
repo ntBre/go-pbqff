@@ -248,8 +248,8 @@ func (m Molpro) ReadFreqs(filename string) (freqs []float64) {
 
 // AugmentHead augments the header of a molpro input file
 // with a specification of the geometry type and units
-func (mp *Molpro) AugmentHead() {
-	lines := strings.Split(mp.Head, "\n")
+func (m *Molpro) AugmentHead() {
+	lines := strings.Split(m.Head, "\n")
 	add := "geomtyp=xyz\nbohr"
 	newlines := make([]string, 0)
 	for i, line := range lines {
@@ -258,7 +258,7 @@ func (mp *Molpro) AugmentHead() {
 			newlines = append(newlines, lines[:i]...)
 			newlines = append(newlines, add)
 			newlines = append(newlines, lines[i:]...)
-			mp.Head = strings.Join(newlines, "\n")
+			m.Head = strings.Join(newlines, "\n")
 			return
 		}
 	}
@@ -268,7 +268,7 @@ func (mp *Molpro) AugmentHead() {
 // energy calculations and return an array of jobs to run. If write
 // is set to true, write the necessary files. Otherwise just return the list
 // of jobs.
-func (mp *Molpro) BuildPoints(filename string, atomNames []string, target *[]CountFloat, ch chan Calc, write bool) {
+func (m *Molpro) BuildPoints(filename string, atomNames []string, target *[]CountFloat, ch chan Calc, write bool) {
 	lines, err := ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -288,7 +288,7 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, target *[]Cou
 	dir := path.Dir(filename)
 	name := strings.Join(atomNames, "")
 	pbs = ptsMaple
-	mp.AugmentHead()
+	m.AugmentHead()
 	nodes := PBSnodes()
 	fmt.Println(nodes)
 	for li, line := range lines {
@@ -299,12 +299,12 @@ func (mp *Molpro) BuildPoints(filename string, atomNames []string, target *[]Cou
 				if li == len(lines)-1 {
 					fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
 				}
-				mp.Geometry = fmt.Sprint(buf.String(), "}\n")
+				m.Geometry = fmt.Sprint(buf.String(), "}\n")
 				basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
 				fname := basename + ".inp"
 				if write {
 					// write the molpro input file and add it to the list of commands
-					mp.WriteInput(fname, none)
+					m.WriteInput(fname, none)
 					end := li == len(lines)-1
 					Push(dir+"/inp", pf, count, []string{fname}, []Calc{{Name: basename, Targets: []Target{{1, target, geom}}}}, ch, end)
 				} else {
@@ -336,6 +336,8 @@ func HashName() string {
 	return fmt.Sprintf("job.%010d", jobNum)
 }
 
+// ProtoCalc is a precursor to a Calc with information for setting up
+// the Calc itself
 type ProtoCalc struct {
 	Coeff float64
 	Name  string
@@ -465,9 +467,8 @@ func Index(ncoords int, id ...int) []int {
 	case 2:
 		if id[0] == id[1] {
 			return []int{ncoords*(id[0]-1) + id[1] - 1}
-		} else {
-			return []int{ncoords*(id[0]-1) + id[1] - 1, ncoords*(id[1]-1) + id[0] - 1}
 		}
+		return []int{ncoords*(id[0]-1) + id[1] - 1, ncoords*(id[1]-1) + id[0] - 1}
 	case 3:
 		return []int{id[0] + (id[1]-1)*id[1]/2 + (id[2]-1)*id[2]*(id[2]+1)/6 - 1}
 	case 4:
@@ -536,7 +537,7 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 
 // BuildCartPoints constructs the calculations needed to run a
 // Cartesian quartic force field
-func (mp *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc4 *[]CountFloat, ch chan Calc) {
+func (m *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc4 *[]CountFloat, ch chan Calc) {
 	var (
 		count *int
 		pf    *int
@@ -550,17 +551,17 @@ func (mp *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc
 	ncoords := len(coords)
 	for i := 1; i <= ncoords; i++ {
 		for j := 1; j <= i; j++ {
-			files, calcs := Derivative(mp, names, coords, fc2, i, j)
+			files, calcs := Derivative(m, names, coords, fc2, i, j)
 			end = i == ncoords && j == i && nDerivative == 2
 			Push(dir, pf, count, files, calcs, ch, end)
 			if nDerivative > 2 {
 				for k := 1; k <= j; k++ {
-					files, calcs := Derivative(mp, names, coords, fc3, i, j, k)
+					files, calcs := Derivative(m, names, coords, fc3, i, j, k)
 					end = i == ncoords && j == i && k == j && nDerivative == 3
 					Push(dir, pf, count, files, calcs, ch, end)
 					if nDerivative > 3 {
 						for l := 1; l <= k; l++ {
-							files, calcs := Derivative(mp, names, coords, fc4, i, j, k, l)
+							files, calcs := Derivative(m, names, coords, fc4, i, j, k, l)
 							end = i == ncoords && j == i && k == j && l == k && nDerivative == 4
 							Push(dir, pf, count, files, calcs, ch, end)
 						}

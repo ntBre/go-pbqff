@@ -47,6 +47,7 @@ date
 
 rm -rf $TMPDIR
 `
+
 // trying --memfree, seemed to have no time cost on 2nd derivatives with plenty of nodes
 // now check --progress
 const pbsMaple = `#!/bin/sh
@@ -101,6 +102,7 @@ rm -rf $TMPDIR
 ssh -t sequoia pkill -{{.Signal}} pbqff
 `
 
+// AddCommand adds a molpro command to cmdfile
 func AddCommand(cmdfile, infile string) {
 	f, err := os.OpenFile(cmdfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
 	if err != nil {

@@ -5,8 +5,10 @@ import (
 	"strings"
 )
 
+// Key is a type for input keyword indices
 type Key int
 
+// Keys in the configuration array
 const (
 	QueueType Key = iota
 	Program
@@ -22,11 +24,14 @@ const (
 	NumKeys
 )
 
+// Regexp combines a *regexp.Regexp and a Key
 type Regexp struct {
 	*regexp.Regexp
 	Name Key
 }
 
+// ParseInfile parses an input file specified by filename and stores
+// the results in the array Input
 func ParseInfile(filename string) {
 	lines, err := ReadFile(filename)
 	if err != nil {

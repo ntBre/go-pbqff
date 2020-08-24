@@ -307,6 +307,7 @@ func TestBuildPoints(t *testing.T) {
 	defer os.RemoveAll("testfiles/read/inp")
 	fmt.Println("dir: ", path.Dir("testfiles/read/file07"))
 	ch := make(chan Calc, 3)
+	paraCount = make(map[string]int)
 	prog.BuildPoints("testfiles/read/file07", names, nil, ch, true)
 	var got []Calc
 	for calc := range ch {

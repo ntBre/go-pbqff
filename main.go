@@ -142,12 +142,16 @@ type Calc struct {
 	Src      *Source
 }
 
+// CountFloat combines a value with a counter that keeps track of how
+// many times it has been modified, and a boolean Loaded to see if it
+// was loaded from a checkpoint file
 type CountFloat struct {
 	Val    float64
 	Count  int
 	Loaded bool
 }
 
+// Add modifies the underlying value of c and decrements its counter
 func (c *CountFloat) Add(plus float64) {
 	c.Val += plus
 	c.Count--
@@ -156,8 +160,11 @@ func (c *CountFloat) Add(plus float64) {
 	}
 }
 
+// Done reports whether or not c's count has reached zero
 func (c *CountFloat) Done() bool { return c.Count == 0 }
 
+// FloatsFromCountFloats converts a slice of CountFloats to the
+// corresponding Float64s
 func FloatsFromCountFloats(cfs []CountFloat) (floats []float64) {
 	for _, cf := range cfs {
 		floats = append(floats, cf.Val)
@@ -165,17 +172,22 @@ func FloatsFromCountFloats(cfs []CountFloat) (floats []float64) {
 	return
 }
 
+// A Source is CountFloat slice and an index in that slice
 type Source struct {
 	Slice *[]CountFloat
 	Index int
 }
 
+// Len returns the length of s's underlying slice
 func (s *Source) Len() int { return len(*s.Slice) }
 
+// Value returns s's underlying value
 func (s *Source) Value() float64 {
 	return (*s.Slice)[s.Index].Val
 }
 
+// Target combines a coefficient, target array, and the index into
+// that array
 type Target struct {
 	Coeff float64
 	Slice *[]CountFloat
@@ -192,6 +204,7 @@ func (g *GarbageHeap) Add(basename string) {
 	g.heap = append(g.heap, basename)
 }
 
+// Len returns the length of g's underlying slice
 func (g *GarbageHeap) Len() int {
 	return len(g.heap)
 }
@@ -388,6 +401,9 @@ func Frequency(prog *Molpro, absPath string) ([]float64, bool) {
 	return prog.ReadFreqs(outfile), true
 }
 
+// Resubmit copies the input file associated with name to
+// name_redo.inp, writes a new PBS file, submits the new PBS job, and
+// returns the associated jobid
 func Resubmit(name string, err error) string {
 	fmt.Fprintf(os.Stderr, "resubmitting %s for %s\n", name, err)
 	src, _ := os.Open(name + ".inp")
@@ -401,7 +417,6 @@ func Resubmit(name string, err error) string {
 	return Submit(name + "_redo.pbs")
 }
 
-// type Calc struct {Name string, Targets []Target, Result float64, ID string, noRun bool, cmdfile string, Resub *Calc}
 // Drain drains the queue of jobs and receives on ch when ready for more
 func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 	start := time.Now()
@@ -525,6 +540,8 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 	return
 }
 
+// Qstat reports whether or not the job associated with jobid is
+// running or queued
 func Qstat(jobid string) bool {
 	out, _ := exec.Command("qstat", jobid).Output()
 	fields := strings.Fields(string(out))
@@ -664,7 +681,7 @@ func XYZGeom(geom string) (names []string, coords []float64) {
 		}
 		fields := strings.Fields(line)
 		if i == 0 && len(fields) == 1 {
-			skip += 1
+			skip++
 			continue
 		}
 		if len(fields) == 4 {
@@ -723,6 +740,7 @@ func PrintFile40(fc []CountFloat, natoms, other int, filename string) int {
 	return len(fc)
 }
 
+// PrintE2D pretty prints the second derivative energy array
 func PrintE2D() {
 	for i := 0; i < len(e2d); i++ {
 		if i%3 == 0 && i > 0 {
