@@ -94,18 +94,19 @@ func FormatZmat(geom string) string {
 	return strings.Join(out, "\n")
 }
 
-// ReadOut reads a molpro output file and returns the resulting energy
-// and an error describing the status of the output
-func (m Molpro) ReadOut(filename string) (result, time float64, err error) {
+// ReadOut reads a molpro output file and returns the resulting
+// energy, the real time taken, the gradient vector, and an error
+// describing the status of the output
+func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, err error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	if _, err = os.Stat(filename); os.IsNotExist(err) {
-		return brokenFloat, 0, ErrFileNotFound
+		return brokenFloat, 0, grad, ErrFileNotFound
 	}
 	error := regexp.MustCompile(`(?i)[^_]error`)
 	lines, err := ReadFile(filename)
 	if err != nil {
-		return brokenFloat, 0, ErrFileNotFound
+		return brokenFloat, 0, grad, ErrFileNotFound
 	}
 	err = ErrEnergyNotFound
 	time = 0
@@ -114,16 +115,24 @@ func (m Molpro) ReadOut(filename string) (result, time float64, err error) {
 	// blank file has a single newline - which is stripped by this ReadLines
 	if len(lines) == 1 {
 		if strings.Contains(strings.ToUpper(lines[0]), "ERROR") {
-			return result, time, ErrFileContainsError
+			return result, time, grad, ErrFileContainsError
 		}
-		return result, time, ErrBlankOutput
+		return result, time, grad, ErrBlankOutput
 	} else if len(lines) == 0 {
-		return result, time, ErrBlankOutput
+		return result, time, grad, ErrBlankOutput
 	}
 
+	var (
+		inGrad bool
+		skip   int
+	)
 	for _, line := range lines {
+		if skip > 0 {
+			skip--
+			continue
+		}
 		if error.MatchString(line) {
-			return result, time, ErrFileContainsError
+			return result, time, grad, ErrFileContainsError
 		}
 		if energyLine.MatchString(line) &&
 			!strings.Contains(line, "gthresh") &&
@@ -148,12 +157,17 @@ func (m Molpro) ReadOut(filename string) (result, time float64, err error) {
 			fields := strings.Fields(line)
 			timeStr := fields[len(fields)-2]
 			time, _ = strconv.ParseFloat(timeStr, 64)
+		} else if strings.Contains(line, "GRADIENT FOR STATE") {
+			inGrad = true
+			skip += 3
+		} else if inGrad && line == "" {
+			inGrad = false
 		}
 		if strings.Contains(line, molproTerminated) && err != nil {
 			err = ErrFinishedButNoEnergy
 		}
 	}
-	return result, time, err
+	return result, time, grad, err
 }
 
 // HandleOutput reads .out and .log files for filename, assumes no extension
@@ -573,3 +587,4 @@ func (m *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc4
 	close(ch)
 	return
 }
+

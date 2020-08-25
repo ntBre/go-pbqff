@@ -70,145 +70,124 @@ func TestWriteInputMolpro(t *testing.T) {
 }
 
 func TestReadOut(t *testing.T) {
-	mp := Molpro{Geometry: FormatZmat(Input[Geometry])}
+	m := Molpro{}
 	temp := energyLine
-	energyLine = regexp.MustCompile(`energy=`)
 	defer func() {
 		energyLine = temp
 	}()
+	tests := []struct {
+		msg      string
+		filename string
+		eline    *regexp.Regexp
+		energy   float64
+		time     float64
+		grad     []float64
+		err      error
+	}{
+		{
+			msg:      "Gradient success",
+			filename: "testfiles/read/grad.out",
+			energy:   -114.379844951044,
+			time:     703.13,
+			grad: []float64{
+				0.000000000, 0.000000000, 0.000000012,
+				-0.000000000, 0.000000000, -0.000000015,
+				0.000000000, -0.000000000, 0.000000002,
+				-0.000000000, 0.000000000, 0.000000002,
+			},
+			err: nil,
+		},
+		{
+			msg:      "Normal success",
+			filename: "testfiles/read/good.out",
+			energy:   -168.463747095015,
+			time:     10372.08,
+			err:      nil,
+		},
+		{
+			msg:      "Error in output",
+			filename: "testfiles/read/error.out",
+			energy:   math.NaN(),
+			time:     119.29,
+			err:      ErrFileContainsError,
+		},
+		{
+			msg:      "File not found",
+			filename: "nonexistent/file",
+			energy:   math.NaN(),
+			time:     0.0,
+			err:      ErrFileNotFound,
+		},
+		{
+			msg:      "One-line error",
+			filename: "testfiles/read/shortcircuit.out",
+			energy:   math.NaN(),
+			time:     0.0,
+			err:      ErrFileContainsError,
+		},
+		{
+			msg:      "Blank file",
+			filename: "testfiles/read/blank.out",
+			energy:   math.NaN(),
+			time:     0.0,
+			err:      ErrBlankOutput,
+		},
+		{
+			msg:      "Parse error",
+			filename: "testfiles/read/parse.out",
+			energy:   math.NaN(),
+			time:     10372.08,
+			err:      ErrFinishedButNoEnergy,
+		},
+		{
+			msg:      "Sequoia partial",
+			filename: "testfiles/read/seq.part",
+			energy:   math.NaN(),
+			time:     67.94,
+			err:      ErrEnergyNotFound,
+		},
+		{
+			msg:      "Sequoia success",
+			filename: "testfiles/read/seq.out",
+			eline:    regexp.MustCompile(`PBQFF\(2\)`),
+			energy:   -634.43134170,
+			time:     1075.84,
+			err:      nil,
+		},
+		{
+			msg:      "cccr success",
+			filename: "testfiles/read/cccr.out",
+			eline:    regexp.MustCompile(`^\s*CCCRE\s+=`),
+			energy:   -56.591603910177,
+			time:     567.99,
+			err:      nil,
+		},
+	}
 
-	t.Run("Successful reading", func(t *testing.T) {
-		got, time, err := mp.ReadOut("testfiles/good.out")
-		want := -168.463747095015
-		wtime := 10372.08
-		if got != want {
-			t.Errorf("got %v, wanted %v\n", got, want)
+	for _, test := range tests {
+		if test.eline != nil {
+			energyLine = test.eline
+		} else {
+			energyLine = regexp.MustCompile(`energy=`)
 		}
-		if time != wtime {
-			t.Errorf("got %v, wanted %v\n", time, wtime)
+		energy, time, grad, err := m.ReadOut(test.filename)
+		if math.IsNaN(test.energy) {
+			if !math.IsNaN(energy) {
+				t.Errorf("got not NaN, wanted NaN\n")
+			}
+		} else if energy != test.energy {
+			t.Errorf("got %v, wanted %v\n", energy, test.energy)
 		}
-		if err != nil {
-			t.Error("got an error, didn't want one")
+		if time != test.time {
+			t.Errorf("got %v, wanted %v\n", time, test.time)
 		}
-	})
-
-	t.Run("Error in output", func(t *testing.T) {
-		got, time, err := mp.ReadOut("testfiles/error.out")
-		wtime := 119.29
-		if !math.IsNaN(got) {
-			t.Errorf("got %v, wanted %v\n", got, math.NaN())
+		if !reflect.DeepEqual(grad, test.grad) {
+			t.Errorf("got %v, wanted %v\n", grad, test.grad)
 		}
-		if time != wtime {
-			t.Errorf("got %v, wanted %v\n", time, wtime)
+		if err != test.err {
+			t.Errorf("got %v, wanted %v\n", err, test.err)
 		}
-		if err != ErrFileContainsError {
-			t.Error("didn't get an error, wanted one")
-		}
-	})
-
-	t.Run("File not found", func(t *testing.T) {
-		got, time, err := mp.ReadOut("nonexistent/file")
-		wtime := 0.
-		if !math.IsNaN(got) {
-			t.Errorf("got %v, wanted %v\n", got, math.NaN())
-		}
-		if time != wtime {
-			t.Errorf("got %v, wanted %v\n", time, wtime)
-		}
-		if err != ErrFileNotFound {
-			t.Error("didn't get an error, wanted one")
-		}
-	})
-
-	t.Run("One-line error", func(t *testing.T) {
-		got, time, err := mp.ReadOut("testfiles/shortcircuit.out")
-		wtime := 0.
-		if !math.IsNaN(got) {
-			t.Errorf("got %v, wanted %v\n", got, math.NaN())
-		} else if err != ErrFileContainsError {
-			t.Errorf("got %q, wanted %q", err, ErrFileContainsError)
-		}
-		if time != wtime {
-			t.Errorf("got %v, wanted %v\n", time, wtime)
-		}
-	})
-
-	t.Run("blank", func(t *testing.T) {
-		got, time, err := mp.ReadOut("testfiles/blank.out")
-		wtime := 0.
-		if !math.IsNaN(got) {
-			t.Errorf("got %v, wanted %v\n", got, math.NaN())
-		} else if err != ErrBlankOutput {
-			t.Errorf("got %q, wanted %q", err, ErrBlankOutput)
-		}
-		if time != wtime {
-			t.Errorf("got %v, wanted %v\n", time, wtime)
-		}
-	})
-
-	t.Run("parse error", func(t *testing.T) {
-		got, time, err := mp.ReadOut("testfiles/parse.out")
-		wtime := 10372.08
-		if !math.IsNaN(got) {
-			t.Errorf("got %v, wanted %v\n", got, math.NaN())
-		} else if err != ErrFinishedButNoEnergy {
-			t.Errorf("got %q, wanted %q", err, ErrFinishedButNoEnergy)
-		}
-		if time != wtime {
-			t.Errorf("got %v, wanted %v\n", time, wtime)
-		}
-	})
-
-	t.Run("sequoia, partial", func(t *testing.T) {
-		got, time, err := mp.ReadOut("testfiles/seq.part")
-		wtime := 67.94
-		if !math.IsNaN(got) {
-			t.Errorf("got %v, wanted %v\n", got, math.NaN())
-		} else if err != ErrEnergyNotFound {
-			t.Errorf("got %q, wanted %q", err, ErrFinishedButNoEnergy)
-		}
-		if time != wtime {
-			t.Errorf("got %v, wanted %v\n", time, wtime)
-		}
-	})
-
-	t.Run("sequoia success", func(t *testing.T) {
-		e := energyLine
-		energyLine = regexp.MustCompile(`PBQFF\(2\)`)
-		defer func() {
-			energyLine = e
-		}()
-		got, time, err := mp.ReadOut("testfiles/seq.out")
-		want := -634.43134170
-		wtime := 1075.84
-		if got != want {
-			t.Errorf("got %v and %v, wanted %v\n", got, err, want)
-		} else if err != nil {
-			t.Error("got an error, didn't want one")
-		}
-		if time != wtime {
-			t.Errorf("got %v, wanted %v\n", time, wtime)
-		}
-	})
-
-	t.Run("cccr success", func(t *testing.T) {
-		e := energyLine
-		energyLine = regexp.MustCompile(`^\s*CCCRE\s+=`)
-		defer func() {
-			energyLine = e
-		}()
-		got, time, err := mp.ReadOut("testfiles/cccr.out")
-		want := -56.591603910177
-		wtime := 567.99
-		if got != want {
-			t.Errorf("got %v and %v, wanted %v\n", got, err, want)
-		} else if err != nil {
-			t.Error("got an error, didn't want one")
-		}
-		if time != wtime {
-			t.Errorf("got %v, wanted %v\n", time, wtime)
-		}
-	})
+	}
 }
 
 func TestHandleOutput(t *testing.T) {
@@ -226,7 +205,7 @@ func TestHandleOutput(t *testing.T) {
 		}
 	})
 	t.Run("Error in output", func(t *testing.T) {
-		_, _, err := mp.HandleOutput("testfiles/error")
+		_, _, err := mp.HandleOutput("testfiles/read/error")
 		if err != ErrFileContainsError {
 			t.Errorf("got %q, wanted %q", err, ErrFileContainsError)
 		}
@@ -236,7 +215,7 @@ func TestHandleOutput(t *testing.T) {
 	t.Run("Sequoia", func(t *testing.T) {
 		p, _ := LoadMolpro("testfiles/load/molpro.in")
 		p.Geometry = FormatZmat(Input[Geometry])
-		_, zmat, _ := p.HandleOutput("testfiles/seq")
+		_, zmat, _ := p.HandleOutput("testfiles/read/seq")
 		want := `ALX=                 1.20291856 ANG
 OX=                  1.26606700 ANG
 `
@@ -271,7 +250,7 @@ OCN=               176.79276221 DEG
 	})
 
 	t.Run("sequoia", func(t *testing.T) {
-		cart, zmat := ReadLog("testfiles/seq.log")
+		cart, zmat := ReadLog("testfiles/read/seq.log")
 		wantCart := `AL 0.000000000 0.000000000 2.273186636
 AL 0.000000000 0.000000000 -2.273186636
 O 0.000000000 2.392519895 0.000000000

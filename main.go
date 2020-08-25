@@ -51,6 +51,7 @@ const (
 	OPT int = 1 << iota
 	PTS
 	CART
+	GRAD
 	FREQS
 )
 
@@ -334,10 +335,10 @@ func Optimize(prog *Molpro) (E0 float64) {
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit("opt/mp.pbs")
 	outfile := "opt/opt.out"
-	_, _, err := prog.ReadOut(outfile)
+	_, _, _, err := prog.ReadOut(outfile)
 	for err != nil {
 		HandleSignal(35, time.Minute)
-		E0, _, err = prog.ReadOut(outfile)
+		E0, _, _, err = prog.ReadOut(outfile)
 		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 			err == ErrFileContainsError || err == ErrBlankOutput) ||
 			err == ErrFileNotFound {
@@ -361,10 +362,10 @@ func RefEnergy(prog *Molpro) (E0 float64) {
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit(dir + pbsfile)
 	outfile := "ref.out"
-	_, _, err := prog.ReadOut(dir + outfile)
+	_, _, _, err := prog.ReadOut(dir + outfile)
 	for err != nil {
 		HandleSignal(35, time.Minute)
-		E0, _, err = prog.ReadOut(dir + outfile)
+		E0, _, _, err = prog.ReadOut(dir + outfile)
 		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 			err == ErrFileContainsError || err == ErrBlankOutput) ||
 			err == ErrFileNotFound {
@@ -387,10 +388,10 @@ func Frequency(prog *Molpro, absPath string) ([]float64, bool) {
 	// doesn't matter if this finishes
 	Submit(absPath + "/mp.pbs")
 	outfile := absPath + "/freq.out"
-	_, _, err := prog.ReadOut(outfile)
+	_, _, _, err := prog.ReadOut(outfile)
 	for err != nil {
 		HandleSignal(35, time.Minute)
-		_, _, err = prog.ReadOut(outfile)
+		_, _, _, err = prog.ReadOut(outfile)
 		// dont resubmit freq
 		if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 			err == ErrFileContainsError {
@@ -447,7 +448,7 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 					energy = job.Src.Value()
 					success = true
 				}
-			} else if energy, t, err = prog.ReadOut(job.Name + ".out"); err == nil {
+			} else if energy, t, _, err = prog.ReadOut(job.Name + ".out"); err == nil {
 				success = true
 				if energy < min {
 					min = energy
@@ -469,7 +470,7 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 			} else if job.Resub != nil {
 				// should DRY this up, inside if is same as case 3 above
 				// should also check if resubmitted job has finished with qsub and set pointer to nil if it has without success
-				if energy, t, err = prog.ReadOut(job.Resub.Name + ".out"); err == nil {
+				if energy, t, _, err = prog.ReadOut(job.Resub.Name + ".out"); err == nil {
 					success = true
 					if energy < min {
 						min = energy
@@ -631,6 +632,9 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	case "gocart":
 		flags |= CART
 		energyLine = regexp.MustCompile(`energy=`)
+	case "grad":
+		flags |= GRAD
+		// probably will not use energyline because it's going to be a bit different
 	case "molpro", "": // default if not specified
 		energyLine = regexp.MustCompile(`energy=`)
 	default:

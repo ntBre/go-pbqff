@@ -212,7 +212,7 @@ D1=                119.99647304 DEGREE
 	})
 	t.Run("sequoia", func(t *testing.T) {
 		prog, _ := LoadMolpro("testfiles/opt.inp")
-		_, zmat, _ := prog.HandleOutput("testfiles/seq")
+		_, zmat, _ := prog.HandleOutput("testfiles/read/seq")
 		start := `X
 X 1 1.0
 Al 1 AlX 2 90.0
