@@ -410,7 +410,8 @@ func (i *Intder) WriteFreqs(filename string, names []string) {
 	for i, name := range names {
 		num, ok := ptable[strings.ToUpper(name)]
 		if !ok {
-			fmt.Errorf("error WriteFreqs: element %q not found in ptable", name)
+			fmt.Fprintf(os.Stderr,
+				"error WriteFreqs: element %q not found in ptable", name)
 		}
 		switch i {
 		case 0:

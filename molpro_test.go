@@ -336,7 +336,7 @@ func TestIndex(t *testing.T) {
 		{9, []int{1, 1, 1}, []int{0}},
 	}
 	for _, test := range tests {
-		got := Index(test.ncoords, test.ids...)
+		got := Index(test.ncoords, false, test.ids...)
 		want := test.want
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, wanted %v\n", got, want)

@@ -21,6 +21,7 @@ OX = 1.1 Ang
 XXO = 80.0 Deg`,
 		GeomType:   "zmat",
 		IntderCmd:  "/home/brent/Packages/intder/intder",
+		ChunkSize: "8",
 		AnpassCmd:  "",
 		SpectroCmd: "",
 	}

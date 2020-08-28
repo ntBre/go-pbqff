@@ -14,6 +14,7 @@ OX = 1.1 Ang
 XXO = 80.0 Deg
 }
 # comment followed by blank line
+chunksize=8
 intder=/home/brent/Packages/intder/intder
 anpass=
 spectro=

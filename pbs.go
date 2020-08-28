@@ -42,7 +42,7 @@ mkdir -p $TMPDIR
 
 date
 echo $HOSTNAME
-parallel -j 8 --joblog {{.Filename}}.pl.log --memfree 8g --progress < {{.Filename}} 2> {{.Filename}}.prog
+parallel -j 8 --joblog {{.Filename}}.pl.log --progress < {{.Filename}} 2> {{.Filename}}.prog
 date
 
 rm -rf $TMPDIR
@@ -130,13 +130,15 @@ func WritePBS(infile string, job *Job, pbs string) {
 // returns the jobid
 func Submit(filename string) string {
 	// -f option to run qsub in foreground
-	out, err := exec.Command("qsub", filename).Output()
+	out, err := exec.Command("qsub", "-f", filename).Output()
 	for err != nil {
+		fmt.Printf("having trouble submitting %s\n", filename)
 		time.Sleep(time.Second)
-		out, err = exec.Command("qsub", filename).Output()
+		out, err = exec.Command("qsub", "-f", filename).Output()
 	}
 	jobid := string(out)
-	return strings.TrimSuffix(jobid, filepath.Ext(jobid))
+	jobid = strings.TrimSuffix(jobid, filepath.Ext(jobid))
+	return jobid
 }
 
 // PBSnodes runs the pbsnodes -a command and returns a list of free

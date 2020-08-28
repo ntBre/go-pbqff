@@ -69,6 +69,10 @@ func DoFreqs() bool { return flags&FREQS > 0 }
 // set
 func DoCart() bool { return flags&CART > 0 }
 
+// DoCart is a helper function for checking whether the CART flag is
+// set
+func DoGrad() bool { return flags&GRAD > 0 }
+
 // Flags
 var (
 	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
@@ -77,6 +81,7 @@ var (
 	freqs      = flag.Bool("freqs", false, "start from running anpass on the pts output")
 	debug      = flag.Bool("debug", false, "for debugging, print 2nd derivative energies array")
 	checkpoint = flag.Bool("c", false, "resume from checkpoint")
+	read       = flag.Bool("r", false, "read reference energy from pts/inp/ref.out")
 	irdy       = flag.String("irdy", "", "intder file is ready to be used in pts; specify the atom order")
 )
 
@@ -101,12 +106,19 @@ var (
 	flags            int
 )
 
-// Finite differences denominators
+// Finite differences denominators for cartesians
 var (
 	angbohr  = 0.529177249
 	fc2Scale = angbohr * angbohr / (4 * delta * delta)
 	fc3Scale = angbohr * angbohr * angbohr / (8 * delta * delta * delta)
 	fc4Scale = angbohr * angbohr * angbohr * angbohr / (16 * delta * delta * delta * delta)
+)
+
+// Finite differences denominators for gradients
+var (
+	gradFc2Scale = angbohr / (2 * delta)
+	gradFc3Scale = angbohr * angbohr / (4 * delta * delta)
+	gradFc4Scale = angbohr * angbohr * angbohr / (8 * delta * delta * delta)
 )
 
 // Cartesian arrays
@@ -356,13 +368,16 @@ func RefEnergy(prog *Molpro) (E0 float64) {
 	dir := "pts/inp/"
 	infile := "ref.inp"
 	pbsfile := "ref.pbs"
+	outfile := "ref.out"
+	E0, _, _, err := prog.ReadOut(dir + outfile)
+	if *read && err == nil {
+		return
+	}
 	prog.WriteInput(dir+infile, opt)
 	WritePBS(dir+pbsfile,
 		&Job{MakeName(Input[Geometry]) + "-ref", dir + infile, 35, ""}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit(dir + pbsfile)
-	outfile := "ref.out"
-	_, _, _, err := prog.ReadOut(dir + outfile)
 	for err != nil {
 		HandleSignal(35, time.Minute)
 		E0, _, _, err = prog.ReadOut(dir + outfile)
@@ -423,21 +438,35 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 	start := time.Now()
 	points := make([]Calc, 0)
 	var (
-		nJobs    int
-		finished int
-		resubs   int
-		success  bool
-		energy   float64
-		err      error
-		t        float64
-		check    int = 1
+		nJobs     int
+		finished  int
+		resubs    int
+		success   bool
+		energy    float64
+		gradients []float64
+		err       error
+		t         float64
+		check     int = 1
 	)
 	heap := new(GarbageHeap)
 	for {
 		shortenBy := 0
 		for i := 0; i < nJobs; i++ {
 			job := points[i]
-			if strings.Contains(job.Name, "E0") {
+			if jnum := paraJobs[job.chunkNum]; Qstat(jnum, "H") {
+				fmt.Println(jnum, "held")
+				out, _ := exec.Command("qstat", "-f", jnum).Output()
+				lines := strings.Split(string(out), "\n")
+				for _, line := range lines {
+					if strings.Contains(line, "Submit_arguments") {
+						fields := strings.Fields(line)
+						fmt.Println(fields)
+						exec.Command("qdel", jnum).Run()
+						paraJobs[job.chunkNum] = Submit(fields[len(fields)-1])
+						break
+					}
+				}
+			} else if strings.Contains(job.Name, "E0") {
 				energy = E0
 				success = true
 			} else if job.Result != 0 {
@@ -448,7 +477,7 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 					energy = job.Src.Value()
 					success = true
 				}
-			} else if energy, t, _, err = prog.ReadOut(job.Name + ".out"); err == nil {
+			} else if energy, t, gradients, err = prog.ReadOut(job.Name + ".out"); err == nil {
 				success = true
 				if energy < min {
 					min = energy
@@ -459,6 +488,7 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 			} else if job.Resub == nil && (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 				err == ErrFileContainsError || err == ErrBlankOutput ||
 				(err == ErrFileNotFound && CheckLog(job.cmdfile, job.Name) && CheckProg(job.cmdfile))) {
+				// THIS DOESNT CATCH FILE EXISTS BUT IS HUNG
 				if err == ErrFileContainsError {
 					fmt.Fprintf(os.Stderr, "error: %v on %s\n", err, job.Name)
 				}
@@ -470,7 +500,7 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 			} else if job.Resub != nil {
 				// should DRY this up, inside if is same as case 3 above
 				// should also check if resubmitted job has finished with qsub and set pointer to nil if it has without success
-				if energy, t, _, err = prog.ReadOut(job.Resub.Name + ".out"); err == nil {
+				if energy, t, gradients, err = prog.ReadOut(job.Resub.Name + ".out"); err == nil {
 					success = true
 					if energy < min {
 						min = energy
@@ -483,8 +513,17 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 				points[nJobs-1], points[i] = points[i], points[nJobs-1]
 				nJobs--
 				points = points[:nJobs]
-				for _, t := range job.Targets {
-					(*t.Slice)[t.Index].Add(t.Coeff * energy)
+				if !DoGrad() {
+					for _, t := range job.Targets {
+						(*t.Slice)[t.Index].Add(t.Coeff * energy)
+					}
+				} else {
+					for g, grad := range gradients {
+						// HARD CODED 9 FOR WATER
+						// TODO pass in ncoords or find them somehow in here
+						id := Index(9, true, job.Targets[0].Index, g+1)[0]
+						(*job.Targets[0].Slice)[id].Add(job.Targets[0].Coeff * grad)
+					}
 				}
 				shortenBy++
 				if !job.noRun {
@@ -512,9 +551,9 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 		if heap.Len() >= chunkSize {
 			heap.Dump()
 		}
-		fmt.Fprintf(os.Stderr, "finished: %d of %d submitted\n", finished, submitted)
+		fmt.Fprintf(os.Stderr, "finished %d of %d submitted, %d being watched\n", finished, submitted, nJobs)
 		// only receive more jobs if there is room
-		if nJobs < jobLimit {
+		for count := 0; count < chunkSize && nJobs < jobLimit; count++ {
 			calc, ok := <-ch
 			if !ok && finished == submitted {
 				fmt.Fprintf(os.Stderr, "resubmitted %d/%d (%.1f%%), points execution time: %v\n",
@@ -534,21 +573,26 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 			} else if ok {
 				points = append(points, calc)
 				nJobs = len(points)
+			} else if !ok {
+				nJobs = len(points)
+				break
 			}
 		}
 	}
-	// unreachable
-	return
 }
 
 // Qstat reports whether or not the job associated with jobid is
 // running or queued
-func Qstat(jobid string) bool {
+func Qstat(jobid string, statuses ...string) bool {
 	out, _ := exec.Command("qstat", jobid).Output()
 	fields := strings.Fields(string(out))
-	status := fields[len(fields)-2]
-	if status == "R" || status == "Q" {
-		return true
+	if len(fields) >= 2 {
+		test := fields[len(fields)-2]
+		for _, status := range statuses {
+			if test == status {
+				return true
+			}
+		}
 	}
 	return false
 }
@@ -613,7 +657,7 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 		}
 	}
 	if Input[ChunkSize] != "" {
-		v, err := strconv.Atoi(Input[JobLimit])
+		v, err := strconv.Atoi(Input[ChunkSize])
 		if err == nil {
 			chunkSize = v
 		}
@@ -634,7 +678,7 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 		energyLine = regexp.MustCompile(`energy=`)
 	case "grad":
 		flags |= GRAD
-		// probably will not use energyline because it's going to be a bit different
+		energyLine = regexp.MustCompile(`energy=`)
 	case "molpro", "": // default if not specified
 		energyLine = regexp.MustCompile(`energy=`)
 	default:
@@ -647,7 +691,7 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	if err != nil {
 		errExit(err, fmt.Sprintf("loading molpro input %q", mpName))
 	}
-	if !DoCart() {
+	if !(DoCart() || DoGrad()) {
 		intder, err = LoadIntder("intder.in")
 		if err != nil {
 			errExit(err, fmt.Sprintf("loading intder input %q", idName))
@@ -657,7 +701,9 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 			errExit(err, fmt.Sprintf("loading anpass input %q", apName))
 		}
 	}
-	MakeDirs(".")
+	if !*read {
+		MakeDirs(".")
+	}
 	errMap = make(map[error]int)
 	paraCount = make(map[string]int)
 	nodes = PBSnodes()
@@ -702,13 +748,19 @@ func XYZGeom(geom string) (names []string, coords []float64) {
 // PrintFile15 prints the second derivative force constants in the
 // format expected by SPECTRO
 func PrintFile15(fc []CountFloat, natoms int, filename string) int {
+	var scale float64
+	if DoGrad() {
+		scale = gradFc2Scale
+	} else {
+		scale = fc2Scale
+	}
 	f, _ := os.Create(filename)
 	fmt.Fprintf(f, "%5d%5d", natoms, 6*natoms) // still not sure why this is just times 6
 	for i := range fc {
 		if i%3 == 0 {
 			fmt.Fprintf(f, "\n")
 		}
-		fmt.Fprintf(f, "%20.10f", fc[i].Val*fc2Scale)
+		fmt.Fprintf(f, "%20.10f", fc[i].Val*scale)
 	}
 	fmt.Fprint(f, "\n")
 	return len(fc)
@@ -717,13 +769,19 @@ func PrintFile15(fc []CountFloat, natoms int, filename string) int {
 // PrintFile30 prints the third derivative force constants in the
 // format expected by SPECTRO
 func PrintFile30(fc []CountFloat, natoms, other int, filename string) int {
+	var scale float64
+	if DoGrad() {
+		scale = gradFc3Scale
+	} else {
+		scale = fc3Scale
+	}
 	f, _ := os.Create(filename)
 	fmt.Fprintf(f, "%5d%5d", natoms, other)
 	for i := range fc {
 		if i%3 == 0 {
 			fmt.Fprintf(f, "\n")
 		}
-		fmt.Fprintf(f, "%20.10f", fc[i].Val*fc3Scale)
+		fmt.Fprintf(f, "%20.10f", fc[i].Val*scale)
 	}
 	fmt.Fprint(f, "\n")
 	return len(fc)
@@ -732,13 +790,19 @@ func PrintFile30(fc []CountFloat, natoms, other int, filename string) int {
 // PrintFile40 prints the fourth derivative force constants in the
 // format expected by SPECTRO
 func PrintFile40(fc []CountFloat, natoms, other int, filename string) int {
+	var scale float64
+	if DoGrad() {
+		scale = gradFc4Scale
+	} else {
+		scale = fc4Scale
+	}
 	f, _ := os.Create(filename)
 	fmt.Fprintf(f, "%5d%5d", natoms, other)
 	for i := range fc {
 		if i%3 == 0 {
 			fmt.Fprintf(f, "\n")
 		}
-		fmt.Fprintf(f, "%20.10f", fc[i].Val*fc4Scale)
+		fmt.Fprintf(f, "%20.10f", fc[i].Val*scale)
 	}
 	fmt.Fprint(f, "\n")
 	return len(fc)
@@ -810,7 +874,7 @@ func main() {
 
 	ch := make(chan Calc, jobLimit)
 
-	if !DoCart() {
+	if !(DoCart() || DoGrad()) {
 		if *irdy == "" {
 			atomNames = intder.ConvertCart(cart)
 		} else {
@@ -826,7 +890,7 @@ func main() {
 		} else {
 			prog.BuildPoints("pts/file07", atomNames, &cenergies, nil, false)
 		}
-	} else {
+	} else if DoCart() {
 		names, coords := XYZGeom(Input[Geometry])
 		natoms = len(names)
 		prog.Geometry = Input[Geometry] + "\n}\n"
@@ -836,13 +900,23 @@ func main() {
 		go func() {
 			prog.BuildCartPoints(names, coords, &fc2, &fc3, &fc4, ch)
 		}()
+	} else if DoGrad() {
+		names, coords := XYZGeom(Input[Geometry])
+		natoms = len(names)
+		prog.Geometry = Input[Geometry] + "\n}\n"
+		if !DoOpt() {
+			E0 = RefEnergy(prog)
+		}
+		go func() {
+			prog.BuildGradPoints(names, coords, &fc2, &fc3, &fc4, ch)
+		}()
 	}
 	// Instead of returning energies, use job.Target = energies, also need a function
 	// for getting the index in the array for fc2,3,4 but do that before setting job.Index
 	min, _ = Drain(prog, ch, E0)
 	queueClear(ptsJobs)
 
-	if !DoCart() {
+	if !(DoCart() || DoGrad()) {
 		energies = FloatsFromCountFloats(cenergies)
 		// convert to relative energies
 		for i := range energies {

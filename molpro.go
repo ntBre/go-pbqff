@@ -159,9 +159,15 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 			time, _ = strconv.ParseFloat(timeStr, 64)
 		} else if strings.Contains(line, "GRADIENT FOR STATE") {
 			inGrad = true
-			skip += 3
-		} else if inGrad && line == "" {
+			skip += 1
+		} else if inGrad && strings.Contains(line, "Nuclear force contribution") {
 			inGrad = false
+		} else if inGrad {
+			fields := strings.Fields(line)
+			for _, f := range fields[1:] {
+				v, _ := strconv.ParseFloat(f, 64)
+				grad = append(grad, v)
+			}
 		}
 		if strings.Contains(line, molproTerminated) && err != nil {
 			err = ErrFinishedButNoEnergy
@@ -400,7 +406,7 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]CountF
 		coords := Step(coords, p.Steps...)
 		prog.Geometry = ZipXYZ(names, coords) + "}\n"
 		temp := Calc{Name: dir + p.Name}
-		for _, v := range Index(ncoords, p.Index...) {
+		for _, v := range Index(ncoords, false, p.Index...) {
 			for len(*target) <= v {
 				*target = append(*target, CountFloat{Val: 0, Count: 0})
 			}
@@ -444,9 +450,9 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]CountF
 		}
 		if len(temp.Targets) > 0 {
 			fname := dir + p.Name + ".inp"
-			if *debug {
-				fmt.Println(ndims, len(protos), fname)
-			}
+			// if *debug {
+			// 	fmt.Println(ndims, len(protos), fname)
+			// }
 			fnames = append(fnames, fname)
 			if strings.Contains(p.Name, "E0") {
 				temp.noRun = true
@@ -470,13 +476,15 @@ func E2dIndex(ncoords int, ns ...int) []int {
 			out = append(out, n)
 		}
 	}
-	return Index(2*ncoords, out...)
+	return Index(2*ncoords, false, out...)
 }
 
 // Index returns the 1-dimensional array index of force constants in
 // 2,3,4-D arrays
-func Index(ncoords int, id ...int) []int {
-	sort.Ints(id)
+func Index(ncoords int, nosort bool, id ...int) []int {
+	if !nosort {
+		sort.Ints(id)
+	}
 	switch len(id) {
 	case 2:
 		if id[0] == id[1] {
@@ -535,6 +543,9 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 				}
 				WritePBS(subfile, &Job{"pts", cmdfile, 35, node}, ptsMaple)
 				jobid := Submit(subfile)
+				if *debug {
+					fmt.Println(subfile, jobid)
+				}
 				ptsJobs = append(ptsJobs, jobid)
 				paraJobs = append(paraJobs, jobid)
 				paraCount[jobid] = chunkSize
@@ -588,3 +599,56 @@ func (m *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc4
 	return
 }
 
+func GradDerivative(prog *Molpro, names []string, coords []float64, target *[]CountFloat, dims ...int) (fnames []string, calcs []Calc) {
+	var protos []ProtoCalc
+	dir := "pts/inp/"
+	ndims := len(dims)
+	ncoords := len(coords)
+	switch ndims {
+	case 1:
+		protos = GradMake2D(dims[0])
+	}
+	for _, p := range protos {
+		coords := Step(coords, p.Steps...)
+		prog.Geometry = ZipXYZ(names, coords) + "}\n"
+		temp := Calc{Name: dir + p.Name}
+		temp.Targets = []Target{
+			{
+				Coeff: p.Coeff,
+				Slice: target,
+				Index: dims[0],
+			},
+		}
+		for len(*target) <= Index(ncoords, true, dims[0], ncoords)[0] {
+			*target = append(*target, CountFloat{Count: len(protos)})
+		}
+		fname := dir + p.Name + ".inp"
+		fnames = append(fnames, fname)
+		prog.WriteInput(fname, none)
+		calcs = append(calcs, temp)
+	}
+	return
+}
+
+// BuildGradPoints constructs the calculations needed to run a
+// Cartesian quartic force field using gradients
+func (m *Molpro) BuildGradPoints(names []string, coords []float64, fc2, fc3, fc4 *[]CountFloat, ch chan Calc) {
+	var (
+		count *int
+		pf    *int
+		end   bool
+	)
+	count = new(int)
+	pf = new(int)
+	*count = 1
+	*pf = 0
+	dir := "pts/inp"
+	ncoords := len(coords)
+	for i := 1; i <= ncoords; i++ {
+		files, calcs := GradDerivative(m, names, coords, fc2, i)
+		end = i == ncoords && nDerivative == 2
+		Push(dir, pf, count, files, calcs, ch, end)
+	}
+	close(ch)
+	return
+}

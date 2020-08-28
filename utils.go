@@ -99,7 +99,7 @@ func ReadFile(filename string) (lines []string, err error) {
 
 // MakeDirs sets up the directory structure described by dirs
 func MakeDirs(root string) (err error) {
-	if DoCart() {
+	if DoCart() || DoGrad() {
 		dirs = []string{"pts/inp"}
 	}
 	for _, dir := range dirs {
