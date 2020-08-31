@@ -1,5 +1,14 @@
 package main
 
+// Make1D makes the Job slices for finite differences first
+// derivative force constants
+func Make1D(i int) []ProtoCalc {
+	return []ProtoCalc{
+		{1, HashName(), []int{i}, []int{i}},
+		{-1, HashName(), []int{-i}, []int{i}},
+	}
+}
+
 // Make2D makes the Job slices for finite differences second
 // derivative force constants
 func Make2D(i, j int) []ProtoCalc {

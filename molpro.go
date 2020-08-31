@@ -606,7 +606,10 @@ func GradDerivative(prog *Molpro, names []string, coords []float64, target *[]Co
 	ncoords := len(coords)
 	switch ndims {
 	case 1:
-		protos = GradMake2D(dims[0])
+		// gradient second derivatives are just first derivatives and so on
+		protos = Make1D(dims[0])
+	case 2:
+		protos = Make2D(dims[0], dims[1])
 	}
 	for _, p := range protos {
 		coords := Step(coords, p.Steps...)
@@ -622,10 +625,17 @@ func GradDerivative(prog *Molpro, names []string, coords []float64, target *[]Co
 		for len(*target) <= Index(ncoords, true, dims[0], ncoords)[0] {
 			*target = append(*target, CountFloat{Count: len(protos)})
 		}
-		fname := dir + p.Name + ".inp"
-		fnames = append(fnames, fname)
-		prog.WriteInput(fname, none)
-		calcs = append(calcs, temp)
+		if len(temp.Targets) > 0 {
+			fname := dir + p.Name + ".inp"
+			fnames = append(fnames, fname)
+			if strings.Contains(p.Name, "E0") {
+				temp.noRun = true
+			}
+			if !temp.noRun {
+				prog.WriteInput(fname, none)
+			}
+			calcs = append(calcs, temp)
+		}
 	}
 	return
 }

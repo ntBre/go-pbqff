@@ -31,7 +31,9 @@ const ptsMaple = `#!/bin/sh
 #PBS -l walltime=5000:00:00
 #PBS -l ncpus=8
 #PBS -l mem=64gb
+{{- if .Host}}
 #PBS -l host={{.Host}}
+{{- end}}
 
 module load pbspro molpro
 
@@ -41,7 +43,7 @@ cd $WORKDIR
 mkdir -p $TMPDIR
 
 date
-echo $HOSTNAME
+hostname
 parallel -j 8 --joblog {{.Filename}}.pl.log --progress < {{.Filename}} 2> {{.Filename}}.prog
 date
 

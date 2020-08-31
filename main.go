@@ -434,7 +434,7 @@ func Resubmit(name string, err error) string {
 }
 
 // Drain drains the queue of jobs and receives on ch when ready for more
-func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
+func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime float64) {
 	start := time.Now()
 	points := make([]Calc, 0)
 	var (
@@ -453,20 +453,7 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 		shortenBy := 0
 		for i := 0; i < nJobs; i++ {
 			job := points[i]
-			if jnum := paraJobs[job.chunkNum]; Qstat(jnum, "H") {
-				fmt.Println(jnum, "held")
-				out, _ := exec.Command("qstat", "-f", jnum).Output()
-				lines := strings.Split(string(out), "\n")
-				for _, line := range lines {
-					if strings.Contains(line, "Submit_arguments") {
-						fields := strings.Fields(line)
-						fmt.Println(fields)
-						exec.Command("qdel", jnum).Run()
-						paraJobs[job.chunkNum] = Submit(fields[len(fields)-1])
-						break
-					}
-				}
-			} else if strings.Contains(job.Name, "E0") {
+			if strings.Contains(job.Name, "E0") {
 				energy = E0
 				success = true
 			} else if job.Result != 0 {
@@ -519,9 +506,7 @@ func Drain(prog *Molpro, ch chan Calc, E0 float64) (min, realTime float64) {
 					}
 				} else {
 					for g, grad := range gradients {
-						// HARD CODED 9 FOR WATER
-						// TODO pass in ncoords or find them somehow in here
-						id := Index(9, true, job.Targets[0].Index, g+1)[0]
+						id := Index(ncoords, true, job.Targets[0].Index, g+1)[0]
 						(*job.Targets[0].Slice)[id].Add(job.Targets[0].Coeff * grad)
 					}
 				}
@@ -852,6 +837,7 @@ func main() {
 		min       float64
 		E0        float64
 		natoms    int
+		ncoords   int
 	)
 
 	if DoOpt() {
@@ -890,30 +876,26 @@ func main() {
 		} else {
 			prog.BuildPoints("pts/file07", atomNames, &cenergies, nil, false)
 		}
-	} else if DoCart() {
+	} else {
 		names, coords := XYZGeom(Input[Geometry])
 		natoms = len(names)
+		ncoords = len(coords)
 		prog.Geometry = Input[Geometry] + "\n}\n"
 		if !DoOpt() {
 			E0 = RefEnergy(prog)
 		}
-		go func() {
-			prog.BuildCartPoints(names, coords, &fc2, &fc3, &fc4, ch)
-		}()
-	} else if DoGrad() {
-		names, coords := XYZGeom(Input[Geometry])
-		natoms = len(names)
-		prog.Geometry = Input[Geometry] + "\n}\n"
-		if !DoOpt() {
-			E0 = RefEnergy(prog)
+		if DoCart() {
+			go func() {
+				prog.BuildCartPoints(names, coords, &fc2, &fc3, &fc4, ch)
+			}()
+		} else if DoGrad() {
+			go func() {
+				prog.BuildGradPoints(names, coords, &fc2, &fc3, &fc4, ch)
+			}()
 		}
-		go func() {
-			prog.BuildGradPoints(names, coords, &fc2, &fc3, &fc4, ch)
-		}()
 	}
-	// Instead of returning energies, use job.Target = energies, also need a function
-	// for getting the index in the array for fc2,3,4 but do that before setting job.Index
-	min, _ = Drain(prog, ch, E0)
+
+	min, _ = Drain(prog, ncoords, ch, E0)
 	queueClear(ptsJobs)
 
 	if !(DoCart() || DoGrad()) {
