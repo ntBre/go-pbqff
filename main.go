@@ -3,8 +3,8 @@ Push-button QFF
 ---------------
 The goal of this program is to streamline the generation
 of quartic force fields, automating as many pieces as possible.
-(setq compile-command "go build . && scp pbqff woods:Programs/pbqff/.")
-(recompile)
+(setq compile-command "go build . && scp -C pbqff woods:Programs/pbqff/.")
+(my-recompile)
 */
 
 package main
@@ -455,6 +455,7 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 			job := points[i]
 			if strings.Contains(job.Name, "E0") {
 				energy = E0
+				gradients = make([]float64, ncoords) // zero gradients at ref geom
 				success = true
 			} else if job.Result != 0 {
 				energy = job.Result
@@ -505,9 +506,16 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 						(*t.Slice)[t.Index].Add(t.Coeff * energy)
 					}
 				} else {
+					// Targets lines up with gradients
 					for g, grad := range gradients {
-						id := Index(ncoords, true, job.Targets[0].Index, g+1)[0]
-						(*job.Targets[0].Slice)[id].Add(job.Targets[0].Coeff * grad)
+						(*job.Targets[g].Slice)[job.Targets[g].Index].Add(job.Targets[0].Coeff * grad)
+						var tar string
+						if job.Targets[g].Slice == &fc2 {
+							tar = "fc2"
+						} else if job.Targets[g].Slice == &fc3 {
+							tar = "fc3"
+						}
+						fmt.Printf("Drain: %s(%d) = %d\n", tar, job.Targets[g].Index, (*job.Targets[g].Slice)[job.Targets[g].Index].Count)
 					}
 				}
 				shortenBy++

@@ -600,42 +600,70 @@ func (m *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc4
 }
 
 func GradDerivative(prog *Molpro, names []string, coords []float64, target *[]CountFloat, dims ...int) (fnames []string, calcs []Calc) {
-	var protos []ProtoCalc
 	dir := "pts/inp/"
 	ndims := len(dims)
 	ncoords := len(coords)
+	var protos []ProtoCalc
 	switch ndims {
 	case 1:
 		// gradient second derivatives are just first derivatives and so on
 		protos = Make1D(dims[0])
 	case 2:
+		// except E0 needs to G(ref geom) == 0, handled this in Drain
 		protos = Make2D(dims[0], dims[1])
 	}
+	// for each ProtoCalc returned by MakeND,
 	for _, p := range protos {
+		// step the coordinates in the reference geometry by ProtoCalc.Steps
 		coords := Step(coords, p.Steps...)
+		// update the geometry
 		prog.Geometry = ZipXYZ(names, coords) + "}\n"
+		// create a new Calc with the same name as the ProtoCalc
 		temp := Calc{Name: dir + p.Name}
-		temp.Targets = []Target{
-			{
+		// Give it a single Target of param target with coefficient from ProtoCalc
+		// and Index from the passed dimensions
+		// TODO just using the first dimension only works for the second derivatives
+		//      I should really handle the calculations here instead of in Drain for looping through the gradient
+		//      Each of those is really a target, have to loop through gradient vector in Drain
+		//      -> it would be nice to sync them up like Targets[x] = grad[x], for example but this may not be clear
+		var index int
+		for g := 1; g <= ncoords; g++ {
+			switch len(dims) {
+			case 1:
+				index = Index(ncoords, true, dims[0], g)[0]
+			case 2:
+				// think this needs to be false
+				// also need to control for duplicates, this will be in the loop below
+				// => loop over targets instead of gradients then to limit
+				index = Index(ncoords, false, dims[0], dims[1], g)[0]
+			}
+			temp.Targets = append(temp.Targets, Target{
 				Coeff: p.Coeff,
 				Slice: target,
-				Index: dims[0],
-			},
-		}
-		for len(*target) <= Index(ncoords, true, dims[0], ncoords)[0] {
-			*target = append(*target, CountFloat{Count: len(protos)})
-		}
-		if len(temp.Targets) > 0 {
-			fname := dir + p.Name + ".inp"
-			fnames = append(fnames, fname)
-			if strings.Contains(p.Name, "E0") {
-				temp.noRun = true
+				Index: index,
+			})
+			for len(*target) <= index {
+				*target = append(*target, CountFloat{})
 			}
-			if !temp.noRun {
-				prog.WriteInput(fname, none)
+			// every time this index is added as a target, increment its count
+			(*target)[index].Count++
+			var tar string
+			if target == &fc2 {
+				tar = "fc2"
+			} else if target == &fc3 {
+				tar = "fc3"
 			}
-			calcs = append(calcs, temp)
+			fmt.Printf("Build: %s(%d) = %d\n", tar, index, (*target)[index].Count)
 		}
+		fname := dir + p.Name + ".inp"
+		fnames = append(fnames, fname)
+		if strings.Contains(p.Name, "E0") {
+			temp.noRun = true
+		}
+		if !temp.noRun {
+			prog.WriteInput(fname, none)
+		}
+		calcs = append(calcs, temp)
 	}
 	return
 }
@@ -658,6 +686,13 @@ func (m *Molpro) BuildGradPoints(names []string, coords []float64, fc2, fc3, fc4
 		files, calcs := GradDerivative(m, names, coords, fc2, i)
 		end = i == ncoords && nDerivative == 2
 		Push(dir, pf, count, files, calcs, ch, end)
+		if nDerivative > 2 {
+			for j := 1; j <= i; j++ {
+				files, calcs := GradDerivative(m, names, coords, fc3, i, j)
+				end = i == ncoords && j == i && nDerivative == 3
+				Push(dir, pf, count, files, calcs, ch, end)
+			}
+		}
 	}
 	close(ch)
 	return
