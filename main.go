@@ -510,10 +510,13 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 					for g := range job.Targets {
 						(*job.Targets[g].Slice)[job.Targets[g].Index].Add(job.Targets[0].Coeff * gradients[g])
 						var tar string
-						if job.Targets[g].Slice == &fc2 {
+						switch job.Targets[g].Slice {
+						case &fc2:
 							tar = "fc2"
-						} else if job.Targets[g].Slice == &fc3 {
+						case &fc3:
 							tar = "fc3"
+						case &fc4:
+							tar = "fc4"
 						}
 						fmt.Printf("Drain: %s(%d) = %d\n", tar, job.Targets[g].Index, (*job.Targets[g].Slice)[job.Targets[g].Index].Count)
 					}

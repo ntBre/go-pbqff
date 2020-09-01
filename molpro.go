@@ -482,7 +482,6 @@ func E2dIndex(ncoords int, ns ...int) []int {
 // Index returns the 1-dimensional array index of force constants in
 // 2,3,4-D arrays
 func Index(ncoords int, nosort bool, id ...int) []int {
-	fmt.Printf("Index: %v\n", id)
 	if !nosort {
 		sort.Ints(id)
 	}
@@ -617,6 +616,9 @@ func GradDerivative(prog *Molpro, names []string, coords []float64, target *[]Co
 		// except E0 needs to G(ref geom) == 0, handled this in Drain
 		protos = Make2D(dims[0], dims[1])
 		dimmax = dims[1]
+	case 3:
+		protos = Make3D(dims[0], dims[1], dims[2])
+		dimmax = dims[2]
 	}
 	// for each ProtoCalc returned by MakeND,
 	for _, p := range protos {
@@ -638,11 +640,9 @@ func GradDerivative(prog *Molpro, names []string, coords []float64, target *[]Co
 			case 1:
 				index = Index(ncoords, true, dims[0], g)[0]
 			case 2:
-				// think this needs to be false
-				// also need to control for duplicates, this will be in the loop below
-				// => loop over targets instead of gradients then to limit
-				// TODO RESUME HERE
 				index = Index(ncoords, false, dims[0], dims[1], g)[0]
+			case 3:
+				index = Index(ncoords, false, dims[0], dims[1], dims[2], g)[0]
 			}
 			temp.Targets = append(temp.Targets, Target{
 				Coeff: p.Coeff,
@@ -655,10 +655,13 @@ func GradDerivative(prog *Molpro, names []string, coords []float64, target *[]Co
 			// every time this index is added as a target, increment its count
 			(*target)[index].Count++
 			var tar string
-			if target == &fc2 {
+			switch target {
+			case &fc2:
 				tar = "fc2"
-			} else if target == &fc3 {
+			case &fc3:
 				tar = "fc3"
+			case &fc4:
+				tar = "fc4"
 			}
 			fmt.Printf("Build: %s(%d) = %d\n", tar, index, (*target)[index].Count)
 		}
@@ -698,6 +701,13 @@ func (m *Molpro) BuildGradPoints(names []string, coords []float64, fc2, fc3, fc4
 				files, calcs := GradDerivative(m, names, coords, fc3, i, j)
 				end = i == ncoords && j == i && nDerivative == 3
 				Push(dir, pf, count, files, calcs, ch, end)
+				if nDerivative > 3 {
+					for k := 1; k <= j; k++ {
+						files, calcs := GradDerivative(m, names, coords, fc4, i, j, k)
+						end = i == ncoords && j == i && k == j && nDerivative == 4
+						Push(dir, pf, count, files, calcs, ch, end)
+					}
+				}
 			}
 		}
 	}
