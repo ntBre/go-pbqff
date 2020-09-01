@@ -507,8 +507,8 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 					}
 				} else {
 					// Targets lines up with gradients
-					for g, grad := range gradients {
-						(*job.Targets[g].Slice)[job.Targets[g].Index].Add(job.Targets[0].Coeff * grad)
+					for g := range job.Targets {
+						(*job.Targets[g].Slice)[job.Targets[g].Index].Add(job.Targets[0].Coeff * gradients[g])
 						var tar string
 						if job.Targets[g].Slice == &fc2 {
 							tar = "fc2"

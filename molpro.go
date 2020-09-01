@@ -482,6 +482,7 @@ func E2dIndex(ncoords int, ns ...int) []int {
 // Index returns the 1-dimensional array index of force constants in
 // 2,3,4-D arrays
 func Index(ncoords int, nosort bool, id ...int) []int {
+	fmt.Printf("Index: %v\n", id)
 	if !nosort {
 		sort.Ints(id)
 	}
@@ -603,14 +604,19 @@ func GradDerivative(prog *Molpro, names []string, coords []float64, target *[]Co
 	dir := "pts/inp/"
 	ndims := len(dims)
 	ncoords := len(coords)
-	var protos []ProtoCalc
+	var (
+		protos []ProtoCalc
+		dimmax int
+	)
 	switch ndims {
 	case 1:
 		// gradient second derivatives are just first derivatives and so on
 		protos = Make1D(dims[0])
+		dimmax = ncoords
 	case 2:
 		// except E0 needs to G(ref geom) == 0, handled this in Drain
 		protos = Make2D(dims[0], dims[1])
+		dimmax = dims[1]
 	}
 	// for each ProtoCalc returned by MakeND,
 	for _, p := range protos {
@@ -627,7 +633,7 @@ func GradDerivative(prog *Molpro, names []string, coords []float64, target *[]Co
 		//      Each of those is really a target, have to loop through gradient vector in Drain
 		//      -> it would be nice to sync them up like Targets[x] = grad[x], for example but this may not be clear
 		var index int
-		for g := 1; g <= ncoords; g++ {
+		for g := 1; g <= dimmax; g++ {
 			switch len(dims) {
 			case 1:
 				index = Index(ncoords, true, dims[0], g)[0]
@@ -635,6 +641,7 @@ func GradDerivative(prog *Molpro, names []string, coords []float64, target *[]Co
 				// think this needs to be false
 				// also need to control for duplicates, this will be in the loop below
 				// => loop over targets instead of gradients then to limit
+				// TODO RESUME HERE
 				index = Index(ncoords, false, dims[0], dims[1], g)[0]
 			}
 			temp.Targets = append(temp.Targets, Target{
