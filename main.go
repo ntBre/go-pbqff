@@ -506,19 +506,9 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 						(*t.Slice)[t.Index].Add(t.Coeff * energy)
 					}
 				} else {
-					// Targets lines up with gradients
+					// Targets line up with gradients
 					for g := range job.Targets {
 						(*job.Targets[g].Slice)[job.Targets[g].Index].Add(job.Targets[0].Coeff * gradients[g])
-						var tar string
-						switch job.Targets[g].Slice {
-						case &fc2:
-							tar = "fc2"
-						case &fc3:
-							tar = "fc3"
-						case &fc4:
-							tar = "fc4"
-						}
-						fmt.Printf("Drain: %s(%d) = %d\n", tar, job.Targets[g].Index, (*job.Targets[g].Slice)[job.Targets[g].Index].Count)
 					}
 				}
 				shortenBy++

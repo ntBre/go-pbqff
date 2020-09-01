@@ -558,6 +558,23 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 			}
 		}
 	}
+	// if end reached with no calcs, which can happen on continue from checkpoints
+	if len(calcs) == 0 && end {
+		if len(nodes) > 0 {
+			node = nodes[0]
+			nodes = nodes[1:]
+		} else {
+			node = ""
+		}
+		WritePBS(subfile, &Job{"pts", cmdfile, 35, node}, ptsMaple)
+		jobid := Submit(subfile)
+		if *debug {
+			fmt.Println(subfile, jobid)
+		}
+		ptsJobs = append(ptsJobs, jobid)
+		paraJobs = append(paraJobs, jobid)
+		paraCount[jobid] = chunkSize
+	}
 }
 
 // BuildCartPoints constructs the calculations needed to run a
@@ -613,27 +630,17 @@ func GradDerivative(prog *Molpro, names []string, coords []float64, target *[]Co
 		protos = Make1D(dims[0])
 		dimmax = ncoords
 	case 2:
-		// except E0 needs to G(ref geom) == 0, handled this in Drain
+		// except E0 needs to be G(ref geom) == 0, handled this in Drain
 		protos = Make2D(dims[0], dims[1])
 		dimmax = dims[1]
 	case 3:
 		protos = Make3D(dims[0], dims[1], dims[2])
 		dimmax = dims[2]
 	}
-	// for each ProtoCalc returned by MakeND,
 	for _, p := range protos {
-		// step the coordinates in the reference geometry by ProtoCalc.Steps
 		coords := Step(coords, p.Steps...)
-		// update the geometry
 		prog.Geometry = ZipXYZ(names, coords) + "}\n"
-		// create a new Calc with the same name as the ProtoCalc
 		temp := Calc{Name: dir + p.Name}
-		// Give it a single Target of param target with coefficient from ProtoCalc
-		// and Index from the passed dimensions
-		// TODO just using the first dimension only works for the second derivatives
-		//      I should really handle the calculations here instead of in Drain for looping through the gradient
-		//      Each of those is really a target, have to loop through gradient vector in Drain
-		//      -> it would be nice to sync them up like Targets[x] = grad[x], for example but this may not be clear
 		var index int
 		for g := 1; g <= dimmax; g++ {
 			switch len(dims) {
@@ -653,27 +660,31 @@ func GradDerivative(prog *Molpro, names []string, coords []float64, target *[]Co
 				*target = append(*target, CountFloat{})
 			}
 			// every time this index is added as a target, increment its count
-			(*target)[index].Count++
-			var tar string
-			switch target {
-			case &fc2:
-				tar = "fc2"
-			case &fc3:
-				tar = "fc3"
-			case &fc4:
-				tar = "fc4"
+			if !(*target)[index].Loaded {
+				(*target)[index].Count++
 			}
-			fmt.Printf("Build: %s(%d) = %d\n", tar, index, (*target)[index].Count)
 		}
-		fname := dir + p.Name + ".inp"
-		fnames = append(fnames, fname)
-		if strings.Contains(p.Name, "E0") {
-			temp.noRun = true
+		// if target was loaded, remove it from list of targets
+		// then only submit if len(Targets) > 0
+		for t := 0; t < len(temp.Targets); {
+			targ := temp.Targets[t]
+			if (*targ.Slice)[targ.Index].Loaded {
+				temp.Targets = append(temp.Targets[:t], temp.Targets[t+1:]...)
+			} else {
+				t++
+			}
 		}
-		if !temp.noRun {
-			prog.WriteInput(fname, none)
+		if len(temp.Targets) > 0 {
+			fname := dir + p.Name + ".inp"
+			fnames = append(fnames, fname)
+			if strings.Contains(p.Name, "E0") {
+				temp.noRun = true
+			}
+			if !temp.noRun {
+				prog.WriteInput(fname, none)
+			}
+			calcs = append(calcs, temp)
 		}
-		calcs = append(calcs, temp)
 	}
 	return
 }
