@@ -86,14 +86,16 @@ func TestReadOut(t *testing.T) {
 	}{
 		{
 			msg:      "Gradient success",
-			filename: "testfiles/read/grad.out",
-			energy:   -114.379844951044,
-			time:     703.13,
+			filename: "testfiles/read/showgrad.out",
+			energy:   -152.379641595220,
+			time:     28.92,
 			grad: []float64{
-				0.000000000, 0.000000000, 0.000000012,
-				-0.000000000, 0.000000000, -0.000000015,
-				0.000000000, -0.000000000, 0.000000002,
-				-0.000000000, 0.000000000, 0.000000002,
+				0.038675130622946, 0.002051946183374, 0.015073821827216,
+				0.115196189670610, 0.146068323479018, 0.149725120162171,
+				0.017871578588965, 0.009170027453292, 0.010289031057109,
+				-0.019700971149367, -0.092155534025566, -0.096689855587206,
+				-0.141218912305456, 0.057539789396310, -0.098009841881230,
+				-0.010823015427707, -0.122674552486430, 0.019611724421961,
 			},
 			err: nil,
 		},
@@ -182,7 +184,7 @@ func TestReadOut(t *testing.T) {
 			t.Errorf("got %v, wanted %v\n", time, test.time)
 		}
 		if !reflect.DeepEqual(grad, test.grad) {
-			t.Errorf("got %v, wanted %v\n", grad, test.grad)
+			t.Errorf("got %#+v, wanted %#+v\n", grad, test.grad)
 		}
 		if err != test.err {
 			t.Errorf("got %v, wanted %v\n", err, test.err)
@@ -287,15 +289,16 @@ func TestBuildPoints(t *testing.T) {
 	fmt.Println("dir: ", path.Dir("testfiles/read/file07"))
 	ch := make(chan Calc, 3)
 	paraCount = make(map[string]int)
-	prog.BuildPoints("testfiles/read/file07", names, nil, ch, true)
+	cf := new([]CountFloat)
+	prog.BuildPoints("testfiles/read/file07", names, cf, ch, true)
 	var got []Calc
 	for calc := range ch {
 		got = append(got, calc)
 	}
 	want := []Calc{
-		Calc{Name: "testfiles/read/inp/NHHH.00000", Targets: []Target{{1, nil, 0}}, cmdfile: "testfiles/read/inp/commands0.txt"},
-		Calc{Name: "testfiles/read/inp/NHHH.00001", Targets: []Target{{1, nil, 1}}, cmdfile: "testfiles/read/inp/commands0.txt"},
-		Calc{Name: "testfiles/read/inp/NHHH.00002", Targets: []Target{{1, nil, 2}}, cmdfile: "testfiles/read/inp/commands0.txt"},
+		Calc{Name: "testfiles/read/inp/NHHH.00000", Targets: []Target{{1, cf, 0}}, cmdfile: "testfiles/read/inp/commands0.txt"},
+		Calc{Name: "testfiles/read/inp/NHHH.00001", Targets: []Target{{1, cf, 1}}, cmdfile: "testfiles/read/inp/commands0.txt"},
+		Calc{Name: "testfiles/read/inp/NHHH.00002", Targets: []Target{{1, cf, 2}}, cmdfile: "testfiles/read/inp/commands0.txt"},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got\n%v, wanted\n%v", got, want)

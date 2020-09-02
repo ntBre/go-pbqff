@@ -97,6 +97,7 @@ func FormatZmat(geom string) string {
 // ReadOut reads a molpro output file and returns the resulting
 // energy, the real time taken, the gradient vector, and an error
 // describing the status of the output
+// TODO signal error on problem reading gradient
 func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, err error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -123,9 +124,17 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 	}
 
 	var (
-		inGrad bool
-		skip   int
+		skip                int
+		gradx, grady, gradz []string
 	)
+
+	processGrad := func(line string) []string {
+		coords := strings.Fields(line)
+		coords = coords[3 : len(coords)-1] // trim front and back
+		coords[len(coords)-1] = strings.TrimRight(coords[len(coords)-1], "]")
+		return coords
+	}
+
 	for _, line := range lines {
 		if skip > 0 {
 			skip--
@@ -157,21 +166,32 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 			fields := strings.Fields(line)
 			timeStr := fields[len(fields)-2]
 			time, _ = strconv.ParseFloat(timeStr, 64)
-		} else if strings.Contains(line, "GRADIENT FOR STATE") {
-			inGrad = true
-			skip += 1
-		} else if inGrad && strings.Contains(line, "Nuclear force contribution") {
-			inGrad = false
-		} else if inGrad {
-			fields := strings.Fields(line)
-			for _, f := range fields[1:] {
-				v, _ := strconv.ParseFloat(f, 64)
-				grad = append(grad, v)
-			}
+		} else if strings.Contains(line, "GRADX") {
+			gradx = processGrad(line)
+		} else if strings.Contains(line, "GRADY") {
+			grady = processGrad(line)
+		} else if strings.Contains(line, "GRADZ") {
+			gradz = processGrad(line)
 		}
 		if strings.Contains(line, molproTerminated) && err != nil {
 			err = ErrFinishedButNoEnergy
 		}
+	}
+	if gradx != nil {
+		grad = func(xs, ys, zs []string) []float64 {
+			lx := len(xs)
+			if !(lx == len(ys) && lx == len(zs)) {
+				panic("Gradient dimension mismatch")
+			}
+			ret := make([]float64, 0, 3*lx)
+			for i := range xs {
+				x, _ := strconv.ParseFloat(xs[i], 64)
+				y, _ := strconv.ParseFloat(ys[i], 64)
+				z, _ := strconv.ParseFloat(zs[i], 64)
+				ret = append(ret, x, y, z)
+			}
+			return ret
+		}(gradx, grady, gradz)
 	}
 	return result, time, grad, err
 }
@@ -307,10 +327,7 @@ func (m *Molpro) BuildPoints(filename string, atomNames []string, target *[]Coun
 	*pf = 0
 	dir := path.Dir(filename)
 	name := strings.Join(atomNames, "")
-	pbs = ptsMaple
 	m.AugmentHead()
-	nodes := PBSnodes()
-	fmt.Println(nodes)
 	for li, line := range lines {
 		if !strings.Contains(line, "#") {
 			ind := i % l
@@ -326,7 +343,11 @@ func (m *Molpro) BuildPoints(filename string, atomNames []string, target *[]Coun
 					// write the molpro input file and add it to the list of commands
 					m.WriteInput(fname, none)
 					end := li == len(lines)-1
-					Push(dir+"/inp", pf, count, []string{fname}, []Calc{{Name: basename, Targets: []Target{{1, target, geom}}}}, ch, end)
+					for len(*target) <= geom {
+						*target = append(*target, CountFloat{Count: 1})
+					}
+					Push(dir+"/inp", pf, count, []string{fname},
+						[]Calc{{Name: basename, Targets: []Target{{1, target, geom}}}}, ch, end)
 				} else {
 					ch <- Calc{Name: basename, Targets: []Target{{1, target, geom}}}
 				}

@@ -5,6 +5,7 @@ The goal of this program is to streamline the generation
 of quartic force fields, automating as many pieces as possible.
 (setq compile-command "go build . && scp -C pbqff woods:Programs/pbqff/.")
 (my-recompile)
+(progn (setq compile-command "go build . && scp -C pbqff woods:Programs/pbqff/.") (my-recompile))
 */
 
 package main

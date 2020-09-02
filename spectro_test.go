@@ -89,6 +89,10 @@ func TestReadSpectroOutput(t *testing.T) {
 		spec, _ := LoadSpectro("testfiles/load/spectro.in", names, coords)
 		spec.ReadOutput("testfiles/read/spectro.prob")
 	})
+	t.Run("no coriolis resonances present", func(t *testing.T) {
+		spec, _ := LoadSpectro("testfiles/load/spectro.in", names, coords)
+		spec.ReadOutput("testfiles/read/spectro.nocoriol")
+	})
 }
 
 func polyEqual(p1, p2 string) bool {

@@ -181,7 +181,7 @@ func (s *Spectro) ReadOutput(filename string) {
 			continue
 		}
 		if coriol {
-			if line == "" {
+			if line == "" || strings.Contains(line, "NO MODES FOUND") {
 				coriol = false
 			} else {
 				coriolCount++
@@ -189,7 +189,7 @@ func (s *Spectro) ReadOutput(filename string) {
 			}
 		}
 		if fermi1 {
-			if line == "" {
+			if line == "" || strings.Contains(line, "NOT FOUND") {
 				fermi1 = false
 			} else {
 				fermi1Count++
