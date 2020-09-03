@@ -32,7 +32,7 @@ var (
 
 func TestPattern(t *testing.T) {
 	t.Run("first test", func(t *testing.T) {
-		got, _ := Pattern(text, 0)
+		got, _ := Pattern(text, 0, false)
 		want := [][]int{
 			[]int{2, 1, 1},
 			[]int{4, 2, 1},
@@ -45,7 +45,7 @@ func TestPattern(t *testing.T) {
 	})
 
 	t.Run("second test", func(t *testing.T) {
-		got, _ := Pattern(text1, 0)
+		got, _ := Pattern(text1, 0, false)
 		want := [][]int{
 			[]int{4, 2, 1},
 			[]int{1, 2, 1},
@@ -79,8 +79,8 @@ func TestSwap(t *testing.T) {
 
 func TestMatchPattern(t *testing.T) {
 	t.Run("columns match", func(t *testing.T) {
-		p1, _ := Pattern(text, 0)
-		p2, _ := Pattern(text1, 0)
+		p1, _ := Pattern(text, 0, false)
+		p2, _ := Pattern(text1, 0, false)
 		_, got, _ := MatchPattern(p1, p2)
 		want := []int{2, 0, 1, 3}
 		if !reflect.DeepEqual(got, want) {
@@ -88,8 +88,8 @@ func TestMatchPattern(t *testing.T) {
 		}
 	})
 	t.Run("column mismatch", func(t *testing.T) {
-		p1, _ := Pattern(text, 0)
-		p2, _ := Pattern(text2, 0)
+		p1, _ := Pattern(text, 0, false)
+		p2, _ := Pattern(text2, 0, false)
 		_, got, _ := MatchPattern(p1, p2)
 		want := []int{0, 1, 2, 3}
 		if !reflect.DeepEqual(got, want) {
@@ -147,8 +147,8 @@ func TestSwapStr(t *testing.T) {
 }
 
 func TestApplyPattern(t *testing.T) {
-	p1, _ := Pattern(text, 0)
-	p2, _ := Pattern(text1, 0)
+	p1, _ := Pattern(text, 0, false)
+	p2, _ := Pattern(text1, 0, false)
 	_, tr, _ := MatchPattern(p1, p2)
 	s := []string{"Al", "Al", "O", "O"}
 	got := ApplyPattern(tr, s)
@@ -193,6 +193,16 @@ func TestConvertCart(t *testing.T) {
 	`,
 			intderFile: "testfiles/load/intder.full",
 			want:       []string{"O", "Al", "Al", "O"},
+		},
+		{
+			msg: "signs opposite",
+			cart: `O          0.000000000    0.000000000   -1.138365613
+     C          0.000000000    0.000000000    1.141275963
+     H          0.000000000    1.772444039    2.234905449
+     H          0.000000000   -1.772444039    2.234905449
+    `,
+			intderFile: "testfiles/load/intder.signs",
+			want: []string{"O", "C", "H", "H"},
 		},
 	}
 

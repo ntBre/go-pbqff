@@ -118,7 +118,7 @@ func Pprint(vals [][]int) {
 //0|0 1 2 [x][y] -> [3x+y]
 //1|3 4 5
 //2|6 7 8
-func Pattern(geom string, ndummy int) ([][]int, []Dummy) {
+func Pattern(geom string, ndummy int, negate bool) ([][]int, []Dummy) {
 	lines := CleanSplit(geom, "\n")
 	pattern := make([][]int, 0, len(lines))
 	floats := make([][]float64, 0, len(lines))
@@ -157,6 +157,9 @@ func Pattern(geom string, ndummy int) ([][]int, []Dummy) {
 		}
 		for j, field := range strings.Fields(line) {
 			f, _ := strconv.ParseFloat(field, 64)
+			if negate {
+				f = -f
+			}
 			floats[i][j] = f
 			pattern[i][j] = 1
 			for k := 0; k < i; k++ {
@@ -216,7 +219,7 @@ func LoadIntder(filename string) (*Intder, error) {
 	}
 	i.Tail = buf.String()
 	i.Geometry = geom[:len(geom)-1]
-	i.Pattern, i.Dummies = Pattern(geom, ndummy)
+	i.Pattern, i.Dummies = Pattern(geom, ndummy, false)
 	return &i, nil
 }
 
@@ -244,10 +247,17 @@ func (i *Intder) ConvertCart(cart string) (names []string) {
 	}
 	// remove last newline
 	buf.Truncate(buf.Len() - 1)
-	pattern, _ := Pattern(buf.String(), 0)
+	pattern, _ := Pattern(buf.String(), 0, false)
+	fmt.Printf("---\n%s\n", buf.String())
 	swaps, order, ok := MatchPattern(i.Pattern, pattern)
 	if !ok {
-		panic("transform failed")
+		// need to multiply through by a negative and try again
+		// => negate = true
+		pattern, _ = Pattern(buf.String(), 0, true)
+		swaps, order, ok = MatchPattern(i.Pattern, pattern)
+		if !ok {
+			panic("transform failed")
+		}
 	}
 	// swap columns
 	strs = SwapStr(swaps, strs, strFmt)
