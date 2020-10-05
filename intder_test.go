@@ -202,7 +202,7 @@ func TestConvertCart(t *testing.T) {
      H          0.000000000   -1.772444039    2.234905449
     `,
 			intderFile: "testfiles/load/intder.signs",
-			want: []string{"O", "C", "H", "H"},
+			want:       []string{"O", "C", "H", "H"},
 		},
 	}
 

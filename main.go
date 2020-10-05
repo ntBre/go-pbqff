@@ -34,8 +34,7 @@ import (
 const (
 	resBound = 1e-16 // warn if anpass residuals above this
 	// this could  be in the input
-	delta = 0.005
-	help  = `Requirements:
+	help = `Requirements:
 - intder, anpass, and spectro executables
 - template intder.in, anpass.in, spectro.in, and molpro.in files
   - intder.in should be a pts intder input and have the old geometry to serve as template
@@ -105,11 +104,14 @@ var (
 	chunkSize        int = 64
 	checkAfter       int = 100
 	flags            int
+	delta            = 0.005   // default step size
+	deltas           []float64 // slice for holding step sizes
 )
 
 // Finite differences denominators for cartesians
 var (
-	angbohr  = 0.529177249
+	angbohr = 0.529177249
+	// Going to get rid of all of these with divisors instead
 	fc2Scale = angbohr * angbohr / (4 * delta * delta)
 	fc3Scale = angbohr * angbohr * angbohr / (8 * delta * delta * delta)
 	fc4Scale = angbohr * angbohr * angbohr * angbohr / (16 * delta * delta * delta * delta)
@@ -130,7 +132,7 @@ var (
 	e2d []CountFloat
 )
 
-// Errors used throughout
+// Errors
 var (
 	ErrEnergyNotFound      = errors.New("Energy not found in Molpro output")
 	ErrFileNotFound        = errors.New("Molpro output file not found")
@@ -154,6 +156,7 @@ type Calc struct {
 	chunkNum int
 	Resub    *Calc
 	Src      *Source
+	Divisor  float64
 }
 
 // CountFloat combines a value with a counter that keeps track of how
@@ -626,6 +629,43 @@ func queueClear(jobs []string) error {
 	return err
 }
 
+// ParseDeltas parses a sequence of step sizes input as a string into
+// a slice of floats
+func ParseDeltas(inp string) (out []float64, err error) {
+	// assume problem
+	err = errors.New("invalid deltas input")
+	var ncoords int
+	geom := strings.Split(Input[Geometry], "\n")
+	if Input[GeomType] == "xyz" {
+		ncoords = len(geom) - 2
+	} else {
+		ncoords = len(geom)
+	}
+	out = make([]float64, ncoords)
+	// set up defaults
+	for i := range out {
+		out[i] = delta
+	}
+	pairs := strings.Split(inp, ",")
+	for _, p := range pairs {
+		sp := strings.Split(p, ":")
+		if len(sp) != 2 {
+			return
+		}
+		d, e := strconv.Atoi(strings.TrimSpace(sp[0]))
+		if e != nil || d > ncoords || d < 1 {
+			return
+		}
+		f, e := strconv.ParseFloat(strings.TrimSpace(sp[1]), 64)
+		if e != nil || f < 0.0 {
+			return
+		}
+		out[d-1] = f
+	}
+	err = nil
+	return
+}
+
 func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	// parse flags for overwrite before mkdirs
 	args := ParseFlags()
@@ -655,6 +695,20 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 			panic(fmt.Sprintf("%v parsing derivative level input: %q\n", err, Input[Deriv]))
 		}
 		nDerivative = d
+	}
+	if Input[Delta] != "" {
+		f, err := strconv.ParseFloat(Input[Delta], 64)
+		if err != nil {
+			panic(fmt.Sprintf("%v parsing delta input: %q\n", err, Input[Delta]))
+		}
+		delta = f
+	}
+	if Input[Deltas] != "" {
+		f, err := ParseDeltas(Input[Deltas])
+		if err != nil {
+			panic(fmt.Sprintf("%v parsing deltas input: %q\n", err, Input[Deltas]))
+		}
+		deltas = f
 	}
 	WhichCluster()
 	switch Input[Program] {

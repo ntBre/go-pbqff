@@ -1,3 +1,92 @@
+#+BEGIN_SRC python :results output
+  def c3d(n):
+      return (4*n**3 + 6*n**2 + 2*n) / 3
+
+  def c4d(n):
+      return 16*n**4 - 20*n**3 + 84*n**2 - 62*n
+
+  print(c3d(9))
+  print(c4d(9))
+#+END_SRC
+
+#+RESULTS:
+: 1140.0
+: 96642
+
+* Counting points
+  nxn 2d array for water
+
+  1 
+  1 2 
+  1 2 3 
+  1 2 3 4 
+  1 2 3 4 5 
+  1 2 3 4 5 6 
+  1 2 3 4 5 6 7 
+  1 2 3 4 5 6 7 8 
+  1 2 3 4 5 6 7 8 9
+
+  diagonal terms (i=j) require 2 calculations each
+  off diagonal terms require 4 each
+  there are n diagonal terms
+  n^2 total terms so (n^2-n)/2 is the remaining since only need under diagonal
+
+  so 2n+4*(n^2-n)/2 = 2n + 2n^2 - 2n = 2n^2 pts for seconds
+  where n is the number of coordinates = 3*natoms
+
+  for water that's 2*81 = 162, which sounds right
+
+  nxnxn is hard to draw so just imagine it
+
+  cases:
+  (1) i = j = k -> all same
+  (2) { i = j != k, i = k != j, j = k != i } -> two same, one different
+  (3) i != j != k -> all different
+
+  case (1) is the diagonal again, still n diagonal terms
+  n^3 - n remaining then
+  4 jobs per point in this case so 4n jobs
+
+  case (2) - diagonal in 2d but not 3d
+  also have to remember that we're under the 2d diagonal and 3d diagonal
+  neglecting this we would have n^2 - n at each level, with n levels
+  so n(n^2-n) without symmetry
+  as we saw with the 2D case above, there are actually (n^2 - n)/2 at each level
+  does the 1/2 assumption hold for the other diagonal? probably, so that gives
+  n/2 * (n^2 - n)/2 = n*(n^2-n)/4 = (n^3-n^2)/4 for this case
+  and there are 6 jobs per point
+  so a total of 3(n^3 - n^2)/2 jobs
+
+  (1) left us with n^3-n remaining, so the leftovers for (3) are
+  n^3-n - (n^3-n^2)/4 = n^3 - n^3/4 -n + n^2/4 = 3n^3/4 + n^2/4 - n
+  and there are 8 jobs per point for this case
+  giving
+  6n^3 + 2n^2 - 8n jobs
+  adding these up gives
+
+  4n + 3/2n^3 - 3/2n^2 + 6n^3 + 2n^2 - 8n 
+
+  15/2n^3 + 1/2n^2 - 4n jobs total
+
+  for h2o that gives
+
+  15/2*9^3 + 1/2*81 - 36
+  10935/2 + 81/2 - 36 = 5508 - 36 = 5472
+  well that's not right
+  forgot to divide by 2 in the final piece?
+
+
+  (/2 for (3)) -> 3n^3 + n^2 - 4n
+  adding again gives
+  3/2n^3 - 3/2n^2 + 3n^3 + n^2
+  9/2n^3 - 1/2n^2 = 3240 for h2o, still doesn't look right
+  I think it's half this, probably need to divide by two for every dimension, so halve the last piece again
+
+  (/4 for (3)) -> 3/2n^3 + 1/2n^2 - 2n
+  4n + 3/2n^3 - 3/2n^2 + 3/2n^3 + 1/2n^2 - 2n
+  this gives
+  3n^3 - n^2 + 2n
+
 * Flow charts
   
 ** Optimize 
@@ -59,7 +148,7 @@ ParseFlags -> ParseInfile -> WhichCluster
    
 ** New
 
-#+BEGIN_SRC dot :file figs/cart.pdf
+   #+BEGIN_SRC dot :file figs/cart.pdf
   digraph {
   a [label="Mkdirs\nOptimize\nFrequency"]
   b [label="Load geometry"]
@@ -88,10 +177,10 @@ ParseFlags -> ParseInfile -> WhichCluster
   i -> Anpass -> Intder -> Spectro
   }
 
-#+END_SRC
+   #+END_SRC
 
-#+RESULTS:
-[[file:figs/cart.pdf]]
+   #+RESULTS:
+   [[file:figs/cart.pdf]]
    
 * 7/28 fast results
   +---------+---------+---------+---------+---------+
@@ -211,49 +300,49 @@ ParseFlags -> ParseInfile -> WhichCluster
 * TODO replace intder, anpass, and spectro entirely                    :HARD:
 
 * ErrFileNotFound brainstorming and eventual fix
-ErrFileNotFound just means the file doesn't exist
+  ErrFileNotFound just means the file doesn't exist
 
-valid reasons for no existence:
-- parallel job submitted but in queue -> could check this with qstat on parallel jobid
-- parallel has not run that job yet -> could check this from log file
+  valid reasons for no existence:
+  - parallel job submitted but in queue -> could check this with qstat on parallel jobid
+  - parallel has not run that job yet -> could check this from log file
 
-reasons to resubmit:
-- parallel job is running (confirmed by jobid)
-- parallel log contains job => job ran but didn't write output
-- parallel log does not contain job => job has not run yet or is running
+  reasons to resubmit:
+  - parallel job is running (confirmed by jobid)
+  - parallel log contains job => job ran but didn't write output
+  - parallel log does not contain job => job has not run yet or is running
 
-so we may want to resubmit whether or not the log contains the job
-- either it's currently running but taking forever || it ran but failed
-I guess if it ran but failed we definitely want to resubmit
-Is taking forever a good reason to resubmit?
+  so we may want to resubmit whether or not the log contains the job
+  - either it's currently running but taking forever || it ran but failed
+  I guess if it ran but failed we definitely want to resubmit
+  Is taking forever a good reason to resubmit?
 
-to resubmit for taking forever:
-- parallel job is running
-- job is not in the log file
+  to resubmit for taking forever:
+  - parallel job is running
+  - job is not in the log file
 
-but these conditions are met by every job at the beginning <- herein lies the problem
+  but these conditions are met by every job at the beginning <- herein lies the problem
 
-even if you wait for one job to finish, all the other jobs meet this condition
+  even if you wait for one job to finish, all the other jobs meet this condition
 
-how to differentiate between jobs that have yet to run and those that are taking too long or won't run
+  how to differentiate between jobs that have yet to run and those that are taking too long or won't run
 
-with --progress can see the number of jobs submitted
-so if job is not in the log and #running < #numjobs some jobs have not been submitted
+  with --progress can see the number of jobs submitted
+  so if job is not in the log and #running < #numjobs some jobs have not been submitted
 
-does this offer any additional insight?
+  does this offer any additional insight?
 
-identity of unsubmitted jobs is unknown as is when they may be submitted
+  identity of unsubmitted jobs is unknown as is when they may be submitted
 
-is the "average completion time" part of the log different in the lingering file? could be something to check
+  is the "average completion time" part of the log different in the lingering file? could be something to check
 
-as jobs fail to finish the average completion time does continue to increase
+  as jobs fail to finish the average completion time does continue to increase
 
-however, it starts at 0 and increases when the first jobs start to finish too
+  however, it starts at 0 and increases when the first jobs start to finish too
 
-how to tell if job is stuck or just running?
+  how to tell if job is stuck or just running?
 
-if ErrFileNotFound && file is not in logfile && numjobs in prog is less than maxjobs, ie 3 < 8
+  if ErrFileNotFound && file is not in logfile && numjobs in prog is less than maxjobs, ie 3 < 8
 
-file not in logfile => job is not finished == job is running or not started
-numjobs < maxjobs in progfile => all jobs have been started => job is running
-ErrFileNotFound => job is not actually running so we need to resubmit
+  file not in logfile => job is not finished == job is running or not started
+  numjobs < maxjobs in progfile => all jobs have been started => job is running
+  ErrFileNotFound => job is not actually running so we need to resubmit

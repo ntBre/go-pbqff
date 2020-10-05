@@ -12,6 +12,8 @@ type Key int
 const (
 	QueueType Key = iota
 	Program
+	Delta
+	Deltas
 	Geometry
 	GeomType
 	Flags
@@ -40,6 +42,8 @@ func ParseInfile(filename string) {
 	Keywords := []Regexp{
 		Regexp{regexp.MustCompile(`(?i)queuetype=`), QueueType},
 		Regexp{regexp.MustCompile(`(?i)program=`), Program},
+		Regexp{regexp.MustCompile(`(?i)delta=`), Delta},
+		Regexp{regexp.MustCompile(`(?i)deltas=`), Deltas},
 		Regexp{regexp.MustCompile(`(?i)geomtype=`), GeomType},
 		Regexp{regexp.MustCompile(`(?i)flags=`), Flags},
 		Regexp{regexp.MustCompile(`(?i)deriv=`), Deriv},
