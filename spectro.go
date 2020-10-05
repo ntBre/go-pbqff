@@ -339,16 +339,16 @@ func RunSpectro(filename string) {
 	}
 }
 
-// DoSpectro runs spectro
-func DoSpectro(spectro *Spectro, nharms int) (float64, []float64, []float64, []float64) {
+// DoSpectro runs spectro in /-terminated dir, assuming there are nharms harmonic frequencies
+func DoSpectro(spectro *Spectro, dir string, nharms int) (float64, []float64, []float64, []float64) {
 	spectro.Nfreqs = nharms
-	spectro.WriteInput("freqs/spectro.in")
-	RunSpectro("freqs/spectro")
-	spectro.ReadOutput("freqs/spectro.out")
-	spectro.WriteInput("freqs/spectro2.in")
-	RunSpectro("freqs/spectro2")
+	spectro.WriteInput(dir+"spectro.in")
+	RunSpectro(dir+"spectro")
+	spectro.ReadOutput(dir+"spectro.out")
+	spectro.WriteInput(dir+"spectro2.in")
+	RunSpectro(dir+"spectro2")
 	// have rotational constants from FreqReport, but need to incorporate them
 	zpt, spHarm, spFund, spCorr,
-		_, _, _ := summarize.Spectro("freqs/spectro2.out", spectro.Nfreqs)
+		_, _, _ := summarize.Spectro(dir+"spectro2.out", spectro.Nfreqs)
 	return zpt, spHarm, spFund, spCorr
 }

@@ -18,6 +18,7 @@ type Job struct {
 	Filename string
 	Signal   int
 	Host     string
+	Queue    string
 }
 
 const mapleCmd = `molpro -t 1 `
@@ -31,6 +32,9 @@ const ptsMaple = `#!/bin/sh
 #PBS -l walltime=5000:00:00
 #PBS -l ncpus=8
 #PBS -l mem=64gb
+{{- if .Queue}}
+#PBS -q {{.Queue}}
+{{- end}}
 {{- if .Host}}
 #PBS -l host={{.Host}}
 {{- end}}
@@ -167,8 +171,8 @@ func readPBSnodes(r io.Reader) (nodes []string) {
 		line = scanner.Text()
 		switch {
 		case line == "" || init:
-			if node != nil && node.queue == "workq" && !node.busy {
-				nodes = append(nodes, node.name)
+			if node != nil && (node.queue == "workq" || node.queue == "r410") && !node.busy {
+				nodes = append(nodes, node.queue+":"+node.name)
 			}
 			node = new(cnode)
 			init = false

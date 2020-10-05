@@ -384,6 +384,7 @@ type ProtoCalc struct {
 	Name  string
 	Steps []int
 	Index []int
+	Scale float64
 }
 
 // Step adjusts coords by delta in the steps indices
@@ -426,7 +427,7 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]CountF
 	for _, p := range protos {
 		coords := Step(coords, p.Steps...)
 		prog.Geometry = ZipXYZ(names, coords) + "}\n"
-		temp := Calc{Name: dir + p.Name}
+		temp := Calc{Name: dir + p.Name, Scale: p.Scale}
 		for _, v := range Index(ncoords, false, p.Index...) {
 			for len(*target) <= v {
 				*target = append(*target, CountFloat{Val: 0, Count: 0})
@@ -547,7 +548,10 @@ func ZipXYZ(names []string, coords []float64) string {
 func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc, end bool) {
 	subfile := fmt.Sprintf("%s/main%d.pbs", dir, *pf)
 	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, *pf)
-	var node string
+	var (
+		node  string
+		queue string
+	)
 	for f := range calcs {
 		calcs[f].cmdfile = cmdfile
 		calcs[f].chunkNum = *pf
@@ -557,12 +561,15 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 			AddCommand(cmdfile, files[f])
 			if *count == chunkSize || (f == len(files)-1 && end) {
 				if len(nodes) > 0 {
-					node = nodes[0]
+					tmp := strings.Split(nodes[0], ":")
+					node = tmp[1]
+					queue = tmp[0]
 					nodes = nodes[1:]
 				} else {
 					node = ""
 				}
-				WritePBS(subfile, &Job{"pts", cmdfile, 35, node}, ptsMaple)
+				WritePBS(subfile,
+					&Job{"pts", cmdfile, 35, node, queue}, ptsMaple)
 				jobid := Submit(subfile)
 				if *debug {
 					fmt.Println(subfile, jobid)
@@ -582,12 +589,15 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 	// if end reached with no calcs, which can happen on continue from checkpoints
 	if len(calcs) == 0 && end {
 		if len(nodes) > 0 {
-			node = nodes[0]
+			tmp := strings.Split(nodes[0], ":")
+			node = tmp[1]
+			queue = tmp[0]
+			nodes = nodes[1:]
 			nodes = nodes[1:]
 		} else {
 			node = ""
 		}
-		WritePBS(subfile, &Job{"pts", cmdfile, 35, node}, ptsMaple)
+		WritePBS(subfile, &Job{"pts", cmdfile, 35, node, queue}, ptsMaple)
 		jobid := Submit(subfile)
 		if *debug {
 			fmt.Println(subfile, jobid)
@@ -661,7 +671,7 @@ func GradDerivative(prog *Molpro, names []string, coords []float64, target *[]Co
 	for _, p := range protos {
 		coords := Step(coords, p.Steps...)
 		prog.Geometry = ZipXYZ(names, coords) + "}\n"
-		temp := Calc{Name: dir + p.Name}
+		temp := Calc{Name: dir + p.Name, Scale: p.Scale}
 		var index int
 		for g := 1; g <= dimmax; g++ {
 			switch len(dims) {

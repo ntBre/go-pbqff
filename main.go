@@ -156,7 +156,7 @@ type Calc struct {
 	chunkNum int
 	Resub    *Calc
 	Src      *Source
-	Divisor  float64
+	Scale    float64
 }
 
 // CountFloat combines a value with a counter that keeps track of how
@@ -169,11 +169,13 @@ type CountFloat struct {
 }
 
 // Add modifies the underlying value of c and decrements its counter
-func (c *CountFloat) Add(plus float64) {
+func (c *CountFloat) Add(t Target, scale float64, plus float64) {
 	c.Val += plus
 	c.Count--
 	if c.Count < 0 {
 		panic("added to CountFloat too many times")
+	} else if c.Count == 0 && t.Slice != &e2d {
+		c.Val *= scale
 	}
 }
 
@@ -347,7 +349,7 @@ func Optimize(prog *Molpro) (E0 float64) {
 	// write opt.inp and mp.pbs
 	prog.WriteInput("opt/opt.inp", opt)
 	WritePBS("opt/mp.pbs",
-		&Job{MakeName(Input[Geometry]) + "-opt", "opt/opt.inp", 35, ""}, pbsMaple)
+		&Job{MakeName(Input[Geometry]) + "-opt", "opt/opt.inp", 35, "", ""}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit("opt/mp.pbs")
 	outfile := "opt/opt.out"
@@ -377,9 +379,14 @@ func RefEnergy(prog *Molpro) (E0 float64) {
 	if *read && err == nil {
 		return
 	}
-	prog.WriteInput(dir+infile, opt)
+
+	if DoOpt() {
+		prog.WriteInput(dir+infile, opt)
+	} else {
+		prog.WriteInput(dir+infile, none)
+	}
 	WritePBS(dir+pbsfile,
-		&Job{MakeName(Input[Geometry]) + "-ref", dir + infile, 35, ""}, pbsMaple)
+		&Job{MakeName(Input[Geometry]) + "-ref", dir + infile, 35, "", ""}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit(dir + pbsfile)
 	for err != nil {
@@ -402,7 +409,7 @@ func Frequency(prog *Molpro, absPath string) ([]float64, bool) {
 	// write freq.inp and that mp.pbs
 	prog.WriteInput(absPath+"/freq.inp", freq)
 	WritePBS(absPath+"/mp.pbs",
-		&Job{MakeName(Input[Geometry]) + "-freq", absPath + "/freq.inp", 35, ""}, pbsMaple)
+		&Job{MakeName(Input[Geometry]) + "-freq", absPath + "/freq.inp", 35, "", ""}, pbsMaple)
 	// submit freq, wait in separate goroutine
 	// doesn't matter if this finishes
 	Submit(absPath + "/mp.pbs")
@@ -433,13 +440,14 @@ func Resubmit(name string, err error) string {
 		src.Close()
 		dst.Close()
 	}()
-	WritePBS(name+"_redo.pbs", &Job{"redo", name + "_redo.inp", 35, ""}, pbsMaple)
+	WritePBS(name+"_redo.pbs", &Job{"redo", name + "_redo.inp", 35, "", ""}, pbsMaple)
 	return Submit(name + "_redo.pbs")
 }
 
 // Drain drains the queue of jobs and receives on ch when ready for more
 func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime float64) {
 	start := time.Now()
+	fmt.Println(deltas)
 	points := make([]Calc, 0)
 	var (
 		nJobs     int
@@ -455,6 +463,7 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 	heap := new(GarbageHeap)
 	for {
 		shortenBy := 0
+		pollStart := time.Now()
 		for i := 0; i < nJobs; i++ {
 			job := points[i]
 			if strings.Contains(job.Name, "E0") {
@@ -507,12 +516,12 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 				points = points[:nJobs]
 				if !DoGrad() {
 					for _, t := range job.Targets {
-						(*t.Slice)[t.Index].Add(t.Coeff * energy)
+						(*t.Slice)[t.Index].Add(t, job.Scale, t.Coeff*energy)
 					}
 				} else {
 					// Targets line up with gradients
 					for g := range job.Targets {
-						(*job.Targets[g].Slice)[job.Targets[g].Index].Add(job.Targets[0].Coeff * gradients[g])
+						(*job.Targets[g].Slice)[job.Targets[g].Index].Add(job.Targets[g], job.Scale, job.Targets[0].Coeff*gradients[g])
 					}
 				}
 				shortenBy++
@@ -541,7 +550,9 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 		if heap.Len() >= chunkSize {
 			heap.Dump()
 		}
-		fmt.Fprintf(os.Stderr, "finished %d of %d submitted, %d being watched\n", finished, submitted, nJobs)
+		// Progress
+		fmt.Fprintf(os.Stderr, "finished %d/%d submitted, %v polling %d jobs\n", finished, submitted,
+			time.Since(pollStart).Round(time.Millisecond), nJobs)
 		// only receive more jobs if there is room
 		for count := 0; count < chunkSize && nJobs < jobLimit; count++ {
 			calc, ok := <-ch
@@ -637,7 +648,7 @@ func ParseDeltas(inp string) (out []float64, err error) {
 	var ncoords int
 	geom := strings.Split(Input[Geometry], "\n")
 	if Input[GeomType] == "xyz" {
-		ncoords = len(geom) - 2
+		ncoords = 3 * (len(geom) - 2)
 	} else {
 		ncoords = len(geom)
 	}
@@ -703,13 +714,12 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 		}
 		delta = f
 	}
-	if Input[Deltas] != "" {
-		f, err := ParseDeltas(Input[Deltas])
-		if err != nil {
-			panic(fmt.Sprintf("%v parsing deltas input: %q\n", err, Input[Deltas]))
-		}
-		deltas = f
+	// always parse deltas to fill with default even if no input
+	f, err := ParseDeltas(Input[Deltas])
+	if err != nil {
+		panic(fmt.Sprintf("%v parsing deltas input: %q\n", err, Input[Deltas]))
 	}
+	deltas = f
 	WhichCluster()
 	switch Input[Program] {
 	case "cccr":
@@ -728,7 +738,7 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	mpName := "molpro.in"
 	idName := "intder.in"
 	apName := "anpass.in"
-	prog, err := LoadMolpro("molpro.in")
+	prog, err = LoadMolpro("molpro.in")
 	if err != nil {
 		errExit(err, fmt.Sprintf("loading molpro input %q", mpName))
 	}
@@ -789,19 +799,13 @@ func XYZGeom(geom string) (names []string, coords []float64) {
 // PrintFile15 prints the second derivative force constants in the
 // format expected by SPECTRO
 func PrintFile15(fc []CountFloat, natoms int, filename string) int {
-	var scale float64
-	if DoGrad() {
-		scale = gradFc2Scale
-	} else {
-		scale = fc2Scale
-	}
 	f, _ := os.Create(filename)
 	fmt.Fprintf(f, "%5d%5d", natoms, 6*natoms) // still not sure why this is just times 6
 	for i := range fc {
 		if i%3 == 0 {
 			fmt.Fprintf(f, "\n")
 		}
-		fmt.Fprintf(f, "%20.10f", fc[i].Val*scale)
+		fmt.Fprintf(f, "%20.10f", fc[i].Val)
 	}
 	fmt.Fprint(f, "\n")
 	return len(fc)
@@ -810,19 +814,13 @@ func PrintFile15(fc []CountFloat, natoms int, filename string) int {
 // PrintFile30 prints the third derivative force constants in the
 // format expected by SPECTRO
 func PrintFile30(fc []CountFloat, natoms, other int, filename string) int {
-	var scale float64
-	if DoGrad() {
-		scale = gradFc3Scale
-	} else {
-		scale = fc3Scale
-	}
 	f, _ := os.Create(filename)
 	fmt.Fprintf(f, "%5d%5d", natoms, other)
 	for i := range fc {
 		if i%3 == 0 {
 			fmt.Fprintf(f, "\n")
 		}
-		fmt.Fprintf(f, "%20.10f", fc[i].Val*scale)
+		fmt.Fprintf(f, "%20.10f", fc[i].Val)
 	}
 	fmt.Fprint(f, "\n")
 	return len(fc)
@@ -831,19 +829,13 @@ func PrintFile30(fc []CountFloat, natoms, other int, filename string) int {
 // PrintFile40 prints the fourth derivative force constants in the
 // format expected by SPECTRO
 func PrintFile40(fc []CountFloat, natoms, other int, filename string) int {
-	var scale float64
-	if DoGrad() {
-		scale = gradFc4Scale
-	} else {
-		scale = fc4Scale
-	}
 	f, _ := os.Create(filename)
 	fmt.Fprintf(f, "%5d%5d", natoms, other)
 	for i := range fc {
 		if i%3 == 0 {
 			fmt.Fprintf(f, "\n")
 		}
-		fmt.Fprintf(f, "%20.10f", fc[i].Val*scale)
+		fmt.Fprintf(f, "%20.10f", fc[i].Val)
 	}
 	fmt.Fprint(f, "\n")
 	return len(fc)
@@ -894,6 +886,8 @@ func main() {
 		E0        float64
 		natoms    int
 		ncoords   int
+		names     []string
+		coords    []float64
 	)
 
 	if DoOpt() {
@@ -966,7 +960,7 @@ func main() {
 		if err != nil {
 			errExit(err, "loading spectro input")
 		}
-		zpt, spHarm, spFund, spCorr := DoSpectro(spectro, len(intderHarms))
+		zpt, spHarm, spFund, spCorr := DoSpectro(spectro, "freqs/", len(intderHarms))
 		if !finished {
 			mpHarm = make([]float64, spectro.Nfreqs)
 		}
@@ -982,6 +976,21 @@ func main() {
 		if nDerivative > 3 {
 			PrintFile40(fc4, natoms, other4, "fort.40")
 		}
+		var spCoords string
+		for i := range coords {
+			if i%3 == 0 && i > 0 {
+				spCoords += fmt.Sprintln()
+			}
+			spCoords += fmt.Sprintf(" %f", coords[i])
+		}
+		fmt.Println(spCoords)
+		spectro, err := LoadSpectro("spectro.in", names, spCoords)
+		if err != nil {
+			errExit(err, "loading spectro input")
+		}
+		// assume 3n-6 freqs
+		zpt, spHarm, spFund, spCorr := DoSpectro(spectro, "./", 3*(ncoords/3)-6)
+		Summarize(zpt, mpHarm, []float64{}, spHarm, spFund, spCorr)
 	}
 	if *debug {
 		PrintE2D()

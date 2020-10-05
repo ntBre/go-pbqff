@@ -7,7 +7,7 @@ import (
 )
 
 func TestWritePBS(t *testing.T) {
-	p := Job{MakeName(Input[Geometry]), "opt.inp", 35, ""}
+	p := Job{MakeName(Input[Geometry]), "opt.inp", 35, "", ""}
 	write := "testfiles/write/mp.pbs"
 	right := "testfiles/right/mp.pbs"
 	WritePBS(write, &p, pbsSequoia)
@@ -28,7 +28,7 @@ func TestReadPBSNodes(t *testing.T) {
 	// cn074 has 6 jobs
 	f, _ := os.Open("testfiles/read/pbsnodes")
 	got := readPBSnodes(f)
-	want := []string{"cn064", "cn065", "cn066", "cn067"}
+	want := []string{"workq:cn064", "workq:cn065", "workq:cn066", "workq:cn067"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %q, wanted %q\n", got, want)
 	}
