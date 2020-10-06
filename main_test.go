@@ -332,7 +332,7 @@ func TestParseDeltas(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		got, err := ParseDeltas(test.in)
+		_, got, err := ParseDeltas(test.in)
 		if !reflect.DeepEqual(got, test.out) {
 			t.Errorf("ParseDeltas(%q): got %v, wanted %v\n",
 				test.msg, got, test.out)

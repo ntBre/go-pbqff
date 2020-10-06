@@ -28,6 +28,7 @@ import (
 
 	"os/exec"
 
+	"bytes"
 	"io"
 )
 
@@ -83,6 +84,7 @@ var (
 	checkpoint = flag.Bool("c", false, "resume from checkpoint")
 	read       = flag.Bool("r", false, "read reference energy from pts/inp/ref.out")
 	irdy       = flag.String("irdy", "", "intder file is ready to be used in pts; specify the atom order")
+	count      = flag.Bool("count", false, "read the input file and print the number of calculations needed then exit")
 )
 
 // Global variables
@@ -447,7 +449,7 @@ func Resubmit(name string, err error) string {
 // Drain drains the queue of jobs and receives on ch when ready for more
 func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime float64) {
 	start := time.Now()
-	fmt.Println(deltas)
+	fmt.Println("step sizes: ", deltas)
 	points := make([]Calc, 0)
 	var (
 		nJobs     int
@@ -642,10 +644,9 @@ func queueClear(jobs []string) error {
 
 // ParseDeltas parses a sequence of step sizes input as a string into
 // a slice of floats
-func ParseDeltas(inp string) (out []float64, err error) {
+func ParseDeltas(inp string) (ncoords int, out []float64, err error) {
 	// assume problem
 	err = errors.New("invalid deltas input")
-	var ncoords int
 	geom := strings.Split(Input[Geometry], "\n")
 	if Input[GeomType] == "xyz" {
 		ncoords = 3 * (len(geom) - 2)
@@ -675,6 +676,10 @@ func ParseDeltas(inp string) (out []float64, err error) {
 	}
 	err = nil
 	return
+}
+
+func totalPoints(n int) int {
+	return 2 * n * (n*n*n + 2*n*n + 8*n + 1) / 3
 }
 
 func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
@@ -715,7 +720,7 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 		delta = f
 	}
 	// always parse deltas to fill with default even if no input
-	f, err := ParseDeltas(Input[Deltas])
+	ncoords, f, err := ParseDeltas(Input[Deltas])
 	if err != nil {
 		panic(fmt.Sprintf("%v parsing deltas input: %q\n", err, Input[Deltas]))
 	}
@@ -726,6 +731,7 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 		energyLine = regexp.MustCompile(`^\s*CCCRE\s+=`)
 	case "gocart":
 		flags |= CART
+		fmt.Printf("%d coords requires %d points\n", ncoords, totalPoints(ncoords))
 		energyLine = regexp.MustCompile(`energy=`)
 	case "grad":
 		flags |= GRAD
@@ -734,6 +740,12 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 		energyLine = regexp.MustCompile(`energy=`)
 	default:
 		errExit(fmt.Errorf("%s not implemented as a Program", Input[Program]), "")
+	}
+	if *count {
+		if !DoCart() {
+			fmt.Println("-count only implemented for Cartesians")
+		}
+		os.Exit(0)
 	}
 	mpName := "molpro.in"
 	idName := "intder.in"
@@ -927,7 +939,7 @@ func main() {
 			prog.BuildPoints("pts/file07", atomNames, &cenergies, nil, false)
 		}
 	} else {
-		names, coords := XYZGeom(Input[Geometry])
+		names, coords = XYZGeom(Input[Geometry])
 		natoms = len(names)
 		ncoords = len(coords)
 		prog.Geometry = Input[Geometry] + "\n}\n"
@@ -976,21 +988,26 @@ func main() {
 		if nDerivative > 3 {
 			PrintFile40(fc4, natoms, other4, "fort.40")
 		}
-		var spCoords string
+		var buf bytes.Buffer
 		for i := range coords {
 			if i%3 == 0 && i > 0 {
-				spCoords += fmt.Sprintln()
+				fmt.Fprint(&buf, "\n")
 			}
-			spCoords += fmt.Sprintf(" %f", coords[i])
+			fmt.Fprintf(&buf, " %.10f", coords[i]/angbohr)
 		}
-		fmt.Println(spCoords)
-		spectro, err := LoadSpectro("spectro.in", names, spCoords)
+		spectro, err := LoadSpectro("spectro.in", names, buf.String())
 		if err != nil {
 			errExit(err, "loading spectro input")
 		}
 		// assume 3n-6 freqs
-		zpt, spHarm, spFund, spCorr := DoSpectro(spectro, "./", 3*(ncoords/3)-6)
-		Summarize(zpt, mpHarm, []float64{}, spHarm, spFund, spCorr)
+		nfreqs := 3*(ncoords/3) - 6
+		zpt, spHarm, spFund, spCorr := DoSpectro(spectro, "./", nfreqs)
+		// fill molpro and intder freqs slots with empty slices
+		err = Summarize(zpt, make([]float64, nfreqs),
+			make([]float64, nfreqs), spHarm, spFund, spCorr)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 	if *debug {
 		PrintE2D()
