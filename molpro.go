@@ -569,7 +569,7 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 					node = ""
 				}
 				WritePBS(subfile,
-					&Job{"pts", cmdfile, 35, node, queue}, ptsMaple)
+					&Job{"pts", cmdfile, 35, node, queue, numJobs}, ptsMaple)
 				jobid := Submit(subfile)
 				if *debug {
 					fmt.Println(subfile, jobid)
@@ -597,7 +597,7 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 		} else {
 			node = ""
 		}
-		WritePBS(subfile, &Job{"pts", cmdfile, 35, node, queue}, ptsMaple)
+		WritePBS(subfile, &Job{"pts", cmdfile, 35, node, queue, numJobs}, ptsMaple)
 		jobid := Submit(subfile)
 		if *debug {
 			fmt.Println(subfile, jobid)

@@ -7,7 +7,7 @@ import (
 )
 
 func TestWritePBS(t *testing.T) {
-	p := Job{MakeName(Input[Geometry]), "opt.inp", 35, "", ""}
+	p := Job{MakeName(Input[Geometry]), "opt.inp", 35, "", "", numJobs}
 	write := "testfiles/write/mp.pbs"
 	right := "testfiles/right/mp.pbs"
 	WritePBS(write, &p, pbsSequoia)

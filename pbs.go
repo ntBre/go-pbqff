@@ -19,6 +19,7 @@ type Job struct {
 	Signal   int
 	Host     string
 	Queue    string
+	NumJobs   int
 }
 
 const mapleCmd = `molpro -t 1 `
@@ -48,7 +49,7 @@ mkdir -p $TMPDIR
 
 date
 hostname
-parallel -j 8 --joblog {{.Filename}}.pl.log --progress < {{.Filename}} 2> {{.Filename}}.prog
+parallel -j {{.NumJobs}} --joblog {{.Filename}}.pl.log --progress < {{.Filename}} 2> {{.Filename}}.prog
 date
 
 rm -rf $TMPDIR

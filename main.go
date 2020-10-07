@@ -30,6 +30,7 @@ import (
 
 	"bytes"
 	"io"
+	"path"
 )
 
 const (
@@ -108,6 +109,7 @@ var (
 	flags            int
 	delta            = 0.005   // default step size
 	deltas           []float64 // slice for holding step sizes
+	numJobs          int       = 8
 )
 
 // Finite differences denominators for cartesians
@@ -351,7 +353,7 @@ func Optimize(prog *Molpro) (E0 float64) {
 	// write opt.inp and mp.pbs
 	prog.WriteInput("opt/opt.inp", opt)
 	WritePBS("opt/mp.pbs",
-		&Job{MakeName(Input[Geometry]) + "-opt", "opt/opt.inp", 35, "", ""}, pbsMaple)
+		&Job{MakeName(Input[Geometry]) + "-opt", "opt/opt.inp", 35, "", "", numJobs}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit("opt/mp.pbs")
 	outfile := "opt/opt.out"
@@ -388,7 +390,7 @@ func RefEnergy(prog *Molpro) (E0 float64) {
 		prog.WriteInput(dir+infile, none)
 	}
 	WritePBS(dir+pbsfile,
-		&Job{MakeName(Input[Geometry]) + "-ref", dir + infile, 35, "", ""}, pbsMaple)
+		&Job{MakeName(Input[Geometry]) + "-ref", dir + infile, 35, "", "", numJobs}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit(dir + pbsfile)
 	for err != nil {
@@ -411,7 +413,7 @@ func Frequency(prog *Molpro, absPath string) ([]float64, bool) {
 	// write freq.inp and that mp.pbs
 	prog.WriteInput(absPath+"/freq.inp", freq)
 	WritePBS(absPath+"/mp.pbs",
-		&Job{MakeName(Input[Geometry]) + "-freq", absPath + "/freq.inp", 35, "", ""}, pbsMaple)
+		&Job{MakeName(Input[Geometry]) + "-freq", absPath + "/freq.inp", 35, "", "", numJobs}, pbsMaple)
 	// submit freq, wait in separate goroutine
 	// doesn't matter if this finishes
 	Submit(absPath + "/mp.pbs")
@@ -442,7 +444,7 @@ func Resubmit(name string, err error) string {
 		src.Close()
 		dst.Close()
 	}()
-	WritePBS(name+"_redo.pbs", &Job{"redo", name + "_redo.inp", 35, "", ""}, pbsMaple)
+	WritePBS(name+"_redo.pbs", &Job{"redo", name + "_redo.inp", 35, "", "", numJobs}, pbsMaple)
 	return Submit(name + "_redo.pbs")
 }
 
@@ -689,7 +691,15 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 		fmt.Fprintf(os.Stderr, "pbqff: no input file supplied\n")
 		os.Exit(1)
 	}
-	ParseInfile(args[0])
+	infile := args[0]
+	// set up output and err files and dup their fds to stdout and stderr
+	// https://github.com/golang/go/issues/325
+	base := infile[:len(infile)-len(path.Ext(infile))]
+	outfile, _ := os.Create(base + ".out")
+	errfile, _ := os.Create(base + ".err")
+	syscall.Dup2(int(outfile.Fd()), 1)
+	syscall.Dup2(int(errfile.Fd()), 2)
+	ParseInfile(infile)
 	if Input[Flags] == "noopt" {
 		flags = flags &^ OPT
 	}
@@ -711,6 +721,13 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 			panic(fmt.Sprintf("%v parsing derivative level input: %q\n", err, Input[Deriv]))
 		}
 		nDerivative = d
+	}
+	if Input[NumJobs] != "" {
+		d, err := strconv.Atoi(Input[NumJobs])
+		if err != nil {
+			panic(fmt.Sprintf("%v parsing number of jobs input: %q\n", err, Input[NumJobs]))
+		}
+		numJobs = d
 	}
 	if Input[Delta] != "" {
 		f, err := strconv.ParseFloat(Input[Delta], 64)
