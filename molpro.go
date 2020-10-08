@@ -394,9 +394,9 @@ func Step(coords []float64, steps ...int) []float64 {
 	for _, v := range steps {
 		if v < 0 {
 			v = -1 * v
-			c[v-1] = c[v-1] - delta
+			c[v-1] = c[v-1] - deltas[v-1]
 		} else {
-			c[v-1] += delta
+			c[v-1] += deltas[v-1]
 		}
 	}
 	return c
