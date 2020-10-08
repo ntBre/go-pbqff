@@ -4,7 +4,7 @@ package main
 // derivative force constants
 func Make1D(i int) []ProtoCalc {
 	// Not sure about this one
-	scale := angbohr * (2 * deltas[i-1])
+	scale := angbohr / (2 * deltas[i-1])
 	return []ProtoCalc{
 		{1, HashName(), []int{i}, []int{i}, scale},
 		{-1, HashName(), []int{-i}, []int{i}, scale},

@@ -660,6 +660,10 @@ func ParseDeltas(inp string) (ncoords int, out []float64, err error) {
 	for i := range out {
 		out[i] = delta
 	}
+	if len(inp) == 0 {
+		err = nil
+		return
+	}
 	pairs := strings.Split(inp, ",")
 	for _, p := range pairs {
 		sp := strings.Split(p, ":")
@@ -1004,26 +1008,26 @@ func main() {
 		}
 		if nDerivative > 3 {
 			PrintFile40(fc4, natoms, other4, "fort.40")
-		}
-		var buf bytes.Buffer
-		for i := range coords {
-			if i%3 == 0 && i > 0 {
-				fmt.Fprint(&buf, "\n")
+			var buf bytes.Buffer
+			for i := range coords {
+				if i%3 == 0 && i > 0 {
+					fmt.Fprint(&buf, "\n")
+				}
+				fmt.Fprintf(&buf, " %.10f", coords[i]/angbohr)
 			}
-			fmt.Fprintf(&buf, " %.10f", coords[i]/angbohr)
-		}
-		spectro, err := LoadSpectro("spectro.in", names, buf.String())
-		if err != nil {
-			errExit(err, "loading spectro input")
-		}
-		// assume 3n-6 freqs
-		nfreqs := 3*(ncoords/3) - 6
-		zpt, spHarm, spFund, spCorr := DoSpectro(spectro, "./", nfreqs)
-		// fill molpro and intder freqs slots with empty slices
-		err = Summarize(zpt, make([]float64, nfreqs),
-			make([]float64, nfreqs), spHarm, spFund, spCorr)
-		if err != nil {
-			fmt.Println(err)
+			spectro, err := LoadSpectro("spectro.in", names, buf.String())
+			if err != nil {
+				errExit(err, "loading spectro input")
+			}
+			// assume 3n-6 freqs
+			nfreqs := 3*(ncoords/3) - 6
+			zpt, spHarm, spFund, spCorr := DoSpectro(spectro, "./", nfreqs)
+			// fill molpro and intder freqs slots with empty slices
+			err = Summarize(zpt, make([]float64, nfreqs),
+				make([]float64, nfreqs), spHarm, spFund, spCorr)
+			if err != nil {
+				fmt.Println(err)
+			}
 		}
 	}
 	if *debug {
