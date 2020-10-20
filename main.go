@@ -86,6 +86,7 @@ var (
 	read       = flag.Bool("r", false, "read reference energy from pts/inp/ref.out")
 	irdy       = flag.String("irdy", "", "intder file is ready to be used in pts; specify the atom order")
 	count      = flag.Bool("count", false, "read the input file and print the number of calculations needed then exit")
+	nodel      = flag.Bool("nodel", false, "don't delete used output files")
 )
 
 // Global variables
@@ -551,7 +552,7 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 			MakeCheckpoint()
 			check = 1
 		}
-		if heap.Len() >= chunkSize {
+		if heap.Len() >= chunkSize && !*nodel {
 			heap.Dump()
 		}
 		// Progress

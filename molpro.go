@@ -550,7 +550,7 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, *pf)
 	var (
 		node  string
-		queue string
+		queue string = Input[Queue]
 	)
 	for f := range calcs {
 		calcs[f].cmdfile = cmdfile
@@ -565,8 +565,6 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 					node = tmp[1]
 					queue = tmp[0]
 					nodes = nodes[1:]
-				} else {
-					node = ""
 				}
 				WritePBS(subfile,
 					&Job{"pts", cmdfile, 35, node, queue, numJobs}, ptsMaple)
@@ -593,9 +591,6 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 			node = tmp[1]
 			queue = tmp[0]
 			nodes = nodes[1:]
-			nodes = nodes[1:]
-		} else {
-			node = ""
 		}
 		WritePBS(subfile, &Job{"pts", cmdfile, 35, node, queue, numJobs}, ptsMaple)
 		jobid := Submit(subfile)
