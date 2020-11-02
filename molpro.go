@@ -562,9 +562,12 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 			if *count == chunkSize || (f == len(files)-1 && end) {
 				if len(nodes) > 0 {
 					tmp := strings.Split(nodes[0], ":")
-					node = tmp[1]
-					queue = tmp[0]
-					nodes = nodes[1:]
+					// defer to Input[Queue] when selecting a queue
+					if queue == "" || tmp[0] == queue {
+						node = tmp[1]
+						queue = tmp[0]
+						nodes = nodes[1:]
+					}
 				}
 				WritePBS(subfile,
 					&Job{"pts", cmdfile, 35, node, queue, numJobs}, ptsMaple)
@@ -588,9 +591,11 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 	if len(calcs) == 0 && end {
 		if len(nodes) > 0 {
 			tmp := strings.Split(nodes[0], ":")
-			node = tmp[1]
-			queue = tmp[0]
-			nodes = nodes[1:]
+			if queue == "" || tmp[0] == queue {
+				node = tmp[1]
+				queue = tmp[0]
+				nodes = nodes[1:]
+			}
 		}
 		WritePBS(subfile, &Job{"pts", cmdfile, 35, node, queue, numJobs}, ptsMaple)
 		jobid := Submit(subfile)

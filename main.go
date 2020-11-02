@@ -5,7 +5,10 @@ The goal of this program is to streamline the generation
 of quartic force fields, automating as many pieces as possible.
 (setq compile-command "go build . && scp -C pbqff woods:Programs/pbqff/.")
 (my-recompile)
+Copy to Programs directory
 (progn (setq compile-command "go build . && scp -C pbqff woods:Programs/pbqff/.") (my-recompile))
+Copy to home area so as not to disrupt running
+(progn (setq compile-command "go build . && scp -C pbqff woods:") (my-recompile))
 */
 
 package main
@@ -87,6 +90,7 @@ var (
 	irdy       = flag.String("irdy", "", "intder file is ready to be used in pts; specify the atom order")
 	count      = flag.Bool("count", false, "read the input file and print the number of calculations needed then exit")
 	nodel      = flag.Bool("nodel", false, "don't delete used output files")
+	format     = flag.Bool("fmt", false, "parse existing output files and print them in anpass format")
 )
 
 // Global variables
@@ -254,6 +258,10 @@ func ParseFlags() []string {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+	if *format {
+		FormatOutput("pts/inp/")
+		os.Exit(0)
+	}
 	switch {
 	case *freqs:
 		flags = FREQS
