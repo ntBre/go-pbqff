@@ -349,6 +349,7 @@ func DoSpectro(spectro *Spectro, dir string, nharms int) (float64, []float64, []
 	RunSpectro(dir+"spectro2")
 	// have rotational constants from FreqReport, but need to incorporate them
 	zpt, spHarm, spFund, spCorr,
-		_, _, _ := summarize.Spectro(dir+"spectro2.out", spectro.Nfreqs)
+		_, _, _,
+		_, _, _, _ := summarize.Spectro(dir+"spectro2.out", spectro.Nfreqs)
 	return zpt, spHarm, spFund, spCorr
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// Subtract takes the difference between two []float64s
 func Subtract(a, b []float64) []float64 {
 	if len(a) != len(b) {
 		panic("Subtract: dimension mismatch")
