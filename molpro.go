@@ -347,9 +347,9 @@ func (m *Molpro) BuildPoints(filename string, atomNames []string, target *[]Coun
 						*target = append(*target, CountFloat{Count: 1})
 					}
 					Push(dir+"/inp", pf, count, []string{fname},
-						[]Calc{{Name: basename, Targets: []Target{{1, target, geom}}}}, ch, end)
+						[]Calc{{Name: basename, Scale: 1.0, Targets: []Target{{1, target, geom}}}}, ch, end)
 				} else {
-					ch <- Calc{Name: basename, Targets: []Target{{1, target, geom}}}
+					ch <- Calc{Name: basename, Scale: 1.0, Targets: []Target{{1, target, geom}}}
 				}
 				geom++
 				buf.Reset()
