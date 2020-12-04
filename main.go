@@ -9,6 +9,10 @@ Copy to Programs directory
 (progn (setq compile-command "go build . && scp -C pbqff woods:Programs/pbqff/.") (my-recompile))
 Copy to home area so as not to disrupt running
 (progn (setq compile-command "go build . && scp -C pbqff woods:") (my-recompile))
+
+To decrease CPU usage increase sleepint input from default of 1 sec
+and increase checkint from default 100 or disable entirely by setting
+it to "no"
 */
 
 package main
@@ -34,6 +38,7 @@ import (
 	"bytes"
 	"io"
 	"path"
+	"runtime/pprof"
 )
 
 const (
@@ -111,10 +116,13 @@ var (
 	jobLimit         int = 1000
 	chunkSize        int = 64
 	checkAfter       int = 100
+	sleep                = 1
+	nocheck          bool
 	flags            int
 	delta            = 0.005   // default step size
 	deltas           []float64 // slice for holding step sizes
 	numJobs          int       = 8
+	StartCPU         int64
 )
 
 // Finite differences denominators for cartesians
@@ -554,11 +562,14 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 		}
 		if shortenBy < 1 {
 			fmt.Fprintln(os.Stderr, "Didn't shorten, sleeping")
-			time.Sleep(time.Second)
+			time.Sleep(time.Duration(sleep) * time.Second)
 		}
 		if check >= checkAfter {
-			MakeCheckpoint()
+			if !nocheck {
+				MakeCheckpoint()
+			}
 			check = 1
+			fmt.Fprintf(os.Stderr, "CPU time: %.3f s\n", float64(GetCPU()-StartCPU)/1e9)
 		}
 		if heap.Len() >= chunkSize && !*nodel {
 			heap.Dump()
@@ -742,6 +753,24 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 		}
 		numJobs = d
 	}
+	if s := Input[SleepInt]; s != "" {
+		d, err := strconv.Atoi(s)
+		if err != nil {
+			panic(fmt.Sprintf("%v parsing sleep interval: %q\n", err, s))
+		}
+		sleep = d
+	}
+	switch Input[CheckInt] {
+	case "no":
+		nocheck = true
+	default:
+		d, err := strconv.Atoi(Input[CheckInt])
+		if err != nil {
+			panic(fmt.Sprintf("%v parsing checkpoint interval: %q\n", err, Input[CheckInt]))
+		}
+		checkAfter = d
+	}
+
 	if Input[Delta] != "" {
 		f, err := strconv.ParseFloat(Input[Delta], 64)
 		if err != nil {
@@ -894,9 +923,26 @@ func PrintE2D() {
 	fmt.Print("\n")
 }
 
+// GetCPU returns the CPU time used by the current process in
+// nanoseconds
+func GetCPU() int64 {
+	use := new(syscall.Rusage)
+	syscall.Getrusage(syscall.RUSAGE_SELF, use)
+	return use.Utime.Nano() + use.Stime.Nano()
+}
+
+// GetCPULimit returns the Cur (soft) and Max (hard) CPU time limits
+// in seconds
+func GetCPULimit() (cur, max uint64) {
+	lim := new(syscall.Rlimit)
+	syscall.Getrlimit(syscall.RLIMIT_CPU, lim)
+	return lim.Cur, lim.Max
+}
+
 var submitted int
 
 func main() {
+	StartCPU = GetCPU()
 	// clear the queue if panicking
 	defer func() {
 		if r := recover(); r != nil {
@@ -915,6 +961,16 @@ func main() {
 		errExit(fmt.Errorf("received SIGTERM"), "")
 	}()
 	prog, intder, anpass := initialize()
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			panic(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+	cur, max := GetCPULimit() // run after initialize so output goes to file
+	fmt.Printf("Maximum CPU time (s):\n\tCur: %d\n\tMax: %d\n", cur, max)
 	var (
 		mpHarm    []float64
 		finished  bool

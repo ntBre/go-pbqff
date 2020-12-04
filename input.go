@@ -21,6 +21,8 @@ const (
 	Deriv
 	JobLimit
 	ChunkSize
+	CheckInt
+	SleepInt
 	NumJobs
 	IntderCmd
 	AnpassCmd
@@ -52,6 +54,8 @@ func ParseInfile(filename string) {
 		Regexp{regexp.MustCompile(`(?i)deriv=`), Deriv},
 		Regexp{regexp.MustCompile(`(?i)joblimit=`), JobLimit},
 		Regexp{regexp.MustCompile(`(?i)chunksize=`), ChunkSize},
+		Regexp{regexp.MustCompile(`(?i)checkint=`), CheckInt},
+		Regexp{regexp.MustCompile(`(?i)sleepint=`), SleepInt},
 		Regexp{regexp.MustCompile(`(?i)numjobs=`), NumJobs},
 		Regexp{regexp.MustCompile(`(?i)intder=`), IntderCmd},
 		Regexp{regexp.MustCompile(`(?i)anpass=`), AnpassCmd},
