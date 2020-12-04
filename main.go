@@ -237,7 +237,7 @@ type GarbageHeap struct {
 
 // Add a filename to the heap
 func (g *GarbageHeap) Add(basename string) {
-	g.heap = append(g.heap, basename)
+	g.heap = append(g.heap, basename+".inp", basename+".out")
 }
 
 // Len returns the length of g's underlying slice
@@ -247,12 +247,7 @@ func (g *GarbageHeap) Len() int {
 
 // Dump deletes the globbed files in the heap using an appended *
 func (g *GarbageHeap) Dump() {
-	toDelete := make([]string, 0)
-	for _, v := range g.heap {
-		files, _ := filepath.Glob(v + "*")
-		toDelete = append(toDelete, files...)
-	}
-	for _, f := range toDelete {
+	for _, f := range g.heap {
 		os.Remove(f)
 	}
 	g.heap = []string{}
