@@ -34,5 +34,5 @@ func TestParseOutput(t *testing.T) {
 
 func TestFormatOutput(t *testing.T) {
 	FormatOutput("testfiles/read/output/")
-	t.Errorf("")
+	// t.Errorf("")
 }

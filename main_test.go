@@ -22,7 +22,7 @@ func TestGHAdd(t *testing.T) {
 	heap := new(GarbageHeap)
 	heap.Add("testname")
 	got := heap.heap
-	want := []string{"testname"}
+	want := []string{"testname.inp", "testname.out"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, wanted %v\n", got, want)
 	}

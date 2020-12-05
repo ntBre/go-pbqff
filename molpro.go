@@ -101,10 +101,6 @@ func FormatZmat(geom string) string {
 func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, err error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
-	if _, err = os.Stat(filename); os.IsNotExist(err) {
-		return brokenFloat, 0, grad, ErrFileNotFound
-	}
-	error := regexp.MustCompile(`(?i)[^_]error`)
 	lines, err := ReadFile(filename)
 	if err != nil {
 		return brokenFloat, 0, grad, ErrFileNotFound
@@ -134,7 +130,7 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 		coords[len(coords)-1] = strings.TrimRight(coords[len(coords)-1], "]")
 		return coords
 	}
-
+	error := regexp.MustCompile(`(?i)[^_]error`)
 	for _, line := range lines {
 		if skip > 0 {
 			skip--
