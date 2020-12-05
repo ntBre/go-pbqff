@@ -136,7 +136,8 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 			skip--
 			continue
 		}
-		if error.MatchString(line) {
+		if strings.Contains(strings.ToLower(line), "error") &&
+			error.MatchString(line) {
 			return result, time, grad, ErrFileContainsError
 		}
 		if energyLine.MatchString(line) &&

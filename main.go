@@ -758,6 +758,7 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	switch Input[CheckInt] {
 	case "no":
 		nocheck = true
+	case "":
 	default:
 		d, err := strconv.Atoi(Input[CheckInt])
 		if err != nil {
@@ -1093,4 +1094,5 @@ func main() {
 	if *debug {
 		PrintE2D()
 	}
+	fmt.Printf("total CPU time used: %.3f s\n", float64(GetCPU()-StartCPU)/1e9)
 }
