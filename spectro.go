@@ -181,7 +181,8 @@ func (s *Spectro) ReadOutput(filename string) {
 			continue
 		}
 		if coriol {
-			if line == "" || strings.Contains(line, "NO MODES FOUND") {
+			if line == "" ||
+				strings.Contains(line, "NO MODES FOUND") {
 				coriol = false
 			} else {
 				coriolCount++
@@ -189,7 +190,8 @@ func (s *Spectro) ReadOutput(filename string) {
 			}
 		}
 		if fermi1 {
-			if line == "" || strings.Contains(line, "NOT FOUND") {
+			if line == "" ||
+				strings.Contains(line, "NOT FOUND") {
 				fermi1 = false
 			} else {
 				fermi1Count++
@@ -197,7 +199,8 @@ func (s *Spectro) ReadOutput(filename string) {
 			}
 		}
 		if fermi2 {
-			if line == "" || strings.Contains(line, "NOT FOUND") {
+			if line == "" ||
+				strings.Contains(line, "NOT FOUND") {
 				fermi2 = false
 			} else {
 				fermi2Count++
@@ -342,11 +345,11 @@ func RunSpectro(filename string) {
 // DoSpectro runs spectro in /-terminated dir, assuming there are nharms harmonic frequencies
 func DoSpectro(spectro *Spectro, dir string, nharms int) (float64, []float64, []float64, []float64) {
 	spectro.Nfreqs = nharms
-	spectro.WriteInput(dir+"spectro.in")
-	RunSpectro(dir+"spectro")
-	spectro.ReadOutput(dir+"spectro.out")
-	spectro.WriteInput(dir+"spectro2.in")
-	RunSpectro(dir+"spectro2")
+	spectro.WriteInput(dir + "spectro.in")
+	RunSpectro(dir + "spectro")
+	spectro.ReadOutput(dir + "spectro.out")
+	spectro.WriteInput(dir + "spectro2.in")
+	RunSpectro(dir + "spectro2")
 	// have rotational constants from FreqReport, but need to incorporate them
 	zpt, spHarm, spFund, spCorr,
 		_, _, _,
