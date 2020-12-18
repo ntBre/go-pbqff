@@ -39,6 +39,9 @@ import (
 	"io"
 	"path"
 	"runtime/pprof"
+
+	"github.com/ntBre/chemutils/spectro"
+	"github.com/ntBre/chemutils/summarize"
 )
 
 const (
@@ -722,6 +725,7 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	if Input[Flags] == "noopt" {
 		flags = flags &^ OPT
 	}
+	spectro.SpectroCommand = Input[SpectroCmd]
 	if Input[JobLimit] != "" {
 		v, err := strconv.Atoi(Input[JobLimit])
 		if err == nil {
@@ -863,6 +867,8 @@ func XYZGeom(geom string) (names []string, coords []float64) {
 	return
 }
 
+// TODO these are all the same besides the 6*natoms in 15
+
 // PrintFile15 prints the second derivative force constants in the
 // format expected by SPECTRO
 func PrintFile15(fc []CountFloat, natoms int, filename string) int {
@@ -993,7 +999,7 @@ func main() {
 		}
 		// only need this if running a freq
 		prog.Geometry = UpdateZmat(prog.Geometry, zmat)
-		// run the frequency in the background
+		// run the frequency in the background and don't wait
 		go func() {
 			absPath, _ := filepath.Abs("freq")
 			mpHarm, finished = Frequency(prog, absPath)
@@ -1016,7 +1022,8 @@ func main() {
 			go func() {
 				prog.BuildPoints("pts/file07", atomNames, &cenergies, ch, true)
 			}()
-			// this works if no points were deleted, else need a resume from checkpoint thing
+			// this works if no points were deleted, else
+			// need a resume from checkpoint thing
 		} else {
 			prog.BuildPoints("pts/file07", atomNames, &cenergies, nil, false)
 		}
@@ -1050,15 +1057,21 @@ func main() {
 		}
 		longLine := DoAnpass(anpass, energies)
 		coords, intderHarms := DoIntder(intder, atomNames, longLine)
-		spectro, err := LoadSpectro("spectro.in", atomNames, coords)
+		spec, err := spectro.Load("spectro.in")
 		if err != nil {
 			errExit(err, "loading spectro input")
 		}
-		zpt, spHarm, spFund, spCorr := DoSpectro(spectro, "freqs/", len(intderHarms))
-		if !finished {
-			mpHarm = make([]float64, spectro.Nfreqs)
+		spec.FormatGeom(atomNames, coords)
+		spec.WriteInput("freqs/spectro.in")
+		err = spec.DoSpectro("freqs/")
+		if err != nil {
+			errExit(err, "running spectro")
 		}
-		Summarize(zpt, mpHarm, intderHarms, spHarm, spFund, spCorr)
+		if !finished {
+			mpHarm = make([]float64, spec.Nfreqs)
+		}
+		res := summarize.Spectro(filepath.Join("freqs", "spectro2.out"))
+		Summarize(res.ZPT, mpHarm, intderHarms, res.Harm, res.Fund, res.Corr)
 	} else {
 		N3N := natoms * 3 // from spectro manual pg 12
 		other3 := N3N * (N3N + 1) * (N3N + 2) / 6
@@ -1076,16 +1089,21 @@ func main() {
 				}
 				fmt.Fprintf(&buf, " %.10f", coords[i]/angbohr)
 			}
-			spectro, err := LoadSpectro("spectro.in", names, buf.String())
+			spec, err := spectro.Load("spectro.in")
 			if err != nil {
 				errExit(err, "loading spectro input")
 			}
-			// assume 3n-6 freqs
-			nfreqs := 3*(ncoords/3) - 6
-			zpt, spHarm, spFund, spCorr := DoSpectro(spectro, "./", nfreqs)
+			spec.FormatGeom(names, buf.String())
+			spec.WriteInput("spectro.in")
+			err = spec.DoSpectro(".")
+			if err != nil {
+				errExit(err, "running spectro")
+			}
+			res := summarize.Spectro("spectro2.out")
 			// fill molpro and intder freqs slots with empty slices
-			err = Summarize(zpt, make([]float64, nfreqs),
-				make([]float64, nfreqs), spHarm, spFund, spCorr)
+			nfreqs := len(res.Harm)
+			err = Summarize(res.ZPT, make([]float64, nfreqs),
+				make([]float64, nfreqs), res.Harm, res.Fund, res.Corr)
 			if err != nil {
 				fmt.Println(err)
 			}

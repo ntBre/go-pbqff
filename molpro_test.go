@@ -10,6 +10,8 @@ import (
 	"testing"
 )
 
+var names = []string{"Al", "O", "O", "Al"}
+
 func TestLoadMolpro(t *testing.T) {
 	got, _ := LoadMolpro("testfiles/load/molpro.in")
 	want := &Molpro{

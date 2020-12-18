@@ -248,7 +248,6 @@ func (i *Intder) ConvertCart(cart string) (names []string) {
 	// remove last newline
 	buf.Truncate(buf.Len() - 1)
 	pattern, _ := Pattern(buf.String(), 0, false)
-	fmt.Printf("---\n%s\n", buf.String())
 	swaps, order, ok := MatchPattern(i.Pattern, pattern)
 	if !ok {
 		// need to multiply through by a negative and try again
