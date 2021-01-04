@@ -95,10 +95,13 @@ var (
 	debug      = flag.Bool("debug", false, "for debugging, print 2nd derivative energies array")
 	checkpoint = flag.Bool("c", false, "resume from checkpoint")
 	read       = flag.Bool("r", false, "read reference energy from pts/inp/ref.out")
-	irdy       = flag.String("irdy", "", "intder file is ready to be used in pts; specify the atom order")
-	count      = flag.Bool("count", false, "read the input file and print the number of calculations needed then exit")
-	nodel      = flag.Bool("nodel", false, "don't delete used output files")
-	format     = flag.Bool("fmt", false, "parse existing output files and print them in anpass format")
+	irdy       = flag.String("irdy", "",
+		"intder file is ready to be used in pts; specify the atom order")
+	count = flag.Bool("count", false,
+		"read the input file and print the number of calculations needed then exit")
+	nodel  = flag.Bool("nodel", false, "don't delete used output files")
+	format = flag.Bool("fmt", false,
+		"parse existing output files and print them in anpass format")
 )
 
 // Global variables
@@ -368,7 +371,8 @@ func Optimize(prog *Molpro) (E0 float64) {
 	// write opt.inp and mp.pbs
 	prog.WriteInput("opt/opt.inp", opt)
 	WritePBS("opt/mp.pbs",
-		&Job{MakeName(Input[Geometry]) + "-opt", "opt/opt.inp", 35, "", "", numJobs}, pbsMaple)
+		&Job{MakeName(Input[Geometry]) + "-opt", "opt/opt.inp",
+			35, "", "", numJobs}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit("opt/mp.pbs")
 	outfile := "opt/opt.out"
@@ -741,14 +745,16 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	if Input[Deriv] != "" {
 		d, err := strconv.Atoi(Input[Deriv])
 		if err != nil {
-			panic(fmt.Sprintf("%v parsing derivative level input: %q\n", err, Input[Deriv]))
+			panic(fmt.Sprintf("%v parsing derivative level input: %q\n",
+				err, Input[Deriv]))
 		}
 		nDerivative = d
 	}
 	if Input[NumJobs] != "" {
 		d, err := strconv.Atoi(Input[NumJobs])
 		if err != nil {
-			panic(fmt.Sprintf("%v parsing number of jobs input: %q\n", err, Input[NumJobs]))
+			panic(fmt.Sprintf("%v parsing number of jobs input: %q\n",
+				err, Input[NumJobs]))
 		}
 		numJobs = d
 	}
@@ -766,7 +772,8 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	default:
 		d, err := strconv.Atoi(Input[CheckInt])
 		if err != nil {
-			panic(fmt.Sprintf("%v parsing checkpoint interval: %q\n", err, Input[CheckInt]))
+			panic(fmt.Sprintf("%v parsing checkpoint interval: %q\n",
+				err, Input[CheckInt]))
 		}
 		checkAfter = d
 	}
@@ -788,7 +795,7 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	switch Input[Program] {
 	case "cccr":
 		energyLine = regexp.MustCompile(`^\s*CCCRE\s+=`)
-	case "gocart":
+	case "cart", "gocart":
 		flags |= CART
 		fmt.Printf("%d coords requires %d points\n", ncoords, totalPoints(ncoords))
 		energyLine = regexp.MustCompile(`energy=`)

@@ -1,0 +1,13 @@
+memory,1,g
+
+nocompress;
+
+geometry={
+basis={
+default,cc-pVTZ-F12
+}
+set,charge=0
+set,spin=0
+hf
+CCSD(T)-F12
+optg

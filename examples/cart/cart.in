@@ -1,0 +1,21 @@
+program=gocart
+queueType=maple
+geomType=xyz
+geometry={
+ 3
+ Comment
+ H          0.0000000000        0.7574590974        0.5217905143
+ O          0.0000000000        0.0000000000       -0.0657441568
+ H          0.0000000000       -0.7574590974        0.5217905143
+}
+delta=0.005
+deltas=1:0.075,4:0.075,7:0.075
+flags=noopt
+deriv=4
+sleepint=5
+joblimit=8000
+chunksize=64
+numjobs=8
+intder=/ddn/home6/r2533/programs/intder/Intder2005.x
+anpass=/ddn/home6/r2533/programs/anpass/anpass_cerebro.x
+spectro=/ddn/home6/r2533/programs/spec3jm.ifort-O0.static.x

@@ -1,0 +1,16 @@
+memory,1,g
+
+nocompress;
+
+geometry={
+basis={
+default,cc-pVTZ-F12
+}
+set,charge=0
+set,spin=0
+df-hf
+DF-CCSD(T)-F12
+forces,varsav
+show[f20.15],gradx
+show[f20.15],grady
+show[f20.15],gradz

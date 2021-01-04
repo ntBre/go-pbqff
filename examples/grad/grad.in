@@ -1,0 +1,17 @@
+program=grad
+queueType=maple
+geomType=xyz
+geometry={
+    3
+ DF-CCSD(T)-F12/CC-PVTZ-F12  ENERGY=-76.36827708
+ H          0.0000000000        0.7578204038        0.5219210812
+ O          0.0000000000       -0.0000000012       -0.0660052896
+ H          0.0000000000       -0.7578204026        0.5219210802
+}
+flags=noopt
+deriv=4
+joblimit=8000
+chunksize=64
+intder=/ddn/home6/r2533/programs/intder/Intder2005.x
+anpass=/ddn/home6/r2533/programs/anpass/anpass_cerebro.x
+spectro=/ddn/home6/r2533/programs/spec3jm.ifort-O0.static.x

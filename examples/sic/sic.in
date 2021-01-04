@@ -1,0 +1,13 @@
+program=molpro
+queueType=maple
+geomType=zmat
+geometry={
+O
+H 1 oh
+H 1 oh 2 hoh
+oh=1.0 ANG
+hoh=109.5 DEG
+}
+intder=/ddn/home6/r2533/programs/intder/Intder2005.x
+anpass=/ddn/home6/r2533/programs/anpass/anpass_cerebro.x
+spectro=/ddn/home6/r2533/programs/spec3jm.ifort-O0.static.x
