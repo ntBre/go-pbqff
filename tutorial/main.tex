@@ -4,6 +4,7 @@
 \usepackage{array}
 \usepackage{verbatim}
 \usepackage{listings}
+\usepackage{pmboxdraw}
 
 \title{pbqff tutorial}
 \author{Brent R. Westbrook}
@@ -11,6 +12,9 @@
 \begin{document}
 
 \maketitle
+
+% TODO table of contents
+% TODO links in it
 
 \section{Introduction}
 
@@ -229,7 +233,9 @@ given in Table \ref{tab:kwords}, even the \verb|program|,
 \verb|queue|, and \verb|geomType| lines are technically redundant, but
 it's nice to include some of these for future reference. Example:
 
-\lstinputlisting{../examples/sic/sic.in}
+\lstinputlisting[
+caption={pbqff input for an SIC calculation}
+]{../examples/sic/sic.in}
 
 One thing to note is that there is no brace between the Z-matrix
 itself and the values of the parameters, as you might expect if you
@@ -244,7 +250,9 @@ step sizes or derivative level. Again, many of these options are
 technically optional since they are the same as the defaults, but it's
 nice to be explicit when possible. Example:
 
-\lstinputlisting{../examples/cart/cart.in}
+\lstinputlisting[
+caption={pbqff input for a Cartesian calculation}
+]{../examples/cart/cart.in}
 
 Of note here is a first example of an XYZ geometry. You can see that
 the number of atoms line and comment are present. Alignment and
@@ -265,14 +273,153 @@ coupled cluster, so if you want to use gradients keep that in
 mind. Based on some forthcoming research from our group, you probably
 don't want to use gradients though. Example:
 
-\lstinputlisting{../examples/grad/grad.in}
+\lstinputlisting[
+caption={pbqff input for a gradient calculation}
+]{../examples/grad/grad.in}
 
 \section{Template Files}
 
-\subsection{molpro}
+As mentioned previously, pbqff still requires you to give it template
+input files for Molpro and spectro, in the case of Cartesian QFFs, and
+for Molpro, spectro, intder, and anpass for SICs. It should probably
+take template PBS files as well, but the flexibility therein has been
+less necessary so far. The Molpro file is the most important because
+it is required to run any computations, so we will start with that
+one. Next, we will look at the spectro input file since that is common
+to both Cartesian and SIC QFFs. However, the spectro input file is not
+technically required for the program to run usefully. The final real
+products of pbqff are the force constant files that are fed into
+spectro. The program will print an error if it can't find the spectro
+input file, but you can easily run spectro yourself (or with my
+gspectro program) afterward. For SICs both the intder and anpass files
+are strictly required by the program to even start running.
+
+\subsection{Molpro}
+
+The basic Molpro template file is very straightforward. The only
+difference indicating that is a template is the lack of a closing
+brace in the geometry section. Other than that, you can include any
+option accepted by Molpro and it will be transmitted directly into
+each of the single point energy input files. The \verb|optg| line is
+optional if you are going to use the \verb|noopt| flag anyway, but if
+you use that flag the program will automatically remove that line from
+the input.
+
+\lstinputlisting[
+caption={Basic Molpro template file example}
+]{../examples/sic/molpro.in}
+
+For a gradient calculation, a couple minor changes are required, as
+shown in the listing below. In this case, the gradient is what needs
+to be extracted from the output file, not the energy. Molpro prints
+the energy with sufficient precision by default, but it only prints
+the gradient to 8 decimal places. As a result, we need to use the
+\verb|varsav| directive to save the gradients in each direction to
+variables, and then the \verb|show| directive to print each of them in
+a 20.15 format. The 20 is actually irrelevant, and 12 decimal places
+should be sufficient, but you might as well request a little extra
+precision just to be safe. Additionally, as touched on before, Molpro
+only has analytic energy gradients for DF-CCSD(T), so make sure to use
+both DF-HF and DF-CCSD(T) for the energy calculations.
+
+\lstinputlisting[
+caption={Molpro template file example for a gradient calculation}
+]{../examples/grad/molpro.in}
+
+No additional convergence criteria are specified in this gradient
+listing, so make sure you include those if you are doing
+publication-quality research. The typical criteria used in our papers
+are demonstrated in the SIC listing.
+
 \subsection{spectro}
+
+The spectro input file should look like the listing below and must be
+named spectro.in. The necessary sections are the initial
+\verb|# SPECTRO ####| section, which includes the input directives;
+the \verb|# GEOM ####| section, which has the geometry; the
+\verb|# WEIGHT ####| section, which obviously has the masses; and the
+\verb|# CURVIL ####| section, which contains the curvilinear
+coordinate system to be used for the rotational and geometry
+analysis. No resonance information should be included, and
+correspondingly all of the input directives that enable resonance
+accounting should be set to zero. I plan to have the program enforce
+this in the future, but for now you need to make sure of it. The
+geometry does not need to have the right geometry or even the same
+atoms as the input molecule because the program will rewrite the file
+with the appropriate values. However, the order of the atoms should
+match the order present in the input geometry. If you are given a
+template spectro file, I would advise changing the geometry in the
+pbqff input file to match the spectro order. If instead you generate
+the spectro file yourself, just make sure it lines up with the input
+file. The weight section does not need to be correct unless you enable
+its use in the input directives, as is usually the case with
+spectro. It may not even have to be present, but that is a spectro
+question, not a pbqff question.
+
+{\tiny
+\lstinputlisting[
+caption={Example spectro input file for water}
+]{../examples/grad/spectro.in}
+}
+
+Apologies for the size, but those integer input parameters take up a
+lot of room! Just like gspectro, when pbqff runs spectro, it actually
+runs it twice to incorporate the resonances on the second pass. That's
+why it's safe to leave out the resonance information in the template
+file. The input directives will also be updated to reflect the
+necessary resonances, so taking your results from spectro2.out will
+give the correct values. However, pbqff cannot yet handle degenerate
+modes, at least in an explicit sense, so if you need to include a
+\verb|# DEGMODE ####| section, it might work, but you should
+double-check that part by hand. If you can confirm one way or the
+other, please let me know.
+
 \subsection{intder}
+
+The listing below shows the top portion of a template intder file,
+which must be named intder.in, but it shouldn't be too
+interesting. pbqff just expects a normal intder file for generating
+points, but it will take the geometry you leave in there and try to
+match the optimized geometry to it by exchanging rows and
+columns. This typically works very well if the intder file is from a
+molecule with the same symmetry. If you encounter an error saying
+``transform failed'' this coordinate transform is what it is referring
+to. In that case, jump to the Troubleshooting section for a discussion
+of how to address that using a couple of command line
+flags. Otherwise, just feed it a full intder file, either one you
+obtained from someone else or a previous calculation or one you
+generated using taylor.py and its ilk.
+
+{\tiny
+\lstinputlisting[
+caption={Partial example intder input file for water},
+lastline=17
+]{../examples/sic/intder.in}
+}
+
 \subsection{anpass}
+
+Like that of intder, the anpass handling is very
+straightforward. pbqff will parse the anpass file to make sure it
+prints the correct number format and then replace the relative
+energies at the ends of the lines in that section. It does not do any
+validation of the step sizes or of the unknown blocks at the end, so
+make sure you use a well-formed anpass input file that corresponds to
+your intder file. Similar to spectro, pbqff will run anpass once to
+find a new stationary point, and then run again at that stationary
+point, just like you would do with the whole ``long-line'' thing by
+hand. The file must be named anpass.in, which may require a quick
+rename if you copy over an existing anpass1.in file from another
+project. See below for an abbreviated listing of the top of the file,
+just to be consistent with the other sections. Hopefully you know what
+it's supposed to look like. The title only agrees with the contents of
+the file because I got this from someone else. Rest assured that it
+has no effect on the calculation.
+
+\lstinputlisting[
+caption={Partial example anpass input file for water},
+lastline=12
+]{../examples/sic/anpass.in}
 
 \section{Running the Program}
 
@@ -280,9 +427,175 @@ Now that you have all of the requisite input files for any type of
 calculation, you are ready to run the program! In this section I will
 show the basic input command, along with an explanation of the parts
 that aren't as basic as you would expect, and also describe each of
-the flags you can use to modify the program's behavior.
+the flags you can use to modify the program's behavior. The most basic
+form of the command is
+
+\begin{verbatim}
+$ pbqff input.file
+\end{verbatim}
+
+\noindent
+assuming that you have added the executable to your path under the
+name pbqff. Since most of the interesting jobs you will be running will
+take a while, you likely want to run
+
+\begin{verbatim}
+$ pbqff input.file & 
+\end{verbatim}
+
+\noindent
+instead, to put the job in the background. However, as you may or may
+not know, logging out of your terminal session, i.e. exiting your ssh
+connection, sends SIGHUP to all of the programs you had running. This
+means in effect that any background task you started is killed when
+you log out. To combat this, you need to tell the shell not to send
+SIGHUP using the \verb|disown| command with its \verb|-h| flag. With this in mind, the
+command I use to run pbqff is 
+
+\begin{verbatim}
+$ pbqff infile.in & disown -h
+\end{verbatim}
+
+Assuming all goes well, this should immediately create infile.out and
+infile.err. Currently, the .out file does not have too much
+information in it, but the .err file reports the progress of your
+calculation once the points start running. To follow these files, I
+typically use the command
+
+\begin{verbatim}
+$ tail -F infile.out infile.err
+\end{verbatim}
+
+\noindent
+where the \verb|-F| flag is like the lowercase version, but it will
+pick up a file if it is newly created. This is not that important for
+the out and err files, but if you also want to follow either the
+optimization file or the reference energy file in the case of a
+Cartesian run, it can come in handy. These two files are
+\verb|opt/opt.out| and \verb|pts/inp/ref.out|, respectively.
+
+\subsection{Directory Structure}
+
+These filenames give a good lead-in to the directory structure created
+by the program. In the case of SIC QFFs, I used my conventional
+directory structure that looks like
+
+\begin{verbatim}
+.
+├── freq
+├── freqs
+├── opt
+└── pts
+    └── inp
+\end{verbatim}
+
+\noindent
+where opt is used for the geometry optimization, freq is used for the
+Molpro harmonic frequency calculation, pts is used to run intder,
+while pts/inp holds the actual input files, and freqs is where I run
+intder, anpass, and spectro to get the anharmonic data. Cartesian QFFs
+are more streamlined, so everything there is either run in the base
+directory where pbqff is run or in pts/inp. In both cases, you
+generally should not need to descend into the created directories
+unless you are doing some heavy troubleshooting. The only real
+exception is the SIC freqs directory, which will contain your final
+spectro2.out file. Another less important exception could be the SIC
+freq directory if you need to compare the harmonic frequencies to
+those from intder and spectro in the freqs directory.
 
 % run jobs and commandline flags
+
+\subsection{Flags}
+
+You can already access the main functions of pbqff and control its
+behavior to some extent using the input file. However, there are also
+some additional command line flags that you can use to further modify
+the behavior. The most important flag is the \verb|-h| or \verb|-help|
+flag because it will list the help for all of the other flags. I also
+plan to replicate much of the fundamentals of this section in the man
+page, but here I hope to give some examples and explanations of the
+flags in addition to their basic usages. Like the keywords, the flags
+can be found in Table \ref{tab:flags}.
+
+\begin{table}[ht]
+  \centering
+  \caption{Command line flags}
+  \label{tab:flags}
+  \begin{tabular}{|c|c|c|p{0.6\textwidth}|}
+    \hline
+    Flag & Type & Default & Description \\
+    \hline
+    c & Bool & False & Resume from checkpoint; requires the o flag to overwrite existing directory.\\
+    count & Bool & False & Read the input file for a Cartesian QFF,
+                           print the number of calculations needed, and exit.\\
+    cpuprofile & String & None & Write a CPU profile to the supplied filename.\\
+    debug & Bool & False & Print additional information for debugging purposes.\\
+    fmt & Bool & False & Parse existing pts output files and print them in anpass format\\
+    freqs & Bool & False & Start an SIC QFF from running anpass on the pts output.
+                           This requires that all of the points have been preserved.\\
+    irdy & String & None & Ignore the geometry in the input file and use the intder.in file
+                           as is. This implies that you should use noopt. The string is a
+                           space-delimited list of atomic symbols to pair with the geometry.\\
+    nodel & Bool & False & Preserve output files instead of deleting them after use.\\
+    o & Bool & False & Allow existing directories created by the program to be overwritten.\\
+    pts & Bool & False & Resume an SIC QFF by generating the points from
+                         the optimized geometry in the opt directory.\\
+    r & Bool & False & Read the reference energy for a Cartesian QFF from
+                       an existing pts/inp/ref.out file.\\
+    \hline
+  \end{tabular}
+\end{table}
+
+A couple important things to mention are the artifacts of the Go flag
+package. Unlike most (if not all) Unix utilities, the Go flag package
+does not support joining multiple flags together as in
+
+\begin{verbatim}
+$ ls -lt
+\end{verbatim}
+
+\noindent
+which is equivalent to 
+
+\begin{verbatim}
+$ ls -l -t
+\end{verbatim}
+
+This means that when you want to resume a calculation from a
+checkpoint file, which requires that you assent to overwriting
+portions of the inp directory, you have to pass both the \verb|-c| and
+\verb|-o| flags as in
+
+\begin{verbatim}
+$ pbqff -o -c infile.in & disown -h
+\end{verbatim}
+
+What this does afford, however, is the ability to use only a single
+dash for long options or equivalently to use flags longer than single
+letters. That's how and why many of the flags are more descriptive
+than they might have been otherwise. If you are already in the habit
+of using double dashes for long options, it will also handle
+that. Similarly, you can join arguments to flags using an equals sign
+as in
+
+\begin{verbatim}
+$ pbqff -irdy="H O H"
+\end{verbatim}
+
+\noindent
+or without one as in
+
+\begin{verbatim}
+$ pbqff -irdy "H O H"
+\end{verbatim}
+
+\noindent
+but you cannot join the argument directly to the flag since it could
+be parsed as a single-dash long option. For the currently-implemented
+flags, this isn't really a problem, but I figured it doesn't hurt to
+point out.
+
+\subsection{Examples}
 
 \section{Troubleshooting}
 
