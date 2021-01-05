@@ -5,6 +5,7 @@
 \usepackage{verbatim}
 \usepackage{listings}
 \usepackage{pmboxdraw}
+\usepackage[hidelinks]{hyperref}
 
 \title{pbqff tutorial}
 \author{Brent R. Westbrook}
@@ -12,9 +13,9 @@
 \begin{document}
 
 \maketitle
-
-% TODO table of contents
-% TODO links in it
+\newpage
+\tableofcontents
+\newpage
 
 \section{Introduction}
 
@@ -33,12 +34,13 @@ and repetitive steps lend themselves perfectly to being done by the
 computer, freeing you to think about something more interesting. If
 you haven't, I will prepare a separate document giving a general QFF
 tutorial. To understand what pbqff is doing, you should have a good
-grasp on what \textit{you} would be doing if you had to its job by
+grasp on what \textit{you} would be doing if you had to do its job by
 hand. It's not strictly necessary to understand pbqff though, and the
 goal for me was really to make the implementation details irrelevant
 to the end user. If you really want to understand the entirety of
 pbqff and all its implementation details, you should just read the
-source code, which can be found at github.com/ntBre/pbqff. Assuming
+source code, which can be found at
+\href{https://github.com/ntBre/pbqff}{github.com/ntBre/pbqff}. Assuming
 you want to get to work, I hope this tutorial document will give you
 all the information you could possibly want for actually using pbqff
 effectively. I will also prepare a separate man page to use for
@@ -53,7 +55,7 @@ follow the exact steps a person would by hand in running a QFF, but to
 do so quickly and exactly via the computer. As it stands, I think of
 pbqff as ``replacing'' an undergraduate researcher because we usually
 give undergraduates all of the template input files they need. pbqff
-requires that you give it template intder, spectro, anpass, and molpro
+requires that you give it template intder, spectro, anpass, and Molpro
 files for a symmetry internal coordinate (SIC) run, which it can then
 modify as needed. This modification assumes that the template input
 files correspond to molecules with the same coordinate system as the
@@ -71,8 +73,8 @@ pbqff can do.
 
 The deal for Cartesian (or XYZ) coordinate QFFs is a little better
 because intder and anpass are not used. Consequently, you only need
-template spectro and molpro files. This is also true for gradient
-calculations since they are also based on Cartesian coordiantes. Even
+template spectro and Molpro files. This is also true for gradient
+calculations since they are also based on Cartesian coordinates. Even
 more fortunately, I think spectro input files are the easiest to
 generate, so the earliest full automation will come to these types of
 calculations as well. If you are familiar with our traditional SIC
@@ -134,7 +136,7 @@ inputs for the various supported calculation types.
 
 Unlike some programs, the input directives are totally
 order-agnostic. As long as they are in the input file, they will be
-recognized. Available keywords are shown in Table \ref{tab:kwords}.
+recognized. Available keywords are shown in \autoref{tab:kwords}.
 The case of the keywords is ignored by the parser, but each keyword
 must be followed by an equals sign (=). Comments can only start at the
 beginning of a line, by including ``\#'' as the first character on the
@@ -229,7 +231,7 @@ correctly.
 Below is an example input file for an SIC run. Since much of the
 information for the SICs is found in the other template input files,
 the pbqff file is about as minimal as it gets. Based on the defaults
-given in Table \ref{tab:kwords}, even the \verb|program|,
+given in \autoref{tab:kwords}, even the \verb|program|,
 \verb|queue|, and \verb|geomType| lines are technically redundant, but
 it's nice to include some of these for future reference. Example:
 
@@ -297,7 +299,7 @@ are strictly required by the program to even start running.
 \subsection{Molpro}
 
 The basic Molpro template file is very straightforward. The only
-difference indicating that is a template is the lack of a closing
+difference indicating that it is a template is the lack of a closing
 brace in the geometry section. Other than that, you can include any
 option accepted by Molpro and it will be transmitted directly into
 each of the single point energy input files. The \verb|optg| line is
@@ -431,7 +433,7 @@ the flags you can use to modify the program's behavior. The most basic
 form of the command is
 
 \begin{verbatim}
-$ pbqff input.file
+$ pbqff infile.in
 \end{verbatim}
 
 \noindent
@@ -440,7 +442,7 @@ name pbqff. Since most of the interesting jobs you will be running will
 take a while, you likely want to run
 
 \begin{verbatim}
-$ pbqff input.file & 
+$ pbqff infile.in & 
 \end{verbatim}
 
 \noindent
@@ -449,8 +451,8 @@ not know, logging out of your terminal session, i.e. exiting your ssh
 connection, sends SIGHUP to all of the programs you had running. This
 means in effect that any background task you started is killed when
 you log out. To combat this, you need to tell the shell not to send
-SIGHUP using the \verb|disown| command with its \verb|-h| flag. With this in mind, the
-command I use to run pbqff is 
+SIGHUP using the \verb|disown| command with its \verb|-h| flag. With
+this in mind, the command I use to run pbqff is
 
 \begin{verbatim}
 $ pbqff infile.in & disown -h
@@ -503,8 +505,6 @@ spectro2.out file. Another less important exception could be the SIC
 freq directory if you need to compare the harmonic frequencies to
 those from intder and spectro in the freqs directory.
 
-% run jobs and commandline flags
-
 \subsection{Flags}
 
 You can already access the main functions of pbqff and control its
@@ -515,7 +515,7 @@ flag because it will list the help for all of the other flags. I also
 plan to replicate much of the fundamentals of this section in the man
 page, but here I hope to give some examples and explanations of the
 flags in addition to their basic usages. Like the keywords, the flags
-can be found in Table \ref{tab:flags}.
+can be found in \autoref{tab:flags}.
 
 \begin{table}[ht]
   \centering
@@ -595,11 +595,146 @@ be parsed as a single-dash long option. For the currently-implemented
 flags, this isn't really a problem, but I figured it doesn't hurt to
 point out.
 
-\subsection{Examples}
+\subsection{Checkpoints}
+
+Since most interesting calculations are going to take a long time to
+run, the program comes equipped with a checkpointing system to save
+the progress of a run as you go. The JSON files created while the
+program is running serve as these checkpoints, at least for Cartesian
+QFFs. Checkpoints are not currently implemented for SICs, so if you
+are particularly worried about an SIC calculation, I would suggest
+using the \verb|nodel| flag since it's more straightforward to resume
+an SIC as long as all of the output files are present. When resuming
+from a checkpoint, the program behaves mostly as if it were starting
+from scratch, but instead of recalculating all of the energies, it
+will load as many as possible from the JSON files. I already showed an
+example of resuming from a checkpoint above, but just to keep it
+explicit here it is again:
+
+\begin{verbatim}
+$ pbqff -o -c infile.in & disown -h
+\end{verbatim}
+
+The \verb|-o| flag is required since you are going to have to
+overwrite some of the previous files, and the \verb|-c| flag triggers
+the checkpoint loading. You should run this command in the directory
+where you initially ran pbqff. This should be fairly obvious since
+that's where your input file is.
+
+When might you need a checkpoint? The most likely scenario on Maple is
+if your job runs out of CPU time. If you run the command
+
+\begin{verbatim}
+$ ulimit -aH
+\end{verbatim}
+
+\noindent
+you will get a list of your hard resource limits on Maple. At the time
+of this writing, the CPU time limit is 72000 seconds or 20 hours. Of
+course, CPU seconds are not equivalent to wall seconds, so this does
+not mean you can only run jobs that finish within 20 hours. What it
+does mean though is that if pbqff exceeds that usage it will be killed
+automatically. The easiest way to identify that this has happened is
+by checking the modification time of the err file since it should be
+updated every second. You can also run the command
+
+\begin{verbatim}
+$ ps aux | grep pbqff
+\end{verbatim}
+
+\noindent
+to check for a running process with the name pbqff. Alternatively you
+can grep for your username or your username and pbqff to further
+narrow the results. pbqff will print its CPU usage at every checkpoint
+interval, but if you want a more regular way to check, you can use the
+command
+
+\begin{verbatim}
+$ ps axo pid,user,comm,time | grep pbqff
+\end{verbatim}
+
+\noindent
+The important part of this command is the \verb|time| portion, but the
+other fields requested are useful in case you want to kill the program
+(pid), and for sorting based on username and process name (user and
+comm). If you check this and see your pbqff instance approaching 20
+hours, expect to have to restart it soon. Since pbqff doesn't know
+when it will be killed, it will likely have started many jobs already
+that will only be in the way of your new instance. As a result, you
+should kill all of the jobs in your queue using a command like
+
+\begin{verbatim}
+$ qselect -u $USER | xargs qdel
+\end{verbatim}
+
+\noindent
+The \verb|qselect| command is used to select jobs in the queue based
+on the arguments. The \verb|-u| flag selects by user, and the
+environment variable \verb|USER| is your username. You can also select
+by name using the \verb|-N| flag. This can be more useful if you have
+jobs other than those associated with pbqff in the queue and you don't
+want to kill them. The name of the single point energy jobs submitted
+by pbqff is ``pts,'' giving the command
+
+\begin{verbatim}
+$ qselect -u $USER -N pts | xargs qdel
+\end{verbatim}
+
+\noindent
+if you want to be a bit more selective.
+
+Another common issue that will create a huge error dump in the err
+file is using too many operating system threads. The number of threads
+available is much more limited than even the CPU time, so if you try
+running more than one instance of pbqff at a time, both will likely
+crash with this error. The same can be true of any intensive
+action. As a result, while pbqff is running, you should be careful to
+limit your resource usage on Maple. Obviously any interactions with
+the actual queue need to be done on Maple, but if you need to do some
+kind of file scripting or even just tailing the pbqff output and error
+files, you can do that on Woods instead.
 
 \section{Troubleshooting}
 
-% run out of cpu time and die, no message, not running
+The most common problems have already been addressed in the previous
+section since they will require a restart from the checkpoints. In
+this section, I will describe other potential problems you may
+encounter and offer advice on how to solve them. If you run into any
+problems not covered here, please reach out to me and I will add it to
+this section.
+
+\subsection{Transform Failed}
+
+If you get this error message in an SIC QFF, it means that the program
+was unable to match the optimized geometry of your molecule to the
+pattern it identified in the intder template file. Assuming you have
+an actually usable intder template, this can be caused by slight
+symmetry differences in the two geometries that are not ignored by the
+fairly simple pattern matching algorithm. You may be able to recognize
+this and modify the template slightly to allow the program to match
+the pattern automatically, but this is likely difficult to do without
+knowing the implementation details of the matcher. An easier option is
+to manually take the optimized geometry and place it in the intder
+template file as if you were going to run the QFF by hand. From there
+you can tell the program that the intder file is ready by using the
+\verb|-irdy| flag. The string argument to this flag is a
+space-delimited list of the atoms in the geometry. Usually the program
+gets the order of the atoms from the optimized geometry and keeps
+track of their order through the pattern matching. Without that, it
+needs you to tell it which atom is which. As shown above, the full
+command to restart from this point is
+
+\begin{verbatim}
+$ pbqff -o -irdy "H O H" & disown -h
+\end{verbatim}
+
+\noindent
+where the overwrite flag is necessary if you have already run the
+program in the same directory. You will also probably want to add the
+line \verb|flags=noopt| to your input file since you will have
+obviously already optimized the geometry to put it in the intder file.
+That's not necessary for the program to function, but it will save you
+the time of waiting for it to optimize again.
 
 % sic problem matching pattern - set up intder yourself, pass noopt and irdy
 
