@@ -1,0 +1,193 @@
+.\"(zap "" "man")
+.\"(progn (setq compile-command "groff -Tpdf -man pbqff.1 > man.pdf") (my-recompile))
+.TH pbqff 1 2020-01-05
+
+.SH NAME
+pbqff \- push-button quartic force fields
+
+.SH SYNOPSIS
+.SY pbqff
+.OP \-c
+.OP \-count
+.OP \-cpuprofile name
+.OP \-debug
+.OP \-fmt
+.OP \-freqs
+.OP \-irdy atoms
+.OP \-nodel
+.OP \-o
+.OP \-pts
+.OP \-r
+.I input_file
+.YS
+
+.SH DESCRIPTION
+.
+This document describes the
+.B pbqff
+program, a package for running quartic force fields in symmetry
+internal (SIC) and Cartesian coordinates. SICs require template
+intder, anpass, spectro, and Molpro files in addition to the
+.B pbqff
+input file containing the molecular geometry inside a
+.B geometry={...}
+block. The input file must also contain the
+.B intder=
+,
+.B anpass=
+, and
+.B spectro=
+directives specifying the path to the corresponding executables.
+
+The intder template should be named
+.B intder.in
+and be a points-generating intder input file and have a geometry of
+the same symmetry to use as a reference. The anpass template should be
+named
+.B anpass.in
+and be a first-run anpass file, not a stationary point. The spectro template
+must be named
+.B spectro.in
+and should not contain any resonance information in the body or input
+directives. The Molpro template should be named
+.B molpro.in
+and have the geometry removed, along with its terminal curly
+brace. For gradient calculations, the
+.B forces,varsav
+directive should be included in the Molpro template after the DF-HF
+and DF-CCSD(T) lines. Following that should be
+.B show[f20.15],gradx
+,
+.B show[f20.15],grady
+, and
+.B show[f20.15],gradz
+to print the gradient with sufficient precision.
+
+.SH OPTIONS
+.
+The command line is parsed according to the rules of the Go
+.B flag
+package. This means that options cannot be grouped behind a single '-'
+(minus character). Either whitespace or an '=' (equals sign) can
+appear between a command option and its argument.
+
+.TP
+.B \-c
+Resume from checkpoint; requires the
+.B \-o
+flag to overwrite existing directory.
+.TP
+.B \-count
+Read the input file for a Cartesian QFF,
+print the number of calculations needed, and exit.
+.TP
+.B \-cpuprofile
+Write a CPU profile to the supplied filename.
+.TP
+.B \-debug
+Print additional information for debugging purposes.
+.TP
+.B \-fmt
+Parse existing single point output files and print them in anpass format
+.TP
+.B \-freqs
+Start an SIC QFF from running anpass on the pts output. This requires
+that all of the points have been preserved.
+.TP
+.BI \-irdy\  atoms
+Ignore the geometry in the input file and use the intder.in file as
+is. This implies that you should use noopt.
+.I atoms
+is a space-delimited list of atomic symbols to pair with the geometry.
+.TP
+.B \-nodel
+Preserve output files instead of deleting them after use.
+.TP
+.B \-o
+Allow existing directories created by the program to be overwritten.
+.TP
+.B \-pts
+Resume an SIC QFF by generating the points from the optimized geometry
+in the opt directory.
+.TP
+.B \-r
+Read the reference energy for a Cartesian QFF from an existing
+pts/inp/ref.out file.
+
+.SH EXAMPLES
+.
+.SS Basic example
+The following is a basic example of running
+.B pbqff
+on an input file input.in.
+.
+.IP
+.EX
+pbqff input.in & disown -h
+.EE
+.
+.P
+It is necessary to run the program in the background (&) if you want
+to use your terminal for anything else while it runs, and you should
+.B disown
+it with the
+.B \-h
+flag if you want it to survive you logging out of your SSH session.
+This will create the files input.out and input.err. input.out contains
+information about the available queues, the number of jobs that have
+to run, and the CPU time limits. input.err contains progress about the
+running jobs.
+.
+.SS Checking progress
+.
+Before these are updated, the geometry optimization for
+an SIC calculation (if requested) will run in opt/opt.out, so you may
+want to check the overall progress with the command
+.IP
+.EX
+tail -F input.err input.out opt/opt.out
+.EE
+.
+.P
+For a Cartesian calculation the optimization or reference energy is run
+in pts/inp/ref.out, so the command becomes
+.IP
+.EX
+tail -F input.err input.out pts/inp/ref.out
+.EE
+.
+.P
+To make sure
+.B pbqff
+is still running you can use the command
+.IP
+.EX
+ps axo pid,user,comm,time | grep pbqff
+.EE
+.
+.P
+which will also give you information about the CPU time used by the
+process.
+.SS Resuming from checkpoints
+.
+If the CPU time used by
+.B pbqff
+exceeds the limits printed in the output file, the process will be
+killed. To resume from a checkpoint, use the
+.B \-o
+and
+.B \-c
+flags to overwrite the old input directory while loading the previous
+progress from the JSON files. The full command to do this is
+.IP
+.EX
+pbqff -o -c input.in & disown -h
+.EE
+.
+.P
+This should be run in the same directory as the initial
+.B pbqff
+run since that is where the input and checkpoint files are.
+.
+.SH SEE ALSO
+Example input files in \(tir2518/Programs/pbqff/examples.
