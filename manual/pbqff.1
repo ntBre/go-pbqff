@@ -82,7 +82,7 @@ flag to overwrite existing directory.
 Read the input file for a Cartesian QFF,
 print the number of calculations needed, and exit.
 .TP
-.B \-cpuprofile
+.BI \-cpuprofile\  name
 Write a CPU profile to the supplied filename.
 .TP
 .B \-debug
@@ -188,7 +188,23 @@ pbqff -o -c input.in & disown -h
 .P
 This should be run in the same directory as the initial
 .B pbqff
-run since that is where the input and checkpoint files are.
+run since that is where the input and checkpoint files are.  Before
+doing this, you should also clear your queue of the old PBS jobs using
+the command
+.IP
+.EX
+qselect -u $USER -N pts | xargs qdel
+.EE
+.
+.P
+qselect is used to select jobs based on its arguments.
+The
+.B \-u
+flag lets you select by username, and you can use the $USER
+environment variable instead of typing your username. The 
+.B \-N
+flag selects by the name of the job and pts is the name given to all of the
+PBS jobs created by the program.
 .
 .SH SEE ALSO
 Example input files in \(tir2518/Programs/pbqff/examples.

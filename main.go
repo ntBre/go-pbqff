@@ -137,6 +137,7 @@ var (
 var (
 	angbohr = 0.529177249
 	// Going to get rid of all of these with divisors instead
+	// TODO get rid of all of these denominators
 	fc2Scale = angbohr * angbohr / (4 * delta * delta)
 	fc3Scale = angbohr * angbohr * angbohr / (8 * delta * delta * delta)
 	fc4Scale = angbohr * angbohr * angbohr * angbohr / (16 * delta * delta * delta * delta)

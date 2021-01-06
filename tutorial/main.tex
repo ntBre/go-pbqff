@@ -1,6 +1,3 @@
-% TODO clarify use of jobs in parallel part
-% - confusing to have parallel jobs jobs and also call the individual subjobs jobs
-% - parallel uses job to refer to the subjobs so call the parallel things chunks I guess
 % (zap "" "main")
 \documentclass{article}
 
@@ -103,32 +100,35 @@ hand.
 
 The other slightly tricky part about pbqff if you are more used to our
 conventional QFF schemes is that it does not submit, or even generate
-input files for, all of the jobs at once. Doing everything at once is
-obviously convenient when you are doing it by hand because you can
-submit all of the computations to the supercomputer and then go do
-something else. Instead, pbqff watches the running jobs, continuously
-checking for ones that finish, and writes and submits more
-calculations as the old ones finish. It also deletes the files
-associated with the old jobs to save space. Space is not typically a
-major concern with SIC QFFs since even the largest systems we have
-worked with have only 10000 or so points. In contrast, even water has
-half that many points in Cartesian coordinates, and larger molecules
-that we've actually run have had over 200000. Eventually we would like
-to extend this to millions of points, so keeping all of the files
-around is not really feasible. Again, you should be able to picture
-this in the same way as doing it by hand, but it's easier to convince
-the computer to sit and constantly refresh qstat than to make a human
-do it.
+input files for, all of the single point energy calculations at
+once. Doing everything at once is obviously convenient when you are
+doing it by hand because you can submit all of the computations to the
+supercomputer and then go do something else. Instead, pbqff watches
+the running jobs, continuously checking for ones that finish, and
+writes and submits more calculations as the old ones finish. It also
+deletes the files associated with the old jobs to save space. Space is
+not typically a major concern with SIC QFFs since even the largest
+systems we have worked with have only 10000 or so points. In contrast,
+even water has half that many points in Cartesian coordinates, and
+larger molecules that we've actually run have had over
+200000. Eventually we would like to extend this to millions of points,
+so keeping all of the files around is not really feasible. Again, you
+should be able to picture this in the same way as doing it by hand,
+but it's easier to convince the computer to sit and constantly refresh
+qstat than to make a human do it.
 
 A final wrinkle is the use of GNU parallel to reduce the number of
-individual PBS jobs that need to be submitted. parallel is basically a
-miniature version of the whole queuing system in that it takes a list
-of jobs to run and dispatches them as resources are available. While
-this is yet another departure from how you would likely submit these
-jobs by hand, you can certainly use parallel when submitting jobs by
-hand. It should also have no bearing on your interaction with the
-program, but if you are curious why there are so few jobs in your
-queue this is the explanation.
+individual PBS files that need to be submitted. parallel is basically
+a miniature version of the whole queuing system in that it takes a
+list of jobs to run and dispatches them as resources are available on
+a single node. While this is yet another departure from how you would
+likely submit these jobs by hand, you can certainly use parallel when
+submitting jobs by hand. It should also have no bearing on your
+interaction with the program, but if you are curious why there are so
+few jobs in your queue this is the explanation. As shown in
+\autoref{tab:kwords}, I use the term ``chunk'' to refer to a group of
+jobs submitted in one parallel PBS file, and the word ``job'' to refer
+to the individual calculations that compose a chunk.
 
 \section{Program Input}
 
@@ -139,19 +139,18 @@ inputs for the various supported calculation types.
 
 Unlike some programs, the input directives are totally
 order-agnostic. As long as they are in the input file, they will be
-recognized. Available keywords are shown in \autoref{tab:kwords}.
-The case of the keywords is ignored by the parser, but each keyword
-must be followed by an equals sign (=). Comments can only start at the
+recognized. Available keywords are shown in \autoref{tab:kwords}.  The
+case of the keywords is ignored by the parser, but each keyword must
+be followed by an equals sign (=). Comments can only start at the
 beginning of a line, by including ``\#'' as the first character on the
 line. Geometry input is unique in that it expects to look like
 \verb!geometry={...}!, beginning with an equals sign and opening curly
 brace and terminating with a closing curly brace. As shown in the
 options for the GeomType, the geometry can be input as either a
-Cartesian or XYZ geometry or a Z-matrix. If the Cartesian coordinates
-are used, the program expects a fully-formed XYZ geometry, including
-the number of atoms line and the comment line. These lines are
-skipped, so it's not important that they be accurate, but they must be
-present.
+Cartesian/XYZ geometry or a Z-matrix. If the Cartesian coordinates are
+used, the program expects a fully-formed XYZ geometry, including the
+number of atoms line and the comment line. These lines are skipped, so
+it's not important that they be accurate, but they must be present.
 
 The following examples can be found in my home area on hpcwoods under
 Programs/pbqff/examples. The files embedded in this document should be
@@ -214,9 +213,10 @@ correctly.
     \hline
     SleepInt                      & Int: any & 1 & Specify the interval at which to poll running jobs in seconds.\\
     \hline
-    NumJobs                       & Int: any & 8 & Specify the number of jobs to run per GNU parallel job.
+    NumJobs                       & Int: any & 8 & Specify the number of jobs to run per GNU parallel chunk.
                                                    Each parallel job requests 64gb of memory, so NumJobs
-                                                   should evenly divide 64.\\
+                                                   should evenly divide 64. This is also how many CPUs are requested,
+                                                   so it should not exceed the maximum available.\\
     \hline
     IntderCmd                     & String: any & None & Specify the path to the intder executable for SIC QFFs.\\
     \hline
