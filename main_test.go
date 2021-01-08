@@ -284,25 +284,6 @@ func TestXYZGeom(t *testing.T) {
 	}
 }
 
-func TestLookAhead(t *testing.T) {
-	tests := []struct {
-		name string
-		want bool
-	}{
-		{
-			name: "pts/inp/OALALO.00227",
-			want: false,
-		},
-	}
-	for _, test := range tests {
-		got := LookAhead(test.name, 1)
-		want := test.want
-		if got != want {
-			t.Errorf("got %v, wanted %v\n", got, want)
-		}
-	}
-}
-
 func TestParseDeltas(t *testing.T) {
 	tests := []struct {
 		msg string

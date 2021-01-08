@@ -84,7 +84,7 @@ func DoFreqs() bool { return flags&FREQS > 0 }
 // set
 func DoCart() bool { return flags&CART > 0 }
 
-// DoCart is a helper function for checking whether the CART flag is
+// DoGrad is a helper function for checking whether the CART flag is
 // set
 func DoGrad() bool { return flags&GRAD > 0 }
 
@@ -97,13 +97,10 @@ var (
 	debug      = flag.Bool("debug", false, "for debugging, print 2nd derivative energies array")
 	checkpoint = flag.Bool("c", false, "resume from checkpoint")
 	read       = flag.Bool("r", false, "read reference energy from pts/inp/ref.out")
-	irdy       = flag.String("irdy", "",
-		"intder file is ready to be used in pts; specify the atom order")
-	count = flag.Bool("count", false,
-		"read the input file and print the number of calculations needed then exit")
-	nodel  = flag.Bool("nodel", false, "don't delete used output files")
-	format = flag.Bool("fmt", false,
-		"parse existing output files and print them in anpass format")
+	irdy       = flag.String("irdy", "", "intder file is ready to be used in pts; specify the atom order")
+	count      = flag.Bool("count", false, "read the input file and print the number of calculations needed then exit")
+	nodel      = flag.Bool("nodel", false, "don't delete used output files")
+	format     = flag.Bool("fmt", false, "parse existing output files and print them in anpass format")
 )
 
 // Global variables
@@ -113,7 +110,6 @@ var (
 	brokenFloat      = math.NaN()
 	energyLine       *regexp.Regexp
 	molproTerminated = "Molpro calculation terminated"
-	defaultOpt       = "optg,grms=1.d-8,srms=1.d-8"
 	pbs              string
 	nDerivative      int = 4
 	ptsJobs          []string
@@ -136,18 +132,6 @@ var (
 // Finite differences denominators for cartesians
 var (
 	angbohr = 0.529177249
-	// Going to get rid of all of these with divisors instead
-	// TODO get rid of all of these denominators, can just delete
-	fc2Scale = angbohr * angbohr / (4 * delta * delta)
-	fc3Scale = angbohr * angbohr * angbohr / (8 * delta * delta * delta)
-	fc4Scale = angbohr * angbohr * angbohr * angbohr / (16 * delta * delta * delta * delta)
-)
-
-// Finite differences denominators for gradients
-var (
-	gradFc2Scale = angbohr / (2 * delta)
-	gradFc3Scale = angbohr * angbohr / (4 * delta * delta)
-	gradFc4Scale = angbohr * angbohr * angbohr / (8 * delta * delta * delta)
 )
 
 // Cartesian arrays
@@ -613,43 +597,6 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 	}
 }
 
-// Unused
-// Qstat reports whether or not the job associated with jobid is
-// running or queued
-func Qstat(jobid string, statuses ...string) bool {
-	out, _ := exec.Command("qstat", jobid).Output()
-	fields := strings.Fields(string(out))
-	if len(fields) >= 2 {
-		test := fields[len(fields)-2]
-		for _, status := range statuses {
-			if test == status {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// Unused
-// LookAhead looks at jobs around the given one to see if they have
-// run yet
-func LookAhead(jobname string, maxdepth int) bool {
-	ext := filepath.Ext(jobname)
-	endex := len(jobname) - len(ext) + 1
-	strNum := jobname[endex:]
-	num, _ := strconv.Atoi(strNum)
-	if num+maxdepth > submitted {
-		maxdepth = submitted
-	}
-	for i := num; i <= maxdepth; i++ {
-		nextFile := fmt.Sprintf("%s%010d.out", jobname[:endex], i)
-		if _, err := os.Stat(nextFile); !os.IsNotExist(err) {
-			return true
-		}
-	}
-	return false
-}
-
 // Clear the PBS queue of the pts jobs
 func queueClear(jobs []string) error {
 	for _, job := range jobs {
@@ -881,41 +828,9 @@ func XYZGeom(geom string) (names []string, coords []float64) {
 	return
 }
 
-// TODO these are all the same besides the 6*natoms in 15
-
-// PrintFile15 prints the second derivative force constants in the
+// PrintFortFile prints the third derivative force constants in the
 // format expected by SPECTRO
-func PrintFile15(fc []CountFloat, natoms int, filename string) int {
-	f, _ := os.Create(filename)
-	fmt.Fprintf(f, "%5d%5d", natoms, 6*natoms) // still not sure why this is just times 6
-	for i := range fc {
-		if i%3 == 0 {
-			fmt.Fprintf(f, "\n")
-		}
-		fmt.Fprintf(f, "%20.10f", fc[i].Val)
-	}
-	fmt.Fprint(f, "\n")
-	return len(fc)
-}
-
-// PrintFile30 prints the third derivative force constants in the
-// format expected by SPECTRO
-func PrintFile30(fc []CountFloat, natoms, other int, filename string) int {
-	f, _ := os.Create(filename)
-	fmt.Fprintf(f, "%5d%5d", natoms, other)
-	for i := range fc {
-		if i%3 == 0 {
-			fmt.Fprintf(f, "\n")
-		}
-		fmt.Fprintf(f, "%20.10f", fc[i].Val)
-	}
-	fmt.Fprint(f, "\n")
-	return len(fc)
-}
-
-// PrintFile40 prints the fourth derivative force constants in the
-// format expected by SPECTRO
-func PrintFile40(fc []CountFloat, natoms, other int, filename string) int {
+func PrintFortFile(fc []CountFloat, natoms, other int, filename string) int {
 	f, _ := os.Create(filename)
 	fmt.Fprintf(f, "%5d%5d", natoms, other)
 	for i := range fc {
@@ -1090,12 +1005,12 @@ func main() {
 		N3N := natoms * 3 // from spectro manual pg 12
 		other3 := N3N * (N3N + 1) * (N3N + 2) / 6
 		other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24
-		PrintFile15(fc2, natoms, "fort.15")
+		PrintFortFile(fc2, natoms, 6*natoms, "fort.15")
 		if nDerivative > 2 {
-			PrintFile30(fc3, natoms, other3, "fort.30")
+			PrintFortFile(fc3, natoms, other3, "fort.30")
 		}
 		if nDerivative > 3 {
-			PrintFile40(fc4, natoms, other4, "fort.40")
+			PrintFortFile(fc4, natoms, other4, "fort.40")
 			var buf bytes.Buffer
 			for i := range coords {
 				if i%3 == 0 && i > 0 {
