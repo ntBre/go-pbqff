@@ -391,9 +391,9 @@ func Step(coords []float64, steps ...int) []float64 {
 	for _, v := range steps {
 		if v < 0 {
 			v = -1 * v
-			c[v-1] = c[v-1] - deltas[v-1]
+			c[v-1] = c[v-1] - Config.Deltas[v-1]
 		} else {
-			c[v-1] += deltas[v-1]
+			c[v-1] += Config.Deltas[v-1]
 		}
 	}
 	return c
@@ -556,7 +556,7 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 		if !calcs[f].noRun {
 			submitted++
 			AddCommand(cmdfile, files[f])
-			if *count == chunkSize || (f == len(files)-1 && end) {
+			if *count == Config.ChunkSize || (f == len(files)-1 && end) {
 				if len(nodes) > 0 {
 					tmp := strings.Split(nodes[0], ":")
 					// defer to Input[Queue] when selecting a queue
@@ -567,14 +567,15 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 					}
 				}
 				WritePBS(subfile,
-					&Job{"pts", cmdfile, 35, node, queue, numJobs}, ptsMaple)
+					&Job{"pts", cmdfile, 35, node, queue,
+						Config.NumJobs}, ptsMaple)
 				jobid := Submit(subfile)
 				if *debug {
 					fmt.Println(subfile, jobid)
 				}
 				ptsJobs = append(ptsJobs, jobid)
 				paraJobs = append(paraJobs, jobid)
-				paraCount[jobid] = chunkSize
+				paraCount[jobid] = Config.ChunkSize
 				*count = 1
 				*pf++
 				subfile = fmt.Sprintf("%s/main%d.pbs", dir, *pf)
@@ -594,14 +595,14 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 				nodes = nodes[1:]
 			}
 		}
-		WritePBS(subfile, &Job{"pts", cmdfile, 35, node, queue, numJobs}, ptsMaple)
+		WritePBS(subfile, &Job{"pts", cmdfile, 35, node, queue, Config.NumJobs}, ptsMaple)
 		jobid := Submit(subfile)
 		if *debug {
 			fmt.Println(subfile, jobid)
 		}
 		ptsJobs = append(ptsJobs, jobid)
 		paraJobs = append(paraJobs, jobid)
-		paraCount[jobid] = chunkSize
+		paraCount[jobid] = Config.ChunkSize
 	}
 }
 

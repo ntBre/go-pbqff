@@ -1,5 +1,5 @@
 program=molpro
-queueType=pbs
+queueType=maple
 geomType=zmat
 geometry={
 X

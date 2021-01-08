@@ -7,7 +7,7 @@ import (
 )
 
 func TestWritePBS(t *testing.T) {
-	p := Job{"Al2O2", "opt.inp", 35, "", "", numJobs}
+	p := Job{"Al2O2", "opt.inp", 35, "", "", 8}
 	write := "testfiles/write/mp.pbs"
 	right := "testfiles/right/mp.pbs"
 	WritePBS(write, &p, pbsSequoia)

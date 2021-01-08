@@ -70,6 +70,8 @@ const (
 	FREQS
 )
 
+// I hate these
+
 // DoOpt is a helper function for checking whether the OPT flag is set
 func DoOpt() bool { return flags&OPT > 0 }
 
@@ -117,15 +119,10 @@ var (
 	paraCount        map[string]int
 	errMap           map[error]int
 	nodes            []string
-	jobLimit         int = 1000
-	chunkSize        int = 64
 	checkAfter       int = 100
 	sleep                = 1
 	nocheck          bool
 	flags            int
-	delta            = 0.005   // default step size
-	deltas           []float64 // slice for holding step sizes
-	numJobs          int       = 8
 	StartCPU         int64
 )
 
@@ -337,27 +334,13 @@ func UpdateZmat(old, new string) string {
 
 // WhichCluster sets the PBS template and energyLine depending on the
 // which computer is to be used
-func WhichCluster(q string) {
-	sequoia := regexp.MustCompile(`(?i)sequoia`)
-	maple := regexp.MustCompile(`(?i)maple`)
-	switch {
-	case q == "", maple.MatchString(q):
-		pbs = pbsMaple
-	case sequoia.MatchString(q):
-		energyLine = regexp.MustCompile(`PBQFF\(2\)`)
-		pbs = pbsSequoia
-	default:
-		panic("no queue selected")
-	}
-}
-
 // Optimize runs a Molpro optimization in the opt directory
 func Optimize(prog *Molpro) (E0 float64) {
 	// write opt.inp and mp.pbs
 	prog.WriteInput("opt/opt.inp", opt)
 	WritePBS("opt/mp.pbs",
 		&Job{MakeName(Config.Geometry) + "-opt", "opt/opt.inp",
-			35, "", "", numJobs}, pbsMaple)
+			35, "", "", Config.NumJobs}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit("opt/mp.pbs")
 	outfile := "opt/opt.out"
@@ -397,7 +380,12 @@ func RefEnergy(prog *Molpro) (E0 float64) {
 		prog.WriteInput(dir+infile, none)
 	}
 	WritePBS(dir+pbsfile,
-		&Job{MakeName(Config.Geometry) + "-ref", dir + infile, 35, "", "", numJobs}, pbsMaple)
+		&Job{
+			Name:     MakeName(Config.Geometry) + "-ref",
+			Filename: dir + infile,
+			Signal:   35,
+			NumJobs:  Config.NumJobs,
+		}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit(dir + pbsfile)
 	for err != nil {
@@ -420,7 +408,12 @@ func Frequency(prog *Molpro, absPath string) ([]float64, bool) {
 	// write freq.inp and that mp.pbs
 	prog.WriteInput(absPath+"/freq.inp", freq)
 	WritePBS(absPath+"/mp.pbs",
-		&Job{MakeName(Config.Geometry) + "-freq", absPath + "/freq.inp", 35, "", "", numJobs}, pbsMaple)
+		&Job{
+			Name:     MakeName(Config.Geometry) + "-freq",
+			Filename: absPath + "/freq.inp",
+			Signal:   35,
+			NumJobs:  Config.NumJobs,
+		}, pbsMaple)
 	// submit freq, wait in separate goroutine
 	// doesn't matter if this finishes
 	Submit(absPath + "/mp.pbs")
@@ -451,14 +444,15 @@ func Resubmit(name string, err error) string {
 		src.Close()
 		dst.Close()
 	}()
-	WritePBS(name+"_redo.pbs", &Job{"redo", name + "_redo.inp", 35, "", "", numJobs}, pbsMaple)
+	WritePBS(name+"_redo.pbs", &Job{"redo", name + "_redo.inp", 35, "", "",
+		Config.NumJobs}, pbsMaple)
 	return Submit(name + "_redo.pbs")
 }
 
 // Drain drains the queue of jobs and receives on ch when ready for more
 func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime float64) {
 	start := time.Now()
-	fmt.Println("step sizes: ", deltas)
+	fmt.Println("step sizes: ", Config.Deltas)
 	points := make([]Calc, 0)
 	var (
 		nJobs     int
@@ -563,14 +557,14 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 			check = 1
 			fmt.Fprintf(os.Stderr, "CPU time: %.3f s\n", float64(GetCPU()-StartCPU)/1e9)
 		}
-		if heap.Len() >= chunkSize && !*nodel {
+		if heap.Len() >= Config.ChunkSize && !*nodel {
 			heap.Dump()
 		}
 		// Progress
 		fmt.Fprintf(os.Stderr, "finished %d/%d submitted, %v polling %d jobs\n", finished, submitted,
 			time.Since(pollStart).Round(time.Millisecond), nJobs)
 		// only receive more jobs if there is room
-		for count := 0; count < chunkSize && nJobs < jobLimit; count++ {
+		for count := 0; count < Config.ChunkSize && nJobs < Config.JobLimit; count++ {
 			calc, ok := <-ch
 			if !ok && finished == submitted {
 				fmt.Fprintf(os.Stderr, "resubmitted %d/%d (%.1f%%), points execution time: %v\n",
@@ -621,63 +615,8 @@ func queueClear(jobs []string) error {
 	return err
 }
 
-// ParseDeltas parses a sequence of step sizes input as a string into
-// a slice of floats
-func ParseDeltas(deltas string, ncoords int) (out []float64, err error) {
-	// assume problem
-	err = errors.New("invalid deltas input")
-	out = make([]float64, ncoords)
-	// set up defaults
-	for i := range out {
-		out[i] = delta
-	}
-	if len(deltas) == 0 {
-		err = nil
-		return
-	}
-	pairs := strings.Split(deltas, ",")
-	for _, p := range pairs {
-		sp := strings.Split(p, ":")
-		if len(sp) != 2 {
-			return
-		}
-		d, e := strconv.Atoi(strings.TrimSpace(sp[0]))
-		if e != nil || d > ncoords || d < 1 {
-			return
-		}
-		f, e := strconv.ParseFloat(strings.TrimSpace(sp[1]), 64)
-		if e != nil || f < 0.0 {
-			return
-		}
-		out[d-1] = f
-	}
-	err = nil
-	return
-}
-
 func totalPoints(n int) int {
 	return 2 * n * (n*n*n + 2*n*n + 8*n + 1) / 3
-}
-
-type Configuration struct {
-	QueueType  string
-	Program    string
-	Queue      string
-	Delta      float64
-	Deltas     []float64
-	Geometry   string
-	GeomType   string
-	Flags      string
-	Deriv      int
-	JobLimit   int
-	ChunkSize  int
-	CheckInt   int
-	SleepInt   int
-	NumJobs    int
-	IntderCmd  string
-	AnpassCmd  string
-	SpectroCmd string
-	Ncoords    int
 }
 
 func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
@@ -878,7 +817,7 @@ func main() {
 		cart = Config.Geometry
 	}
 
-	ch := make(chan Calc, jobLimit)
+	ch := make(chan Calc, Config.JobLimit)
 
 	if !(DoCart() || DoGrad()) {
 		if *irdy == "" {

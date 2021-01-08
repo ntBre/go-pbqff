@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -90,34 +92,132 @@ func ParseInfile(filename string) (input [NumKeys]string) {
 	return
 }
 
-func NewConfig(input [NumKeys]string) (conf Configuration) {
-	if input[JobLimit] != "" {
-		v, err := strconv.Atoi(input[JobLimit])
-		if err == nil {
-			jobLimit = v
+// ParseDeltas parses a sequence of step sizes input as a string into
+// a slice of floats
+func (c *Configuration) ParseDeltas(deltas string) (err error) {
+	// assume problem
+	err = errors.New("invalid deltas input")
+	c.Deltas = make([]float64, c.Ncoords)
+	// set up defaults
+	for i := range c.Deltas {
+		c.Deltas[i] = c.Delta
+	}
+	if len(deltas) == 0 {
+		err = nil
+		return
+	}
+	pairs := strings.Split(deltas, ",")
+	for _, p := range pairs {
+		sp := strings.Split(p, ":")
+		if len(sp) != 2 {
+			return
 		}
+		d, e := strconv.Atoi(strings.TrimSpace(sp[0]))
+		if e != nil || d > c.Ncoords || d < 1 {
+			return
+		}
+		f, e := strconv.ParseFloat(strings.TrimSpace(sp[1]), 64)
+		if e != nil || f < 0.0 {
+			return
+		}
+		c.Deltas[d-1] = f
+	}
+	err = nil
+	return
+}
+
+func WhichCluster(q string) {
+	sequoia := regexp.MustCompile(`(?i)sequoia`)
+	maple := regexp.MustCompile(`(?i)maple`)
+	switch {
+	case q == "", maple.MatchString(q):
+		pbs = pbsMaple
+	case sequoia.MatchString(q):
+		energyLine = regexp.MustCompile(`PBQFF\(2\)`)
+		pbs = pbsSequoia
+	default:
+		panic("no queue selected " + q)
+	}
+}
+
+type Configuration struct {
+	QueueType  string
+	Program    string
+	Queue      string
+	Delta      float64
+	Deltas     []float64
+	Geometry   string
+	GeomType   string
+	Flags      string
+	Deriv      int
+	JobLimit   int
+	ChunkSize  int
+	CheckInt   int
+	SleepInt   int
+	NumJobs    int
+	IntderCmd  string
+	AnpassCmd  string
+	SpectroCmd string
+	Ncoords    int
+}
+
+func (c Configuration) String() string {
+	ret, _ := json.MarshalIndent(c, "", "\t")
+	return string(ret)
+}
+
+func Defaults() Configuration {
+	return Configuration{
+		QueueType: "maple",
+		Program:   "molpro",
+		Delta:     0.005,
+		GeomType:  "zmat",
+		Deriv:     4,
+		JobLimit:  1024,
+		ChunkSize: 64,
+		CheckInt:  100,
+		SleepInt:  1,
+		NumJobs:   8,
+	}
+}
+
+func parseInt(str string) int {
+	v, err := strconv.Atoi(str)
+	if err != nil {
+		e := fmt.Sprintf(
+			"%v parsing input line %q\n",
+			err, str)
+		panic(e)
+	}
+	return v
+}
+
+// if joblimit is not a multiple of chunksize, we should
+// increase joblimit until it is
+// if some fields are not present, need to error
+// - geometry and the cmds I think are the only ones
+//   - and the latter only if needed
+//     (not intder and anpass in carts)
+
+// TODO test this
+func NewConfig(input [NumKeys]string) (conf Configuration) {
+	conf = Defaults()
+	conf.Geometry = input[Geometry]
+	conf.IntderCmd = input[IntderCmd]
+	conf.AnpassCmd = input[AnpassCmd]
+	conf.SpectroCmd = input[SpectroCmd]
+	WhichCluster(input[QueueType])
+	if input[JobLimit] != "" {
+		conf.JobLimit = parseInt(input[JobLimit])
 	}
 	if input[ChunkSize] != "" {
-		v, err := strconv.Atoi(input[ChunkSize])
-		if err == nil {
-			chunkSize = v
-		}
+		conf.ChunkSize = parseInt(input[ChunkSize])
 	}
 	if input[Deriv] != "" {
-		d, err := strconv.Atoi(input[Deriv])
-		if err != nil {
-			panic(fmt.Sprintf("%v parsing derivative level input: %q\n",
-				err, Config.Deriv))
-		}
-		nDerivative = d
+		conf.Deriv = parseInt(input[Deriv])
 	}
 	if input[NumJobs] != "" {
-		d, err := strconv.Atoi(input[NumJobs])
-		if err != nil {
-			panic(fmt.Sprintf("%v parsing number of jobs input: %q\n",
-				err, Config.NumJobs))
-		}
-		numJobs = d
+		conf.NumJobs = parseInt(input[NumJobs])
 	}
 	if s := input[SleepInt]; s != "" {
 		d, err := strconv.Atoi(s)
@@ -143,7 +243,7 @@ func NewConfig(input [NumKeys]string) (conf Configuration) {
 		if err != nil {
 			panic(fmt.Sprintf("%v parsing delta input: %q\n", err, input[Delta]))
 		}
-		delta = f
+		Config.Delta = f
 	}
 	// always parse deltas to fill with default even if no input
 	geom := strings.Split(input[Geometry], "\n")
@@ -153,11 +253,11 @@ func NewConfig(input [NumKeys]string) (conf Configuration) {
 		conf.Ncoords = len(geom)
 	}
 	var err error
-	conf.Deltas, err = ParseDeltas(input[Deltas], conf.Ncoords)
+	err = conf.ParseDeltas(input[Deltas])
 	if err != nil {
-		panic(fmt.Sprintf("%v parsing deltas input: %v\n", err, Config.Deltas))
+		panic(fmt.Sprintf("%v parsing deltas input: %v\n",
+			err, Config.Deltas))
 	}
-	WhichCluster(input[QueueType])
 	switch Config.Program {
 	case "cccr":
 		energyLine = regexp.MustCompile(`^\s*CCCRE\s+=`)
@@ -173,5 +273,5 @@ func NewConfig(input [NumKeys]string) (conf Configuration) {
 	default:
 		errExit(fmt.Errorf("%s not implemented as a Program", Config.Program), "")
 	}
-	return Configuration{}
+	return
 }
