@@ -117,7 +117,7 @@ var (
 	pbs              string
 	nDerivative      int = 4
 	ptsJobs          []string
-	paraJobs         []string
+	paraJobs         []string // counters for parallel jobs
 	paraCount        map[string]int
 	errMap           map[error]int
 	nodes            []string
@@ -137,7 +137,7 @@ var (
 var (
 	angbohr = 0.529177249
 	// Going to get rid of all of these with divisors instead
-	// TODO get rid of all of these denominators
+	// TODO get rid of all of these denominators, can just delete
 	fc2Scale = angbohr * angbohr / (4 * delta * delta)
 	fc3Scale = angbohr * angbohr * angbohr / (8 * delta * delta * delta)
 	fc4Scale = angbohr * angbohr * angbohr * angbohr / (16 * delta * delta * delta * delta)
@@ -547,7 +547,8 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 				} else {
 					// Targets line up with gradients
 					for g := range job.Targets {
-						(*job.Targets[g].Slice)[job.Targets[g].Index].Add(job.Targets[g], job.Scale, job.Targets[0].Coeff*gradients[g])
+						(*job.Targets[g].Slice)[job.Targets[g].Index].Add(job.Targets[g],
+							job.Scale, job.Targets[0].Coeff*gradients[g])
 					}
 				}
 				shortenBy++
@@ -558,7 +559,8 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 					if paraCount[paraJobs[job.chunkNum]] == 0 {
 						queueClear([]string{paraJobs[job.chunkNum]})
 						if *debug {
-							fmt.Printf("clearing paracount of chunk %d, jobid %s\n", job.chunkNum, paraJobs[job.chunkNum])
+							fmt.Printf("clearing paracount of chunk %d, jobid %s\n",
+								job.chunkNum, paraJobs[job.chunkNum])
 						}
 					}
 				}
@@ -611,6 +613,7 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 	}
 }
 
+// Unused
 // Qstat reports whether or not the job associated with jobid is
 // running or queued
 func Qstat(jobid string, statuses ...string) bool {
@@ -627,6 +630,7 @@ func Qstat(jobid string, statuses ...string) bool {
 	return false
 }
 
+// Unused
 // LookAhead looks at jobs around the given one to see if they have
 // run yet
 func LookAhead(jobname string, maxdepth int) bool {
