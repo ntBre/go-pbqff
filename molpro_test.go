@@ -43,7 +43,17 @@ hf,accuracy=16,energy=1.0d-10
 }
 
 func TestFormatZmat(t *testing.T) {
-	got := FormatZmat(Input[Geometry])
+	got := FormatZmat(
+		`X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 XXO  3 90.0
+O  1 OX  2 XXO  4 90.0
+AlX = 0.85 Ang
+OX = 1.1 Ang
+XXO = 80.0 Deg`,
+	)
 	want := `X
 X 1 1.0
 Al 1 AlX 2 90.0
@@ -64,11 +74,22 @@ func TestWriteInputMolpro(t *testing.T) {
 	write := "testfiles/write/opt.inp"
 	right := "testfiles/right/opt.inp"
 	mp, _ := LoadMolpro(load)
-	mp.Geometry = FormatZmat(Input[Geometry])
+	mp.Geometry = FormatZmat(
+		`X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 XXO  3 90.0
+O  1 OX  2 XXO  4 90.0
+AlX = 0.85 Ang
+OX = 1.1 Ang
+XXO = 80.0 Deg`,
+	)
 	mp.WriteInput(write, opt)
 	if !compareFile(write, right) {
 		t.Errorf("mismatch between %s and %s\n", write, right)
 	}
+	// (diff "testfiles/write/opt.inp" "testfiles/right/opt.inp")
 }
 
 func TestReadOut(t *testing.T) {
@@ -195,7 +216,18 @@ func TestReadOut(t *testing.T) {
 }
 
 func TestHandleOutput(t *testing.T) {
-	mp := Molpro{Geometry: FormatZmat(Input[Geometry])}
+	mp := Molpro{Geometry: FormatZmat(
+		`X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 XXO  3 90.0
+O  1 OX  2 XXO  4 90.0
+
+AlX = 0.85 Ang
+OX = 1.1 Ang
+XXO = 80.0 Deg`,
+	)}
 	t.Run("warning in outfile", func(t *testing.T) {
 		_, _, err := mp.HandleOutput("testfiles/opt")
 		if err != nil {
@@ -218,7 +250,6 @@ func TestHandleOutput(t *testing.T) {
 	// were inexplicably not in the frequency calculation
 	t.Run("Sequoia", func(t *testing.T) {
 		p, _ := LoadMolpro("testfiles/load/molpro.in")
-		p.Geometry = FormatZmat(Input[Geometry])
 		_, zmat, _ := p.HandleOutput("testfiles/read/seq")
 		want := `ALX=                 1.20291856 ANG
 OX=                  1.26606700 ANG
@@ -273,7 +304,7 @@ OX=                  1.26606700 ANG
 }
 
 func TestReadFreqs(t *testing.T) {
-	mp := Molpro{Geometry: FormatZmat(Input[Geometry])}
+	mp := Molpro{}
 	got := mp.ReadFreqs("testfiles/freq.out")
 	want := []float64{805.31, 774.77, 679.79, 647.70, 524.26, 301.99}
 	if !reflect.DeepEqual(got, want) {
@@ -283,7 +314,6 @@ func TestReadFreqs(t *testing.T) {
 
 func TestBuildPoints(t *testing.T) {
 	prog, _ := LoadMolpro("testfiles/load/molpro.in")
-	prog.Geometry = Input[Geometry]
 	cart, _, _ := prog.HandleOutput("testfiles/opt")
 	names := GetNames(cart)
 	os.Mkdir("testfiles/read/inp", 0755)

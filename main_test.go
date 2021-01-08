@@ -135,9 +135,7 @@ func TestHandleSignal(t *testing.T) {
 }
 
 func TestGetNames(t *testing.T) {
-	prog := Molpro{
-		Geometry: Input[Geometry],
-	}
+	prog := Molpro{}
 	cart, _, _ := prog.HandleOutput("testfiles/opt")
 	got := GetNames(cart)
 	want := []string{"N", "H", "H", "H"}
@@ -194,7 +192,17 @@ func TestUpdateZmat(t *testing.T) {
 	t.Run("maple", func(t *testing.T) {
 		prog, _ := LoadMolpro("testfiles/opt.inp")
 		_, zmat, _ := prog.HandleOutput("testfiles/nowarn")
-		got := UpdateZmat(FormatZmat(Input[Geometry]), zmat)
+		got := UpdateZmat(FormatZmat(
+			`X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 XXO  3 90.0
+O  1 OX  2 XXO  4 90.0
+AlX = 0.85 Ang
+OX = 1.1 Ang
+XXO = 80.0 Deg`,
+		), zmat)
 		want := `X
 X 1 1.0
 Al 1 AlX 2 90.0
@@ -288,6 +296,7 @@ func TestParseDeltas(t *testing.T) {
 	tests := []struct {
 		msg string
 		in  string
+		n   int
 		we  error
 		out []float64
 	}{
@@ -295,6 +304,7 @@ func TestParseDeltas(t *testing.T) {
 			msg: "normal input",
 			in:  "1:0.005,2:0.010,3:0.015,4:0.0075",
 			we:  nil,
+			n:   9,
 			out: []float64{
 				0.005, 0.010, 0.015,
 				0.0075, 0.005, 0.005,
@@ -304,6 +314,7 @@ func TestParseDeltas(t *testing.T) {
 		{
 			msg: "spaces in input",
 			in:  "1:0.005, 2: 0.010, 3:   0.015, 4:0.0075",
+			n:   9,
 			we:  nil,
 			out: []float64{
 				0.005, 0.010, 0.015,
@@ -313,7 +324,7 @@ func TestParseDeltas(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		_, got, err := ParseDeltas(test.in)
+		got, err := ParseDeltas(test.in, test.n)
 		if !reflect.DeepEqual(got, test.out) {
 			t.Errorf("ParseDeltas(%q): got %v, wanted %v\n",
 				test.msg, got, test.out)

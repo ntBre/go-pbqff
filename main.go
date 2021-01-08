@@ -105,7 +105,7 @@ var (
 
 // Global variables
 var (
-	Input            [NumKeys]string
+	Config           Configuration
 	dirs             = []string{"opt", "freq", "pts", "freqs", "pts/inp"}
 	brokenFloat      = math.NaN()
 	energyLine       *regexp.Regexp
@@ -129,8 +129,7 @@ var (
 	StartCPU         int64
 )
 
-// Finite differences denominators for cartesians
-var (
+const (
 	angbohr = 0.529177249
 )
 
@@ -287,7 +286,7 @@ func HandleSignal(sig int, timeout time.Duration) error {
 	}
 }
 
-// GetNames takes a cartesian geometry and extract the atom names
+// GetNames takes a cartesian geometry and extracts the atom names
 func GetNames(cart string) (names []string) {
 	lines := strings.Split(cart, "\n")
 	for _, line := range lines {
@@ -338,10 +337,9 @@ func UpdateZmat(old, new string) string {
 
 // WhichCluster sets the PBS template and energyLine depending on the
 // which computer is to be used
-func WhichCluster() {
+func WhichCluster(q string) {
 	sequoia := regexp.MustCompile(`(?i)sequoia`)
 	maple := regexp.MustCompile(`(?i)maple`)
-	q := Input[QueueType]
 	switch {
 	case q == "", maple.MatchString(q):
 		pbs = pbsMaple
@@ -358,7 +356,7 @@ func Optimize(prog *Molpro) (E0 float64) {
 	// write opt.inp and mp.pbs
 	prog.WriteInput("opt/opt.inp", opt)
 	WritePBS("opt/mp.pbs",
-		&Job{MakeName(Input[Geometry]) + "-opt", "opt/opt.inp",
+		&Job{MakeName(Config.Geometry) + "-opt", "opt/opt.inp",
 			35, "", "", numJobs}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit("opt/mp.pbs")
@@ -378,6 +376,9 @@ func Optimize(prog *Molpro) (E0 float64) {
 	return
 }
 
+// This should be combined with optimize; if DoOpt, optimize, but both
+// are used as references
+
 // RefEnergy runs a Molpro single point energy calculation in the
 // pts/inp directory
 func RefEnergy(prog *Molpro) (E0 float64) {
@@ -396,7 +397,7 @@ func RefEnergy(prog *Molpro) (E0 float64) {
 		prog.WriteInput(dir+infile, none)
 	}
 	WritePBS(dir+pbsfile,
-		&Job{MakeName(Input[Geometry]) + "-ref", dir + infile, 35, "", "", numJobs}, pbsMaple)
+		&Job{MakeName(Config.Geometry) + "-ref", dir + infile, 35, "", "", numJobs}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit(dir + pbsfile)
 	for err != nil {
@@ -419,7 +420,7 @@ func Frequency(prog *Molpro, absPath string) ([]float64, bool) {
 	// write freq.inp and that mp.pbs
 	prog.WriteInput(absPath+"/freq.inp", freq)
 	WritePBS(absPath+"/mp.pbs",
-		&Job{MakeName(Input[Geometry]) + "-freq", absPath + "/freq.inp", 35, "", "", numJobs}, pbsMaple)
+		&Job{MakeName(Config.Geometry) + "-freq", absPath + "/freq.inp", 35, "", "", numJobs}, pbsMaple)
 	// submit freq, wait in separate goroutine
 	// doesn't matter if this finishes
 	Submit(absPath + "/mp.pbs")
@@ -622,25 +623,19 @@ func queueClear(jobs []string) error {
 
 // ParseDeltas parses a sequence of step sizes input as a string into
 // a slice of floats
-func ParseDeltas(inp string) (ncoords int, out []float64, err error) {
+func ParseDeltas(deltas string, ncoords int) (out []float64, err error) {
 	// assume problem
 	err = errors.New("invalid deltas input")
-	geom := strings.Split(Input[Geometry], "\n")
-	if Input[GeomType] == "xyz" {
-		ncoords = 3 * (len(geom) - 2)
-	} else {
-		ncoords = len(geom)
-	}
 	out = make([]float64, ncoords)
 	// set up defaults
 	for i := range out {
 		out[i] = delta
 	}
-	if len(inp) == 0 {
+	if len(deltas) == 0 {
 		err = nil
 		return
 	}
-	pairs := strings.Split(inp, ",")
+	pairs := strings.Split(deltas, ",")
 	for _, p := range pairs {
 		sp := strings.Split(p, ":")
 		if len(sp) != 2 {
@@ -664,6 +659,27 @@ func totalPoints(n int) int {
 	return 2 * n * (n*n*n + 2*n*n + 8*n + 1) / 3
 }
 
+type Configuration struct {
+	QueueType  string
+	Program    string
+	Queue      string
+	Delta      float64
+	Deltas     []float64
+	Geometry   string
+	GeomType   string
+	Flags      string
+	Deriv      int
+	JobLimit   int
+	ChunkSize  int
+	CheckInt   int
+	SleepInt   int
+	NumJobs    int
+	IntderCmd  string
+	AnpassCmd  string
+	SpectroCmd string
+	Ncoords    int
+}
+
 func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	// parse flags for overwrite before mkdirs
 	args := ParseFlags()
@@ -679,88 +695,12 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	errfile, _ := os.Create(base + ".err")
 	syscall.Dup2(int(outfile.Fd()), 1)
 	syscall.Dup2(int(errfile.Fd()), 2)
-	ParseInfile(infile)
-	if Input[Flags] == "noopt" {
+	input := ParseInfile(infile)
+	Config = NewConfig(input)
+	if Config.Flags == "noopt" {
 		flags = flags &^ OPT
 	}
-	spectro.SpectroCommand = Input[SpectroCmd]
-	if Input[JobLimit] != "" {
-		v, err := strconv.Atoi(Input[JobLimit])
-		if err == nil {
-			jobLimit = v
-		}
-	}
-	if Input[ChunkSize] != "" {
-		v, err := strconv.Atoi(Input[ChunkSize])
-		if err == nil {
-			chunkSize = v
-		}
-	}
-	if Input[Deriv] != "" {
-		d, err := strconv.Atoi(Input[Deriv])
-		if err != nil {
-			panic(fmt.Sprintf("%v parsing derivative level input: %q\n",
-				err, Input[Deriv]))
-		}
-		nDerivative = d
-	}
-	if Input[NumJobs] != "" {
-		d, err := strconv.Atoi(Input[NumJobs])
-		if err != nil {
-			panic(fmt.Sprintf("%v parsing number of jobs input: %q\n",
-				err, Input[NumJobs]))
-		}
-		numJobs = d
-	}
-	if s := Input[SleepInt]; s != "" {
-		d, err := strconv.Atoi(s)
-		if err != nil {
-			panic(fmt.Sprintf("%v parsing sleep interval: %q\n", err, s))
-		}
-		sleep = d
-	}
-	switch Input[CheckInt] {
-	case "no":
-		nocheck = true
-	case "":
-	default:
-		d, err := strconv.Atoi(Input[CheckInt])
-		if err != nil {
-			panic(fmt.Sprintf("%v parsing checkpoint interval: %q\n",
-				err, Input[CheckInt]))
-		}
-		checkAfter = d
-	}
-
-	if Input[Delta] != "" {
-		f, err := strconv.ParseFloat(Input[Delta], 64)
-		if err != nil {
-			panic(fmt.Sprintf("%v parsing delta input: %q\n", err, Input[Delta]))
-		}
-		delta = f
-	}
-	// always parse deltas to fill with default even if no input
-	ncoords, f, err := ParseDeltas(Input[Deltas])
-	if err != nil {
-		panic(fmt.Sprintf("%v parsing deltas input: %q\n", err, Input[Deltas]))
-	}
-	deltas = f
-	WhichCluster()
-	switch Input[Program] {
-	case "cccr":
-		energyLine = regexp.MustCompile(`^\s*CCCRE\s+=`)
-	case "cart", "gocart":
-		flags |= CART
-		fmt.Printf("%d coords requires %d points\n", ncoords, totalPoints(ncoords))
-		energyLine = regexp.MustCompile(`energy=`)
-	case "grad":
-		flags |= GRAD
-		energyLine = regexp.MustCompile(`energy=`)
-	case "molpro", "": // default if not specified
-		energyLine = regexp.MustCompile(`energy=`)
-	default:
-		errExit(fmt.Errorf("%s not implemented as a Program", Input[Program]), "")
-	}
+	spectro.SpectroCommand = Config.SpectroCmd
 	if *count {
 		if !DoCart() {
 			fmt.Println("-count only implemented for Cartesians")
@@ -770,6 +710,7 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	mpName := "molpro.in"
 	idName := "intder.in"
 	apName := "anpass.in"
+	var err error
 	prog, err = LoadMolpro("molpro.in")
 	if err != nil {
 		errExit(err, fmt.Sprintf("loading molpro input %q", mpName))
@@ -920,7 +861,7 @@ func main() {
 	)
 
 	if DoOpt() {
-		prog.Geometry = FormatZmat(Input[Geometry])
+		prog.Geometry = FormatZmat(Config.Geometry)
 		E0 = Optimize(prog)
 		cart, zmat, err = prog.HandleOutput("opt/opt")
 		if err != nil {
@@ -934,7 +875,7 @@ func main() {
 			mpHarm, finished = Frequency(prog, absPath)
 		}()
 	} else {
-		cart = Input[Geometry]
+		cart = Config.Geometry
 	}
 
 	ch := make(chan Calc, jobLimit)
@@ -957,10 +898,10 @@ func main() {
 			prog.BuildPoints("pts/file07", atomNames, &cenergies, nil, false)
 		}
 	} else {
-		names, coords = XYZGeom(Input[Geometry])
+		names, coords = XYZGeom(Config.Geometry)
 		natoms = len(names)
 		ncoords = len(coords)
-		prog.Geometry = Input[Geometry] + "\n}\n"
+		prog.Geometry = Config.Geometry + "\n}\n"
 		if !DoOpt() {
 			E0 = RefEnergy(prog)
 		}

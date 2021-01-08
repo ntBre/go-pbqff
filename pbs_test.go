@@ -7,12 +7,12 @@ import (
 )
 
 func TestWritePBS(t *testing.T) {
-	p := Job{MakeName(Input[Geometry]), "opt.inp", 35, "", "", numJobs}
+	p := Job{"Al2O2", "opt.inp", 35, "", "", numJobs}
 	write := "testfiles/write/mp.pbs"
 	right := "testfiles/right/mp.pbs"
 	WritePBS(write, &p, pbsSequoia)
 	if !compareFile(write, right) {
-		t.Errorf("mismatch between %s and %s\n", right, write)
+		t.Errorf("mismatch between %s and %s\n(diff %[1]q %[2]q)", right, write)
 	}
 }
 

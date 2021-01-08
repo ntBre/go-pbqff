@@ -6,7 +6,7 @@ import (
 )
 
 func TestParseInfile(t *testing.T) {
-	ParseInfile("testfiles/test.in")
+	input := ParseInfile("testfiles/test.in")
 	after := [NumKeys]string{
 		QueueType: "pbs",
 		Program:   "molpro",
@@ -21,11 +21,11 @@ OX = 1.1 Ang
 XXO = 80.0 Deg`,
 		GeomType:   "zmat",
 		IntderCmd:  "/home/brent/Packages/intder/intder",
-		ChunkSize: "8",
+		ChunkSize:  "8",
 		AnpassCmd:  "",
 		SpectroCmd: "",
 	}
-	if !reflect.DeepEqual(Input, after) {
-		t.Errorf("\ngot %q\nwad %q\n", Input, after)
+	if !reflect.DeepEqual(input, after) {
+		t.Errorf("\ngot %q\nwad %q\n", input, after)
 	}
 }

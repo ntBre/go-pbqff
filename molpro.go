@@ -547,7 +547,7 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, *pf)
 	var (
 		node  string
-		queue string = Input[Queue]
+		queue string = Config.Queue
 	)
 	for f := range calcs {
 		calcs[f].cmdfile = cmdfile
