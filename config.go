@@ -233,7 +233,15 @@ var Config = Conf{
 	},
 	Flags: {
 		Re: regexp.MustCompile(`(?i)flags=`),
-		// TODO set flag in this func
+		Extract: func(str string) interface{} {
+			switch str {
+			case "noopt":
+				flags = flags &^ OPT
+			default:
+				panic("unsupported option for keyword flag")
+			}
+			return str
+		},
 	},
 	Deriv: {
 		Re:      regexp.MustCompile(`(?i)deriv=`),

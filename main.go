@@ -1,25 +1,16 @@
 /*
 Push-button QFF
 ---------------
-The goal of this program is to streamline the generation
-of quartic force fields, automating as many pieces as possible.
-(setq compile-command "go build . && scp -C pbqff woods:Programs/pbqff/.")
-(my-recompile)
-Copy to Programs directory
-(progn (setq compile-command "go build . && scp -C pbqff woods:Programs/pbqff/.") (my-recompile))
-Copy to home area so as not to disrupt running
-(progn (setq compile-command "go build . && scp -C pbqff woods:") (my-recompile))
-
-To decrease CPU usage increase sleepint input from default of 1 sec
-and increase checkint from default 100 or disable entirely by setting
-it to "no"
+The goal of this program is to streamline the generation of quartic
+force fields, automating as many pieces as possible. To decrease CPU
+usage increase sleepint input from default of 1 sec and increase
+checkint from default 100 or disable entirely by setting it to "no"
 */
 
 package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"math"
 	"os"
@@ -41,23 +32,6 @@ import (
 
 	"github.com/ntBre/chemutils/spectro"
 	"github.com/ntBre/chemutils/summarize"
-)
-
-const (
-	resBound = 1e-16 // warn if anpass residuals above this
-	// this could  be in the input
-	help = `Requirements (* denotes requirements for SICs only):
-- pbqff input file minimally specifying the geometry and the
-- paths to intder*, anpass*, and spectro executables
-- template intder.in*, anpass.in*, spectro.in, and molpro.in files
-  - intder.in should be a pts intder input and have the old geometry to serve as a template
-  - anpass.in should be a first run anpass file, not a stationary point
-  - spectro.in should not have any resonance information
-  - molpro.in should have the geometry removed and have no closing brace to the geometry section
-    - on sequoia, the custom energy parameter pbqff=energy is required for parsing
-    - for gradients, use forces,varsav and show[f20.15],grad{x,y,z} to print the gradients
-Flags:
-`
 )
 
 // Flags for the procedures to be run
@@ -89,21 +63,6 @@ func DoCart() bool { return flags&CART > 0 }
 // set
 func DoGrad() bool { return flags&GRAD > 0 }
 
-// Flags
-var (
-	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
-	overwrite  = flag.Bool("o", false, "overwrite existing inp directory")
-	pts        = flag.Bool("pts", false, "start by running pts on optimized geometry from opt")
-	freqs      = flag.Bool("freqs", false, "start from running anpass on the pts output")
-	debug      = flag.Bool("debug", false, "for debugging, print 2nd derivative energies array")
-	checkpoint = flag.Bool("c", false, "resume from checkpoint")
-	read       = flag.Bool("r", false, "read reference energy from pts/inp/ref.out")
-	irdy       = flag.String("irdy", "", "intder file is ready to be used in pts; specify the atom order")
-	count      = flag.Bool("count", false, "read the input file and print the number of calculations needed then exit")
-	nodel      = flag.Bool("nodel", false, "don't delete used output files")
-	format     = flag.Bool("fmt", false, "parse existing output files and print them in anpass format")
-)
-
 // Global variables
 var (
 	dirs             = []string{"opt", "freq", "pts", "freqs", "pts/inp"}
@@ -120,7 +79,8 @@ var (
 )
 
 const (
-	angbohr = 0.529177249
+	angbohr  = 0.529177249 // angstrom per bohr
+	resBound = 1e-16       // warn if anpass residuals above this
 )
 
 // Cartesian arrays
@@ -233,32 +193,6 @@ func (g *GarbageHeap) Dump() {
 		os.Remove(f)
 	}
 	g.heap = []string{}
-}
-
-// ParseFlags parses command line flags and returns a slice of
-// the remaining arguments
-func ParseFlags() []string {
-	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), help)
-		flag.PrintDefaults()
-	}
-	flag.Parse()
-	if *format {
-		FormatOutput("pts/inp/")
-		os.Exit(0)
-	}
-	switch {
-	case *freqs:
-		flags = FREQS
-	case *pts:
-		flags = PTS | FREQS
-	default:
-		flags = OPT | PTS | FREQS
-	}
-	if *checkpoint {
-		LoadCheckpoint()
-	}
-	return flag.Args()
 }
 
 // HandleSignal waits to receive a real-time signal or times out
@@ -466,7 +400,8 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 			job := points[i]
 			if strings.Contains(job.Name, "E0") {
 				energy = E0
-				gradients = make([]float64, ncoords) // zero gradients at ref geom
+				// zero gradients at ref geom
+				gradients = make([]float64, ncoords)
 				success = true
 			} else if job.Result != 0 {
 				energy = job.Result
@@ -476,7 +411,8 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 					energy = job.Src.Value()
 					success = true
 				}
-			} else if energy, t, gradients, err = prog.ReadOut(job.Name + ".out"); err == nil {
+			} else if energy, t, gradients,
+				err = prog.ReadOut(job.Name + ".out"); err == nil {
 				success = true
 				if energy < min {
 					min = energy
@@ -484,22 +420,34 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 				realTime += t
 				heap.Add(job.Name)
 				// job has not been resubmitted && there is an error
-			} else if job.Resub == nil && (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
-				err == ErrFileContainsError || err == ErrBlankOutput ||
-				(err == ErrFileNotFound && CheckLog(job.cmdfile, job.Name) && CheckProg(job.cmdfile))) {
+			} else if job.Resub == nil &&
+				(err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
+					err == ErrFileContainsError || err == ErrBlankOutput ||
+					(err == ErrFileNotFound && CheckLog(job.cmdfile,
+						job.Name) && CheckProg(job.cmdfile))) {
 				// THIS DOESNT CATCH FILE EXISTS BUT IS HUNG
 				if err == ErrFileContainsError {
-					fmt.Fprintf(os.Stderr, "error: %v on %s\n", err, job.Name)
+					fmt.Fprintf(os.Stderr,
+						"error: %v on %s\n", err, job.Name)
 				}
 				errMap[err]++
 				// can't use job.whatever if you want to modify the thing
-				points[i].Resub = &Calc{Name: job.Name + "_redo", ID: Resubmit(job.Name, err)}
+				points[i].Resub = &Calc{
+					Name: job.Name + "_redo",
+					ID:   Resubmit(job.Name, err),
+				}
 				resubs++
 				ptsJobs = append(ptsJobs, points[i].Resub.ID)
 			} else if job.Resub != nil {
-				// should DRY this up, inside if is same as case 3 above
-				// should also check if resubmitted job has finished with qsub and set pointer to nil if it has without success
-				if energy, t, gradients, err = prog.ReadOut(job.Resub.Name + ".out"); err == nil {
+				// should DRY this up, inside if is
+				// same as case 3 above
+				// should also check if resubmitted
+				// job has finished with qsub and set
+				// pointer to nil if it has without
+				// success
+				if energy, t, gradients,
+					err = prog.ReadOut(job.Resub.Name +
+					".out"); err == nil {
 					success = true
 					if energy < min {
 						min = energy
@@ -514,13 +462,17 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 				points = points[:nJobs]
 				if !DoGrad() {
 					for _, t := range job.Targets {
-						(*t.Slice)[t.Index].Add(t, job.Scale, t.Coeff*energy)
+						(*t.Slice)[t.Index].Add(t,
+							job.Scale, t.Coeff*energy)
 					}
 				} else {
 					// Targets line up with gradients
 					for g := range job.Targets {
-						(*job.Targets[g].Slice)[job.Targets[g].Index].Add(job.Targets[g],
-							job.Scale, job.Targets[0].Coeff*gradients[g])
+						(*job.Targets[g].Slice)[job.Targets[g].Index].
+							Add(job.Targets[g],
+								job.Scale,
+								job.Targets[0].
+									Coeff*gradients[g])
 					}
 				}
 				shortenBy++
@@ -531,8 +483,10 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 					if paraCount[paraJobs[job.chunkNum]] == 0 {
 						queueClear([]string{paraJobs[job.chunkNum]})
 						if *debug {
-							fmt.Printf("clearing paracount of chunk %d, jobid %s\n",
-								job.chunkNum, paraJobs[job.chunkNum])
+							fmt.Printf("clearing paracount of"+
+								"chunk %d, jobid %s\n",
+								job.chunkNum,
+								paraJobs[job.chunkNum])
 						}
 					}
 				}
@@ -548,27 +502,40 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 				MakeCheckpoint()
 			}
 			check = 1
-			fmt.Fprintf(os.Stderr, "CPU time: %.3f s\n", float64(GetCPU()-StartCPU)/1e9)
+			fmt.Fprintf(os.Stderr, "CPU time: %.3f s\n",
+				float64(GetCPU()-StartCPU)/1e9)
 		}
 		if heap.Len() >= Config.Int(ChunkSize) && !*nodel {
 			heap.Dump()
 		}
 		// Progress
-		fmt.Fprintf(os.Stderr, "finished %d/%d submitted, %v polling %d jobs\n", finished, submitted,
+		fmt.Fprintf(os.Stderr, "finished %d/%d submitted, %v polling %d jobs\n",
+			finished, submitted,
 			time.Since(pollStart).Round(time.Millisecond), nJobs)
 		// only receive more jobs if there is room
-		for count := 0; count < Config.Int(ChunkSize) && nJobs < Config.Int(JobLimit); count++ {
+		for count := 0; count < Config.Int(ChunkSize) &&
+			nJobs < Config.Int(JobLimit); count++ {
 			calc, ok := <-ch
 			if !ok && finished == submitted {
-				fmt.Fprintf(os.Stderr, "resubmitted %d/%d (%.1f%%), points execution time: %v\n",
-					resubs, submitted, float64(resubs)/float64(submitted)*100, time.Since(start))
+				fmt.Fprintf(os.Stderr,
+					"resubmitted %d/%d (%.1f%%),"+
+						" points execution time: %v\n",
+					resubs, submitted,
+					float64(resubs)/float64(submitted)*100,
+					time.Since(start))
 				minutes := int(realTime) / 60
 				secRem := realTime - 60*float64(minutes)
-				fmt.Fprintf(os.Stderr, "total job time (wall): %.2f sec = %dm%.2fs\n", realTime, minutes, secRem)
-				// this is deprecated now that all should be saved but leave to check
+				fmt.Fprintf(os.Stderr,
+					"total job time (wall): %.2f sec = %dm%.2fs\n",
+					realTime, minutes, secRem)
+				// this is deprecated now that all
+				// should be saved but leave to check
 				if Config.Int(Deriv) == 4 {
-					fmt.Fprintf(os.Stderr, "saved %d/%d (%.f%%) fourth derivative components from e2d\n",
-						saved, fourTwos, float64(saved)/float64(fourTwos)*100)
+					fmt.Fprintf(os.Stderr,
+						"saved %d/%d (%.f%%) "+
+							"4th deriv components from e2d\n",
+						saved, fourTwos,
+						float64(saved)/float64(fourTwos)*100)
 				}
 				for k, v := range errMap {
 					fmt.Fprintf(os.Stderr, "%v: %d occurrences\n", k, v)
@@ -598,9 +565,11 @@ func queueClear(jobs []string) error {
 			}
 		}
 		if host != "" {
-			out, err := exec.Command("ssh", host, "-t", "rm -rf /tmp/$USER/"+job+".maple").CombinedOutput()
+			out, err := exec.Command("ssh", host, "-t",
+				"rm -rf /tmp/$USER/"+job+".maple").CombinedOutput()
 			if *debug {
-				fmt.Println("CombinedOutput and error from queueClear: ", string(out), err)
+				fmt.Println("CombinedOutput and error from queueClear: ",
+					string(out), err)
 			}
 		}
 	}
@@ -628,16 +597,15 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	syscall.Dup2(int(outfile.Fd()), 1)
 	syscall.Dup2(int(errfile.Fd()), 2)
 	ParseInfile(infile)
-	if Config.Str(Flags) == "noopt" {
-		flags = flags &^ OPT
-	}
 	spectro.SpectroCommand = Config.Str(SpectroCmd)
+	// TODO count not working, see end of config.go for needed code
 	if *count {
 		if !DoCart() {
 			fmt.Println("-count only implemented for Cartesians")
 		}
 		os.Exit(0)
 	}
+	// TODO these should be keywords with these defaults
 	mpName := "molpro.in"
 	idName := "intder.in"
 	apName := "anpass.in"
