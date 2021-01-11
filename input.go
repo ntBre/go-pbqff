@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"reflect"
 )
 
 // Key is a type for input keyword indices
@@ -32,6 +31,7 @@ const (
 	IntderCmd
 	AnpassCmd
 	SpectroCmd
+	Ncoords
 	NumKeys
 )
 
@@ -48,24 +48,23 @@ func ParseInfile(filename string) (input [NumKeys]string) {
 	if err != nil {
 		panic(err)
 	}
-	Keywords := []Regexp{
-		Regexp{regexp.MustCompile(`(?i)queuetype=`), QueueType},
-		Regexp{regexp.MustCompile(`(?i)program=`), Program},
-		Regexp{regexp.MustCompile(`(?i)queue=`), Queue},
-		Regexp{regexp.MustCompile(`(?i)delta=`), Delta},
-		Regexp{regexp.MustCompile(`(?i)deltas=`), Deltas},
-		Regexp{regexp.MustCompile(`(?i)geomtype=`), GeomType},
-		Regexp{regexp.MustCompile(`(?i)flags=`), Flags},
-		Regexp{regexp.MustCompile(`(?i)deriv=`), Deriv},
-		Regexp{regexp.MustCompile(`(?i)joblimit=`), JobLimit},
-		Regexp{regexp.MustCompile(`(?i)chunksize=`), ChunkSize},
-		Regexp{regexp.MustCompile(`(?i)checkint=`), CheckInt},
-		Regexp{regexp.MustCompile(`(?i)sleepint=`), SleepInt},
-		Regexp{regexp.MustCompile(`(?i)numjobs=`), NumJobs},
-		Regexp{regexp.MustCompile(`(?i)intder=`), IntderCmd},
-		Regexp{regexp.MustCompile(`(?i)anpass=`), AnpassCmd},
-		Regexp{regexp.MustCompile(`(?i)spectro=`), SpectroCmd},
-	}
+	// Keywords := []Regexp{
+	// 	Regexp{regexp.MustCompile(`(?i)program=`), Program},
+	// 	Regexp{regexp.MustCompile(`(?i)queue=`), Queue},
+	// 	Regexp{regexp.MustCompile(`(?i)delta=`), Delta},
+	// 	Regexp{regexp.MustCompile(`(?i)deltas=`), Deltas},
+	// 	Regexp{regexp.MustCompile(`(?i)geomtype=`), GeomType},
+	// 	Regexp{regexp.MustCompile(`(?i)flags=`), Flags},
+	// 	Regexp{regexp.MustCompile(`(?i)deriv=`), Deriv},
+	// 	Regexp{regexp.MustCompile(`(?i)joblimit=`), JobLimit},
+	// 	Regexp{regexp.MustCompile(`(?i)chunksize=`), ChunkSize},
+	// 	Regexp{regexp.MustCompile(`(?i)checkint=`), CheckInt},
+	// 	Regexp{regexp.MustCompile(`(?i)sleepint=`), SleepInt},
+	// 	Regexp{regexp.MustCompile(`(?i)numjobs=`), NumJobs},
+	// 	Regexp{regexp.MustCompile(`(?i)intder=`), IntderCmd},
+	// 	Regexp{regexp.MustCompile(`(?i)anpass=`), AnpassCmd},
+	// 	Regexp{regexp.MustCompile(`(?i)spectro=`), SpectroCmd},
+	// }
 	geom := regexp.MustCompile(`(?i)geometry={`)
 	for i := 0; i < len(lines); {
 		if lines[i][0] == '#' {
@@ -81,10 +80,10 @@ func ParseInfile(filename string) (input [NumKeys]string) {
 			}
 			input[Geometry] = strings.Join(geomlines, "\n")
 		} else {
-			for _, kword := range Keywords {
-				if kword.MatchString(lines[i]) {
+			for _, kword := range Config2 {
+				if kword.Re.MatchString(lines[i]) {
 					split := strings.Split(lines[i], "=")
-					input[kword.Name] = split[len(split)-1]
+					kword.Value = kword.Extract(split[len(split)-1])
 				}
 			}
 			i++
@@ -146,6 +145,16 @@ func WhichCluster(q string) {
 	}
 }
 
+type Keyword struct {
+	Re      *regexp.Regexp
+	Extract func(string) interface{}
+	Value   interface{}
+}
+
+func StringKeyword(str string) interface{} {
+	return str
+}
+
 type Configuration struct {
 	QueueType  string
 	Program    string
@@ -165,6 +174,33 @@ type Configuration struct {
 	AnpassCmd  string
 	SpectroCmd string
 	Ncoords    int
+}
+
+// give each one its own func to check defaults instead of generic
+// XKeyword funs
+var Config2 = []Keyword{
+	QueueType: {
+		Re:      regexp.MustCompile(`(?i)queuetype=`),
+		Extract: StringKeyword,
+		Value:   "maple",
+	},
+	// Program:    {},
+	// Queue:      {},
+	// Delta:      {},
+	// Deltas:     {},
+	// Geometry:   {},
+	// GeomType:   {},
+	// Flags:      {},
+	// Deriv:      {},
+	// JobLimit:   {},
+	// ChunkSize:  {},
+	// CheckInt:   {},
+	// SleepInt:   {},
+	// NumJobs:    {},
+	// IntderCmd:  {},
+	// AnpassCmd:  {},
+	// SpectroCmd: {},
+	// Ncoords:    {},
 }
 
 func (c Configuration) String() string {
