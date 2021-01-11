@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"reflect"
 )
 
 // Key is a type for input keyword indices
@@ -93,7 +94,10 @@ func ParseInfile(filename string) (input [NumKeys]string) {
 }
 
 // ParseDeltas parses a sequence of step sizes input as a string into
-// a slice of floats
+// a slice of floats. Unprovided steps are set to c.Delta. For
+// example, the input 1:0.075,4:0.075,7:0.075 yields [0.075, 0.005,
+// 0.005, 0.075, 0.005, 0.005, 0.075, 0.005, 0.005], assuming c.Delta
+// is 0.005, and c.Ncoord is 9
 func (c *Configuration) ParseDeltas(deltas string) (err error) {
 	// assume problem
 	err = errors.New("invalid deltas input")
@@ -126,6 +130,8 @@ func (c *Configuration) ParseDeltas(deltas string) (err error) {
 	return
 }
 
+// WhichCluster is a helper function for setting global variables
+// depending on the QueueType keyword
 func WhichCluster(q string) {
 	sequoia := regexp.MustCompile(`(?i)sequoia`)
 	maple := regexp.MustCompile(`(?i)maple`)
@@ -199,7 +205,6 @@ func parseInt(str string) int {
 //   - and the latter only if needed
 //     (not intder and anpass in carts)
 
-// TODO test this
 func NewConfig(input [NumKeys]string) (conf Configuration) {
 	conf = Defaults()
 	conf.Geometry = input[Geometry]
@@ -263,7 +268,8 @@ func NewConfig(input [NumKeys]string) (conf Configuration) {
 		energyLine = regexp.MustCompile(`^\s*CCCRE\s+=`)
 	case "cart", "gocart":
 		flags |= CART
-		fmt.Printf("%d coords requires %d points\n", conf.Ncoords, totalPoints(conf.Ncoords))
+		fmt.Printf("%d coords requires %d points\n",
+			conf.Ncoords, totalPoints(conf.Ncoords))
 		energyLine = regexp.MustCompile(`energy=`)
 	case "grad":
 		flags |= GRAD
