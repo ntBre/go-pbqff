@@ -4,7 +4,7 @@ package main
 // derivative force constants
 func Make1D(i int) []ProtoCalc {
 	// Not sure about this one
-	scale := angbohr / (2 * Config.Deltas[i-1])
+	scale := angbohr / (2 * Config.FlSlice(Deltas)[i-1])
 	return []ProtoCalc{
 		{1, HashName(), []int{i}, []int{i}, scale},
 		{-1, HashName(), []int{-i}, []int{i}, scale},
@@ -14,7 +14,7 @@ func Make1D(i int) []ProtoCalc {
 // Make2D makes the Job slices for finite differences second
 // derivative force constants
 func Make2D(i, j int) []ProtoCalc {
-	scale := angbohr * angbohr / (4 * Config.Deltas[i-1] * Config.Deltas[j-1])
+	scale := angbohr * angbohr / (4 * Config.FlSlice(Deltas)[i-1] * Config.FlSlice(Deltas)[j-1])
 	switch {
 	case i == j:
 		// E(+i+i) - 2*E(0) + E(-i-i) / (2d)^2
@@ -39,7 +39,7 @@ func Make2D(i, j int) []ProtoCalc {
 // Make3D makes the ProtoCalc slices for finite differences third derivative
 // force constants
 func Make3D(i, j, k int) []ProtoCalc {
-	scale := angbohr * angbohr * angbohr / (8 * Config.Deltas[i-1] * Config.Deltas[j-1] * Config.Deltas[k-1])
+	scale := angbohr * angbohr * angbohr / (8 * Config.FlSlice(Deltas)[i-1] * Config.FlSlice(Deltas)[j-1] * Config.FlSlice(Deltas)[k-1])
 	switch {
 	case i == j && i == k:
 		// E(+i+i+i) - 3*E(i) + 3*E(-i) -E(-i-i-i) / (2d)^3
@@ -95,7 +95,11 @@ func Make3D(i, j, k int) []ProtoCalc {
 // Make4D makes the ProtoCalc slices for finite differences fourth
 // derivative force constants
 func Make4D(i, j, k, l int) []ProtoCalc {
-	scale := angbohr * angbohr * angbohr * angbohr / (16 * Config.Deltas[i-1] * Config.Deltas[j-1] * Config.Deltas[k-1] * Config.Deltas[l-1])
+	scale := angbohr * angbohr * angbohr * angbohr /
+		(16 * Config.FlSlice(Deltas)[i-1] *
+			Config.FlSlice(Deltas)[j-1] *
+			Config.FlSlice(Deltas)[k-1] *
+			Config.FlSlice(Deltas)[l-1])
 	switch {
 	// all the same
 	case i == j && i == k && i == l:

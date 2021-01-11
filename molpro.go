@@ -140,7 +140,7 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 			error.MatchString(line) {
 			return result, time, grad, ErrFileContainsError
 		}
-		if energyLine.MatchString(line) &&
+		if Config.RE(EnergyLine).MatchString(line) &&
 			!strings.Contains(line, "gthresh") &&
 			!strings.Contains(line, "hf") {
 			split := strings.Fields(line)
@@ -391,9 +391,9 @@ func Step(coords []float64, steps ...int) []float64 {
 	for _, v := range steps {
 		if v < 0 {
 			v = -1 * v
-			c[v-1] = c[v-1] - Config.Deltas[v-1]
+			c[v-1] = c[v-1] - Config.FlSlice(Deltas)[v-1]
 		} else {
-			c[v-1] += Config.Deltas[v-1]
+			c[v-1] += Config.FlSlice(Deltas)[v-1]
 		}
 	}
 	return c
@@ -547,7 +547,7 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, *pf)
 	var (
 		node  string
-		queue string = Config.Queue
+		queue string = Config.Str(Queue)
 	)
 	for f := range calcs {
 		calcs[f].cmdfile = cmdfile
@@ -556,7 +556,8 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 		if !calcs[f].noRun {
 			submitted++
 			AddCommand(cmdfile, files[f])
-			if *count == Config.ChunkSize || (f == len(files)-1 && end) {
+			if *count == Config.Int(ChunkSize) ||
+				(f == len(files)-1 && end) {
 				if len(nodes) > 0 {
 					tmp := strings.Split(nodes[0], ":")
 					// defer to Input[Queue] when selecting a queue
@@ -568,14 +569,14 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 				}
 				WritePBS(subfile,
 					&Job{"pts", cmdfile, 35, node, queue,
-						Config.NumJobs}, ptsMaple)
+						Config.Int(NumJobs)}, ptsMaple)
 				jobid := Submit(subfile)
 				if *debug {
 					fmt.Println(subfile, jobid)
 				}
 				ptsJobs = append(ptsJobs, jobid)
 				paraJobs = append(paraJobs, jobid)
-				paraCount[jobid] = Config.ChunkSize
+				paraCount[jobid] = Config.Int(ChunkSize)
 				*count = 1
 				*pf++
 				subfile = fmt.Sprintf("%s/main%d.pbs", dir, *pf)
@@ -595,14 +596,16 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 				nodes = nodes[1:]
 			}
 		}
-		WritePBS(subfile, &Job{"pts", cmdfile, 35, node, queue, Config.NumJobs}, ptsMaple)
+		WritePBS(subfile,
+			&Job{"pts", cmdfile, 35, node, queue, Config.Int(NumJobs)},
+			ptsMaple)
 		jobid := Submit(subfile)
 		if *debug {
 			fmt.Println(subfile, jobid)
 		}
 		ptsJobs = append(ptsJobs, jobid)
 		paraJobs = append(paraJobs, jobid)
-		paraCount[jobid] = Config.ChunkSize
+		paraCount[jobid] = Config.Int(ChunkSize)
 	}
 }
 
@@ -623,17 +626,17 @@ func (m *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc4
 	for i := 1; i <= ncoords; i++ {
 		for j := 1; j <= i; j++ {
 			files, calcs := Derivative(m, names, coords, fc2, i, j)
-			end = i == ncoords && j == i && nDerivative == 2
+			end = i == ncoords && j == i && Config.Int(Deriv) == 2
 			Push(dir, pf, count, files, calcs, ch, end)
-			if nDerivative > 2 {
+			if Config.Int(Deriv) > 2 {
 				for k := 1; k <= j; k++ {
 					files, calcs := Derivative(m, names, coords, fc3, i, j, k)
-					end = i == ncoords && j == i && k == j && nDerivative == 3
+					end = i == ncoords && j == i && k == j && Config.Int(Deriv) == 3
 					Push(dir, pf, count, files, calcs, ch, end)
-					if nDerivative > 3 {
+					if Config.Int(Deriv) > 3 {
 						for l := 1; l <= k; l++ {
 							files, calcs := Derivative(m, names, coords, fc4, i, j, k, l)
-							end = i == ncoords && j == i && k == j && l == k && nDerivative == 4
+							end = i == ncoords && j == i && k == j && l == k && Config.Int(Deriv) == 4
 							Push(dir, pf, count, files, calcs, ch, end)
 						}
 					}
@@ -734,17 +737,17 @@ func (m *Molpro) BuildGradPoints(names []string, coords []float64, fc2, fc3, fc4
 	ncoords := len(coords)
 	for i := 1; i <= ncoords; i++ {
 		files, calcs := GradDerivative(m, names, coords, fc2, i)
-		end = i == ncoords && nDerivative == 2
+		end = i == ncoords && Config.Int(Deriv) == 2
 		Push(dir, pf, count, files, calcs, ch, end)
-		if nDerivative > 2 {
+		if Config.Int(Deriv) > 2 {
 			for j := 1; j <= i; j++ {
 				files, calcs := GradDerivative(m, names, coords, fc3, i, j)
-				end = i == ncoords && j == i && nDerivative == 3
+				end = i == ncoords && j == i && Config.Int(Deriv) == 3
 				Push(dir, pf, count, files, calcs, ch, end)
-				if nDerivative > 3 {
+				if Config.Int(Deriv) > 3 {
 					for k := 1; k <= j; k++ {
 						files, calcs := GradDerivative(m, names, coords, fc4, i, j, k)
-						end = i == ncoords && j == i && k == j && nDerivative == 4
+						end = i == ncoords && j == i && k == j && Config.Int(Deriv) == 4
 						Push(dir, pf, count, files, calcs, ch, end)
 					}
 				}

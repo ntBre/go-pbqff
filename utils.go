@@ -53,7 +53,7 @@ func MakeName(geom string) (name string) {
 	atoms := make(map[string]int)
 	split := strings.Split(geom, "\n")
 	// TODO handle no comment/natom lines in xyz
-	if Config.GeomType == "xyz" {
+	if Config.Str(GeomType) == "xyz" {
 		split = split[2:]
 	}
 	for _, line := range split {

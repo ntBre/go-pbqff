@@ -543,7 +543,7 @@ func (i *Intder) Read9903(filename string) {
 // on pts/intder.in and redirects the output into
 // pts/intder.out
 func RunIntder(filename string) {
-	err := RunProgram(Config.IntderCmd, filename)
+	err := RunProgram(Config.Str(IntderCmd), filename)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -24,7 +24,6 @@ import (
 	"math"
 	"os"
 	"os/signal"
-	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -107,20 +106,14 @@ var (
 
 // Global variables
 var (
-	Config           Configuration
 	dirs             = []string{"opt", "freq", "pts", "freqs", "pts/inp"}
 	brokenFloat      = math.NaN()
-	energyLine       *regexp.Regexp
 	molproTerminated = "Molpro calculation terminated"
-	pbs              string
-	nDerivative      int = 4
 	ptsJobs          []string
 	paraJobs         []string // counters for parallel jobs
 	paraCount        map[string]int
 	errMap           map[error]int
 	nodes            []string
-	checkAfter       int = 100
-	sleep                = 1
 	nocheck          bool
 	flags            int
 	StartCPU         int64
@@ -339,8 +332,8 @@ func Optimize(prog *Molpro) (E0 float64) {
 	// write opt.inp and mp.pbs
 	prog.WriteInput("opt/opt.inp", opt)
 	WritePBS("opt/mp.pbs",
-		&Job{MakeName(Config.Geometry) + "-opt", "opt/opt.inp",
-			35, "", "", Config.NumJobs}, pbsMaple)
+		&Job{MakeName(Config.Str(Geometry)) + "-opt", "opt/opt.inp",
+			35, "", "", Config.Int(NumJobs)}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit("opt/mp.pbs")
 	outfile := "opt/opt.out"
@@ -381,10 +374,10 @@ func RefEnergy(prog *Molpro) (E0 float64) {
 	}
 	WritePBS(dir+pbsfile,
 		&Job{
-			Name:     MakeName(Config.Geometry) + "-ref",
+			Name:     MakeName(Config.Str(Geometry)) + "-ref",
 			Filename: dir + infile,
 			Signal:   35,
-			NumJobs:  Config.NumJobs,
+			NumJobs:  Config.Int(NumJobs),
 		}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit(dir + pbsfile)
@@ -409,10 +402,10 @@ func Frequency(prog *Molpro, absPath string) ([]float64, bool) {
 	prog.WriteInput(absPath+"/freq.inp", freq)
 	WritePBS(absPath+"/mp.pbs",
 		&Job{
-			Name:     MakeName(Config.Geometry) + "-freq",
+			Name:     MakeName(Config.Str(Geometry)) + "-freq",
 			Filename: absPath + "/freq.inp",
 			Signal:   35,
-			NumJobs:  Config.NumJobs,
+			NumJobs:  Config.Int(NumJobs),
 		}, pbsMaple)
 	// submit freq, wait in separate goroutine
 	// doesn't matter if this finishes
@@ -445,14 +438,14 @@ func Resubmit(name string, err error) string {
 		dst.Close()
 	}()
 	WritePBS(name+"_redo.pbs", &Job{"redo", name + "_redo.inp", 35, "", "",
-		Config.NumJobs}, pbsMaple)
+		Config.Int(NumJobs)}, pbsMaple)
 	return Submit(name + "_redo.pbs")
 }
 
 // Drain drains the queue of jobs and receives on ch when ready for more
 func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime float64) {
 	start := time.Now()
-	fmt.Println("step sizes: ", Config.Deltas)
+	fmt.Println("step sizes: ", Config.FlSlice(Deltas))
 	points := make([]Calc, 0)
 	var (
 		nJobs     int
@@ -548,23 +541,23 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 		}
 		if shortenBy < 1 {
 			fmt.Fprintln(os.Stderr, "Didn't shorten, sleeping")
-			time.Sleep(time.Duration(sleep) * time.Second)
+			time.Sleep(time.Duration(Config.Int(SleepInt)) * time.Second)
 		}
-		if check >= checkAfter {
+		if check >= Config.Int(CheckInt) {
 			if !nocheck {
 				MakeCheckpoint()
 			}
 			check = 1
 			fmt.Fprintf(os.Stderr, "CPU time: %.3f s\n", float64(GetCPU()-StartCPU)/1e9)
 		}
-		if heap.Len() >= Config.ChunkSize && !*nodel {
+		if heap.Len() >= Config.Int(ChunkSize) && !*nodel {
 			heap.Dump()
 		}
 		// Progress
 		fmt.Fprintf(os.Stderr, "finished %d/%d submitted, %v polling %d jobs\n", finished, submitted,
 			time.Since(pollStart).Round(time.Millisecond), nJobs)
 		// only receive more jobs if there is room
-		for count := 0; count < Config.ChunkSize && nJobs < Config.JobLimit; count++ {
+		for count := 0; count < Config.Int(ChunkSize) && nJobs < Config.Int(JobLimit); count++ {
 			calc, ok := <-ch
 			if !ok && finished == submitted {
 				fmt.Fprintf(os.Stderr, "resubmitted %d/%d (%.1f%%), points execution time: %v\n",
@@ -573,7 +566,7 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 				secRem := realTime - 60*float64(minutes)
 				fmt.Fprintf(os.Stderr, "total job time (wall): %.2f sec = %dm%.2fs\n", realTime, minutes, secRem)
 				// this is deprecated now that all should be saved but leave to check
-				if nDerivative == 4 {
+				if Config.Int(Deriv) == 4 {
 					fmt.Fprintf(os.Stderr, "saved %d/%d (%.f%%) fourth derivative components from e2d\n",
 						saved, fourTwos, float64(saved)/float64(fourTwos)*100)
 				}
@@ -634,12 +627,11 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	errfile, _ := os.Create(base + ".err")
 	syscall.Dup2(int(outfile.Fd()), 1)
 	syscall.Dup2(int(errfile.Fd()), 2)
-	input := ParseInfile(infile)
-	Config = NewConfig(input)
-	if Config.Flags == "noopt" {
+	ParseInfile(infile)
+	if Config.Str(Flags) == "noopt" {
 		flags = flags &^ OPT
 	}
-	spectro.SpectroCommand = Config.SpectroCmd
+	spectro.SpectroCommand = Config.Str(SpectroCmd)
 	if *count {
 		if !DoCart() {
 			fmt.Println("-count only implemented for Cartesians")
@@ -800,7 +792,7 @@ func main() {
 	)
 
 	if DoOpt() {
-		prog.Geometry = FormatZmat(Config.Geometry)
+		prog.Geometry = FormatZmat(Config.Str(Geometry))
 		E0 = Optimize(prog)
 		cart, zmat, err = prog.HandleOutput("opt/opt")
 		if err != nil {
@@ -814,10 +806,10 @@ func main() {
 			mpHarm, finished = Frequency(prog, absPath)
 		}()
 	} else {
-		cart = Config.Geometry
+		cart = Config.Str(Geometry)
 	}
 
-	ch := make(chan Calc, Config.JobLimit)
+	ch := make(chan Calc, Config.Int(JobLimit))
 
 	if !(DoCart() || DoGrad()) {
 		if *irdy == "" {
@@ -837,10 +829,10 @@ func main() {
 			prog.BuildPoints("pts/file07", atomNames, &cenergies, nil, false)
 		}
 	} else {
-		names, coords = XYZGeom(Config.Geometry)
+		names, coords = XYZGeom(Config.Str(Geometry))
 		natoms = len(names)
 		ncoords = len(coords)
-		prog.Geometry = Config.Geometry + "\n}\n"
+		prog.Geometry = Config.Str(Geometry) + "\n}\n"
 		if !DoOpt() {
 			E0 = RefEnergy(prog)
 		}
@@ -886,10 +878,10 @@ func main() {
 		other3 := N3N * (N3N + 1) * (N3N + 2) / 6
 		other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24
 		PrintFortFile(fc2, natoms, 6*natoms, "fort.15")
-		if nDerivative > 2 {
+		if Config.Int(Deriv) > 2 {
 			PrintFortFile(fc3, natoms, other3, "fort.30")
 		}
-		if nDerivative > 3 {
+		if Config.Int(Deriv) > 3 {
 			PrintFortFile(fc4, natoms, other4, "fort.40")
 			var buf bytes.Buffer
 			for i := range coords {

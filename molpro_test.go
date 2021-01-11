@@ -94,9 +94,9 @@ XXO = 80.0 Deg`,
 
 func TestReadOut(t *testing.T) {
 	m := Molpro{}
-	temp := energyLine
+	temp := Config.RE(EnergyLine)
 	defer func() {
-		energyLine = temp
+		Config.Set(EnergyLine, temp)
 	}()
 	tests := []struct {
 		msg      string
@@ -191,9 +191,9 @@ func TestReadOut(t *testing.T) {
 
 	for _, test := range tests {
 		if test.eline != nil {
-			energyLine = test.eline
+			Config.Set(EnergyLine, test.eline)
 		} else {
-			energyLine = regexp.MustCompile(`energy=`)
+			Config.Set(EnergyLine, regexp.MustCompile(`energy=`))
 		}
 		energy, time, grad, err := m.ReadOut(test.filename)
 		if math.IsNaN(test.energy) {
