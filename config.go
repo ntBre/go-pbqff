@@ -56,6 +56,26 @@ func (k Key) String() string {
 	}[k]
 }
 
+/* If generics are ever added, this becomes
+
+type Keyword[T any] struct {
+  *regexp.Regexp
+  Extract func(string) T
+  Value T
+}
+
+and I can get rid of all these stupid conversion methods
+
+At would become something like
+
+func (c *Config) [T any] At(k Key) T {
+
+Nope, no parameterized methods, need a different approach. I guess I
+would just use Config[Key].Value since that's basically what at was
+doing anyway, and the main advantage was not having to do the type
+casting myself.
+*/
+
 type Keyword struct {
 	Re      *regexp.Regexp
 	Extract func(string) interface{}
