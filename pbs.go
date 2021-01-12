@@ -31,7 +31,7 @@ const ptsMaple = `#!/bin/sh
 #PBS -o {{.Filename}}.out
 #PBS -W umask=022
 #PBS -l walltime=5000:00:00
-#PBS -l ncpus=8
+#PBS -l ncpus={{.NumJobs}}
 #PBS -l mem=64gb
 {{- if .Queue}}
 #PBS -q {{.Queue}}
