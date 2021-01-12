@@ -36,6 +36,7 @@ func TestMakeDirs(t *testing.T) {
 	if got != nil {
 		t.Errorf("got an error %q, didn't want one", got)
 	}
+	dirs := []string{"opt", "freq", "pts", "freqs", "pts/inp"}
 	for _, dir := range dirs {
 		if _, err := os.Stat(root + "/" + dir); os.IsNotExist(err) {
 			t.Errorf("failed to create %s in %s\n", dir, root)

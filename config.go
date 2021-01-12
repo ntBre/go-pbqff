@@ -1,3 +1,5 @@
+// Could actually have accessor methods for each of these with the
+// right types
 package main
 
 import (
@@ -11,7 +13,10 @@ import (
 // Key is a type for input keyword indices
 type Key int
 
-// Keys in the configuration array
+// Keys in the configuration array. To add a new Keyword, add a Key
+// here, then add its field to Conf below. If it requires other
+// Keywords to fully process, add a method on Config and call it at
+// the end of ParseInfile in input.go.
 const (
 	Cluster Key = iota
 	Program
@@ -33,6 +38,9 @@ const (
 	Ncoords
 	EnergyLine
 	PBS
+	MolproTmpl
+	AnpassTmpl
+	IntderTmpl
 	NumKeys
 )
 
@@ -56,10 +64,12 @@ type Keyword struct {
 
 type Config [NumKeys]Keyword
 
+// At returns the Value of c at k
 func (c *Config) At(k Key) interface{} {
 	return (*c)[k].Value
 }
 
+// Set sets the Value of c at k
 func (c *Config) Set(k Key, val interface{}) {
 	(*c)[k].Value = val
 }
@@ -198,16 +208,16 @@ func (c *Config) ParseDeltas() {
 	c.Set(Deltas, ret)
 }
 
-func StringKeyword(str string) interface{} {
-	return str
-}
-
 func kwpanic(str string, err error) {
 	panic(
 		fmt.Sprintf(
 			"%v parsing input line %q\n",
 			err, str),
 	)
+}
+
+func StringKeyword(str string) interface{} {
+	return str
 }
 
 func FloatKeyword(str string) interface{} {
@@ -334,5 +344,20 @@ var Conf = Config{
 	},
 	EnergyLine: {
 		Value: regexp.MustCompile(`energy=`),
+	},
+	MolproTmpl: {
+		Re:      regexp.MustCompile(`(?i)molprotmpl=`),
+		Extract: StringKeyword,
+		Value:   "molpro.in",
+	},
+	AnpassTmpl: {
+		Re:      regexp.MustCompile(`(?i)anpasstmpl=`),
+		Extract: StringKeyword,
+		Value:   "anpass.in",
+	},
+	IntderTmpl: {
+		Re:      regexp.MustCompile(`(?i)intdertmpl=`),
+		Extract: StringKeyword,
+		Value:   "intder.in",
 	},
 }

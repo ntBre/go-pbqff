@@ -99,8 +99,11 @@ func ReadFile(filename string) (lines []string, err error) {
 
 // MakeDirs sets up the directory structure described by dirs
 func MakeDirs(root string) (err error) {
+	var dirs []string
 	if DoCart() || DoGrad() {
 		dirs = []string{"pts/inp"}
+	} else {
+		dirs = []string{"opt", "freq", "pts", "freqs", "pts/inp"}
 	}
 	for _, dir := range dirs {
 		filename := root + "/" + dir
@@ -119,4 +122,9 @@ func MakeDirs(root string) (err error) {
 		}
 	}
 	return err
+}
+
+func errExit(err error, msg string) {
+	fmt.Fprintf(os.Stderr, "pbqff: %v %s\n", err, msg)
+	os.Exit(1)
 }

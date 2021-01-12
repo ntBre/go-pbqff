@@ -65,7 +65,6 @@ func DoGrad() bool { return flags&GRAD > 0 }
 
 // Global variables
 var (
-	dirs             = []string{"opt", "freq", "pts", "freqs", "pts/inp"}
 	brokenFloat      = math.NaN()
 	molproTerminated = "Molpro calculation terminated"
 	ptsJobs          []string
@@ -75,6 +74,7 @@ var (
 	nodes            []string
 	nocheck          bool
 	flags            int
+	submitted        int
 	StartCPU         int64
 )
 
@@ -580,6 +580,15 @@ func queueClear(jobs []string) error {
 func totalPoints(n int) int {
 	return 2 * n * (n*n*n + 2*n*n + 8*n + 1) / 3
 }
+func DupOutErr(infile string) {
+	// set up output and err files and dup their fds to stdout and stderr
+	// https://github.com/golang/go/issues/325
+	base := infile[:len(infile)-len(path.Ext(infile))]
+	outfile, _ := os.Create(base + ".out")
+	errfile, _ := os.Create(base + ".err")
+	syscall.Dup2(int(outfile.Fd()), 1)
+	syscall.Dup2(int(errfile.Fd()), 2)
+}
 
 func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	// parse flags for overwrite before mkdirs
@@ -589,28 +598,29 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 		os.Exit(1)
 	}
 	infile := args[0]
-	// set up output and err files and dup their fds to stdout and stderr
-	// https://github.com/golang/go/issues/325
-	base := infile[:len(infile)-len(path.Ext(infile))]
-	outfile, _ := os.Create(base + ".out")
-	errfile, _ := os.Create(base + ".err")
-	syscall.Dup2(int(outfile.Fd()), 1)
-	syscall.Dup2(int(errfile.Fd()), 2)
+	DupOutErr(infile)
 	ParseInfile(infile)
+	// TODO update this in spectro package not to stutter
+	// -> spectro.Command
 	spectro.SpectroCommand = Conf.Str(SpectroCmd)
-	// TODO count not working, see end of config.go for needed code
-	if *count {
-		if !DoCart() {
-			fmt.Println("-count only implemented for Cartesians")
+	if DoCart() {
+		nc := Conf.Int(Ncoords)
+		fmt.Printf("%d coords requires %d points\n",
+			nc, totalPoints(nc))
+		if *count {
+			os.Exit(0)
 		}
-		os.Exit(0)
+	} else if *count {
+		fmt.Println("-count only implemented for Cartesians")
+		os.Exit(1)
 	}
-	// TODO these should be keywords with these defaults
-	mpName := "molpro.in"
-	idName := "intder.in"
-	apName := "anpass.in"
+	// TODO make these input arguments with these defaults, then
+	// use from Config
+	mpName := Conf.Str(MolproTmpl)
+	idName := Conf.Str(IntderTmpl)
+	apName := Conf.Str(AnpassTmpl)
 	var err error
-	prog, err = LoadMolpro("molpro.in")
+	prog, err = LoadMolpro(mpName)
 	if err != nil {
 		errExit(err, fmt.Sprintf("loading molpro input %q", mpName))
 	}
@@ -632,11 +642,6 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	nodes = PBSnodes()
 	fmt.Printf("nodes: %q\n", nodes)
 	return prog, intder, anpass
-}
-
-func errExit(err error, msg string) {
-	fmt.Fprintf(os.Stderr, "pbqff: %v %s\n", err, msg)
-	os.Exit(1)
 }
 
 // XYZGeom converts a string xyz style geometry into a list of atom
@@ -710,18 +715,17 @@ func GetCPULimit() (cur, max uint64) {
 	return lim.Cur, lim.Max
 }
 
-var submitted int
+func CatchPanic() {
+	if r := recover(); r != nil {
+		fmt.Println("running queueClear before panic")
+		queueClear(ptsJobs)
+		panic(r)
+	}
+}
 
 func main() {
 	StartCPU = GetCPU()
-	// clear the queue if panicking
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("running queueClear before panic")
-			queueClear(ptsJobs)
-			panic(r)
-		}
-	}()
+	defer CatchPanic()
 	// clear the queue if killed
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Signal(syscall.SIGTERM))

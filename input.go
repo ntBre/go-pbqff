@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 )
@@ -52,14 +51,10 @@ func ParseInfile(filename string) {
 			ProcessInput(lines[i])
 		}
 	}
+	// Post-parse processing on some of the keywords
 	Conf.WhichProgram()
 	Conf.WhichCluster() // Cluster EnergyLine overwrites Program
 	if Conf.ProcessGeom() {
-		nc := Conf.Int(Ncoords)
-		// TODO differentiate between grad and normal cart,
-		// this is for normal cart
-		fmt.Printf("%d coords requires %d points\n",
-			nc, totalPoints(nc))
 		Conf.ParseDeltas()
 	}
 }
