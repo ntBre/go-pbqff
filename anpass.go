@@ -135,7 +135,7 @@ func GetLongLine(filename string) (string, bool) {
 // on freqs/anpass1.in and redirects the output into
 // freqs/anpass1.out
 func RunAnpass(filename string) {
-	err := RunProgram(Config.Str(AnpassCmd), filename)
+	err := RunProgram(Conf.Str(AnpassCmd), filename)
 	if err != nil {
 		panic(err)
 	}

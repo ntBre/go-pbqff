@@ -33,6 +33,7 @@ const (
 	Ncoords
 	EnergyLine
 	PBS
+	NumKeys
 )
 
 func (k Key) String() string {
@@ -53,38 +54,148 @@ type Keyword struct {
 	Value   interface{}
 }
 
-type Conf []Keyword
+type Config [NumKeys]Keyword
 
-func (c *Conf) At(k int) interface{} {
-	return (*c)[Key(k)].Value
+func (c *Config) At(k Key) interface{} {
+	return (*c)[k].Value
 }
 
-func (c *Conf) Set(k Key, val interface{}) {
+func (c *Config) Set(k Key, val interface{}) {
 	(*c)[k].Value = val
 }
 
-func (c *Conf) Str(k Key) string {
+func (c *Config) Str(k Key) string {
 	return (*c)[k].Value.(string)
 }
 
-func (c *Conf) FlSlice(k Key) []float64 {
+func (c *Config) Float(k Key) float64 {
+	return (*c)[k].Value.(float64)
+}
+
+func (c *Config) FlSlice(k Key) []float64 {
 	return (*c)[k].Value.([]float64)
 }
 
-func (c *Conf) Int(k Key) int {
+func (c *Config) Int(k Key) int {
 	return (*c)[k].Value.(int)
 }
 
-func (c *Conf) RE(k Key) *regexp.Regexp {
+func (c *Config) RE(k Key) *regexp.Regexp {
 	return (*c)[k].Value.(*regexp.Regexp)
 }
 
-func (c Conf) String() string {
+func (c Config) String() string {
 	var buf strings.Builder
 	for i, kw := range c {
 		fmt.Fprintf(&buf, "%s: %v\n", Key(i), kw.Value)
 	}
 	return buf.String()
+}
+
+// WhichCluster is a helper function for setting Config.EnergyLine and
+// Config.PBS based on the selected Cluster
+func (c *Config) WhichCluster() {
+	cluster := c.Str(Cluster)
+	sequoia := regexp.MustCompile(`(?i)sequoia`)
+	maple := regexp.MustCompile(`(?i)maple`)
+	var pbs string
+	switch {
+	case cluster == "", maple.MatchString(cluster):
+		pbs = pbsMaple
+	case sequoia.MatchString(cluster):
+		c.Set(EnergyLine, regexp.MustCompile(`PBQFF\(2\)`))
+		pbs = pbsSequoia
+	default:
+		panic("unsupported option for keyword cluster")
+	}
+	c.Set(PBS, pbs)
+}
+
+// WhichProgram is a helper function for setting Config.EnergyLine
+// based on the selected Program
+func (c *Config) WhichProgram() {
+	switch c.Str(Program) {
+	case "cccr":
+		c.Set(EnergyLine, regexp.MustCompile(`^\s*CCCRE\s+=`))
+	case "cart", "gocart":
+		flags |= CART
+	case "grad":
+		// TODO count points for grad
+		flags |= GRAD
+	case "molpro", "", "sic": // default if not specified
+	default:
+		panic("unsupported option for keyword program")
+	}
+}
+
+// ProcessGeom uses c.Geometry to update c.Deltas and calculate
+// c.Ncoords
+func (c *Config) ProcessGeom() (cart bool) {
+	var (
+		ncoords int
+		start   int
+		end     int
+	)
+	if c.At(Geometry) == nil {
+		panic("no geometry given")
+	}
+	lines := strings.Split(c.Str(Geometry), "\n")
+	gt := c.At(GeomType)
+	switch gt {
+	case "xyz", "cart":
+		start = 2
+		end = len(lines)
+		cart = true
+	case "zmat":
+		end = len(lines)
+	default:
+		panic("unable to determine geometry type")
+	}
+	for _, line := range lines[start:end] {
+		if !strings.Contains(line, "=") {
+			ncoords++
+		}
+	}
+	c.Set(Ncoords, ncoords)
+	return
+	// we could actually do heavier processing of the geometry
+	// here, as seen in the Zmat or XYZ functions I think in main
+}
+
+// ParseDeltas parses a sequence of step size inputs as a string into
+// a slice of floats. Unprovided steps are set to c.Delta. For
+// example, the input 1:0.075,4:0.075,7:0.075 yields [0.075, 0.005,
+// 0.005, 0.075, 0.005, 0.005, 0.075, 0.005, 0.005], assuming c.Delta
+// is 0.005, and c.Ncoord is 9
+func (c *Config) ParseDeltas() {
+	err := errors.New("invalid deltas input")
+	ret := make([]float64, 0)
+	if c.At(Deltas) == nil {
+		panic("no deltas to parse")
+	}
+	pairs := strings.Split(c.Str(Deltas), ",")
+	for _, p := range pairs {
+		sp := strings.Split(p, ":")
+		if len(sp) != 2 {
+			panic(err)
+		}
+		d, e := strconv.Atoi(strings.TrimSpace(sp[0]))
+		if e != nil || d < 1 {
+			panic(err)
+		}
+		f, e := strconv.ParseFloat(strings.TrimSpace(sp[1]), 64)
+		if e != nil || f < 0.0 {
+			panic(err)
+		}
+		for d > len(ret) {
+			ret = append(ret, c.Float(Delta))
+		}
+		ret[d-1] = f
+	}
+	for len(ret) < c.Int(Ncoords) {
+		ret = append(ret, c.Float(Delta))
+	}
+	c.Set(Deltas, ret)
 }
 
 func StringKeyword(str string) interface{} {
@@ -115,82 +226,7 @@ func IntKeyword(str string) interface{} {
 	return v
 }
 
-// ParseDeltas parses a sequence of step size inputs as a string into
-// a slice of floats. Unprovided steps are set to c.Delta. For
-// example, the input 1:0.075,4:0.075,7:0.075 yields [0.075, 0.005,
-// 0.005, 0.075, 0.005, 0.005, 0.075, 0.005, 0.005], assuming c.Delta
-// is 0.005, and c.Ncoord is 9
-func ParseDeltas(deltas string) interface{} {
-	err := errors.New("invalid deltas input")
-	ret := make([]float64, 0)
-	pairs := strings.Split(deltas, ",")
-	for _, p := range pairs {
-		sp := strings.Split(p, ":")
-		if len(sp) != 2 {
-			panic(err)
-		}
-		d, e := strconv.Atoi(strings.TrimSpace(sp[0]))
-		if e != nil || d < 1 {
-			panic(err)
-		}
-		f, e := strconv.ParseFloat(strings.TrimSpace(sp[1]), 64)
-		if e != nil || f < 0.0 {
-			panic(err)
-		}
-		for d > len(ret) {
-			ret = append(ret, -1.0)
-		}
-		ret[d-1] = f
-	}
-	return ret
-}
-
-// WhichCluster is a helper function for setting Config.EnergyLine and
-// Config.PBS based on the selected Cluster
-func (c *Conf) WhichCluster(cluster string) {
-	sequoia := regexp.MustCompile(`(?i)sequoia`)
-	maple := regexp.MustCompile(`(?i)maple`)
-	var (
-		pbs   string
-		eline *regexp.Regexp
-	)
-	switch {
-	case cluster == "", maple.MatchString(cluster):
-		pbs = pbsMaple
-	case sequoia.MatchString(cluster):
-		eline = regexp.MustCompile(`PBQFF\(2\)`)
-		pbs = pbsSequoia
-	default:
-		panic("unsupported option for keyword cluster")
-	}
-	c.Set(PBS, pbs)
-	c.Set(EnergyLine, eline)
-}
-
-// WhichProgram is a helper function for setting Config.EnergyLine
-// based on the selected Program
-func (c *Conf) WhichProgram(str string) {
-	eline := regexp.MustCompile(`energy=`)
-	switch str {
-	case "cccr":
-		eline = regexp.MustCompile(`^\s*CCCRE\s+=`)
-	case "cart", "gocart":
-		flags |= CART
-	case "grad":
-		// TODO count points for grad
-		flags |= GRAD
-	case "molpro", "", "sic": // default if not specified
-	default:
-		panic("unsupported option for keyword program")
-	}
-	c.Set(EnergyLine, eline)
-}
-
-// TODO use WhichX at end of parseinfile to break recursion
-
-// give each one its own func to check defaults instead of generic
-// XKeyword funs
-var Config = Conf{
+var Conf = Config{
 	Cluster: {
 		Re:      regexp.MustCompile(`(?i)queuetype=`),
 		Extract: StringKeyword,
@@ -211,6 +247,9 @@ var Config = Conf{
 			}
 			return str
 		},
+		// possible problem using this in template if ""
+		// doesn't satisify {{if .Field}} = False
+		// just delete and leave nil if not
 		Value: "",
 	},
 	Delta: {
@@ -220,7 +259,7 @@ var Config = Conf{
 	},
 	Deltas: {
 		Re:      regexp.MustCompile(`(?i)deltas=`),
-		Extract: ParseDeltas,
+		Extract: StringKeyword,
 	},
 	Geometry: {
 		Re:      regexp.MustCompile(`(?i)geometry=`),
@@ -297,21 +336,3 @@ var Config = Conf{
 		Value: regexp.MustCompile(`energy=`),
 	},
 }
-
-// TODO set Ncoords somewhere, prob in geom parser or after that somehow
-// this is how I did it before
-// geom := strings.Split(input[Geometry], "\n")
-// if input[GeomType] == "xyz" {
-// 	conf.Ncoords = 3 * (len(geom) - 2)
-// } else {
-// 	conf.Ncoords = len(geom)
-// }
-
-// also print this after:
-// fmt.Printf("%d coords requires %d points\n",
-// 	conf.Ncoords, totalPoints(conf.Ncoords))
-
-// check if geometry was given, if not it's an error so just parse
-// ncoords from that at the end of ParseInfile
-
-// after that we can make sure deltas is the right shape

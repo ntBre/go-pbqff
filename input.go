@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 )
@@ -11,15 +12,12 @@ type Regexp struct {
 	Name Key
 }
 
-// have a function to detect geomtype from the input instead of
-// reading geomtype=
-
 func ProcessInput(line string) {
-	for k, kword := range Config {
+	for k, kword := range Conf {
 		if kword.Extract != nil &&
 			kword.Re.MatchString(line) {
 			split := strings.SplitN(line, "=", 2)
-			Config[Key(k)].Value =
+			Conf[Key(k)].Value =
 				kword.Extract(split[len(split)-1])
 			break
 		}
@@ -53,6 +51,16 @@ func ParseInfile(filename string) {
 		default:
 			ProcessInput(lines[i])
 		}
+	}
+	Conf.WhichProgram()
+	Conf.WhichCluster() // Cluster EnergyLine overwrites Program
+	if Conf.ProcessGeom() {
+		nc := Conf.Int(Ncoords)
+		// TODO differentiate between grad and normal cart,
+		// this is for normal cart
+		fmt.Printf("%d coords requires %d points\n",
+			nc, totalPoints(nc))
+		Conf.ParseDeltas()
 	}
 }
 
