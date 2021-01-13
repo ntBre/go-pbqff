@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"reflect"
@@ -143,12 +144,20 @@ OX=                  1.26606700 ANG
 	}
 }
 
-func TestWriteInputMolpro(t *testing.T) {
-	load := "testfiles/load/molpro.in"
-	write := "testfiles/write/opt.inp"
-	right := "testfiles/right/opt.inp"
-	mp, _ := LoadMolpro(load)
-	mp.FormatZmat(`X
+// TODO test freq procedure
+func TestWriteInput(t *testing.T) {
+	tests := []struct {
+		load  string
+		write string
+		right string
+		geom  string
+		proc  Procedure
+	}{
+		{
+			load:  "testfiles/load/molpro.in",
+			write: "testfiles/write/opt.inp",
+			right: "testfiles/right/opt.inp",
+			geom: `X
 X 1 1.0
 Al 1 AlX 2 90.0
 Al 1 AlX 2 90.0 3 180.0
@@ -156,12 +165,19 @@ O  1 OX  2 XXO  3 90.0
 O  1 OX  2 XXO  4 90.0
 AlX = 0.85 Ang
 OX = 1.1 Ang
-XXO = 80.0 Deg`)
-	mp.WriteInput(write, opt)
-	if !compareFile(write, right) {
-		t.Errorf("mismatch between %s and %s\n", write, right)
+XXO = 80.0 Deg`,
+			proc: opt,
+		},
 	}
-	// (diff "testfiles/write/opt.inp" "testfiles/right/opt.inp")
+	for _, test := range tests {
+		mp, _ := LoadMolpro(test.load)
+		mp.FormatZmat(test.geom)
+		mp.WriteInput(test.write, test.proc)
+		if !compareFile(test.write, test.right) {
+			t.Errorf("mismatch between %s and %s\n"+
+				"(diff %#[1]q %#[2]q)\n", test.write, test.right)
+		}
+	}
 }
 
 func TestReadOut(t *testing.T) {
@@ -386,6 +402,7 @@ func TestReadFreqs(t *testing.T) {
 	}
 }
 
+// TODO test write=false case
 func TestBuildPoints(t *testing.T) {
 	prog, _ := LoadMolpro("testfiles/load/molpro.in")
 	cart, _, _ := prog.HandleOutput("testfiles/opt")
@@ -423,6 +440,33 @@ func TestBuildPoints(t *testing.T) {
 	}
 }
 
+func TestStep(t *testing.T) {
+	tmp := Conf
+	defer func() {
+		Conf = tmp
+	}()
+	Conf = Config{}
+	Conf.Set(Deltas, []float64{
+		0.005, 0.005, 0.005,
+		0.005, 0.005, 0.005,
+		0.005, 0.005, 0.005,
+	})
+	got := Step([]float64{
+		1, 1, 1,
+		1, 1, 1,
+		1, 1, 1,
+	}, []int{1, 2, 3}...)
+	want := []float64{
+		1.005, 1.005, 1.005,
+		1, 1, 1,
+		1, 1, 1,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+}
+
+// This only tests a 2nd derivative
 func TestDerivative(t *testing.T) {
 	prog := new(Molpro)
 	target := new([]CountFloat)
@@ -514,6 +558,30 @@ func TestDerivative(t *testing.T) {
 			t.Errorf("got\n%v, wanted\n%v\n", calcs, test.calcs)
 		}
 	}
+}
+
+func TestPush(t *testing.T) {
+	dir := t.TempDir()
+	var pf, count int
+	files := []string{}
+	calcs := []Calc{}
+	ch := make(chan Calc)
+	tmp := Submit
+	defer func() {
+		Submit = tmp
+	}()
+	Submit = func(str string) string {
+		return exec.Command("qsub", "-f", str).String()
+	}
+	Push(dir, &pf, &count, files, calcs, ch, true)
+	// things to test:
+	// does calc.cmdfile get set
+	// does calc.chunknum get set
+	// does the command get added to cmdfile, with and without noRun
+	// check both branches of if *count ==
+	// check if len(calcs) == 0 && end condition
+	// factor out nodes part I marked and test that separately
+	t.Error("WRITEME")
 }
 
 func TestBuildCartPoints(t *testing.T) {

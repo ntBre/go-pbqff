@@ -19,7 +19,7 @@ type Job struct {
 	Signal   int
 	Host     string
 	Queue    string
-	NumJobs   int
+	NumJobs  int
 }
 
 const mapleCmd = `molpro -t 1 `
@@ -135,7 +135,7 @@ func WritePBS(infile string, job *Job, pbs string) {
 
 // Submit submits the pbs script defined by filename to the queue and
 // returns the jobid
-func Submit(filename string) string {
+var Submit = func(filename string) string {
 	// -f option to run qsub in foreground
 	out, err := exec.Command("qsub", "-f", filename).Output()
 	for err != nil {

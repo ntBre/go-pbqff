@@ -73,10 +73,10 @@ func (m *Molpro) WriteInput(filename string, p Procedure) {
 	buf.WriteString(m.Head)
 	buf.WriteString(m.Geometry + "\n")
 	buf.WriteString(m.Tail)
-	switch {
-	case p == opt:
+	switch p {
+	case opt:
 		buf.WriteString(m.Opt)
-	case p == freq:
+	case freq:
 		buf.WriteString("{frequencies}\n")
 	}
 	buf.WriteString(m.Extra)
@@ -139,7 +139,6 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 	}
 
 	var (
-		skip                int
 		gradx, grady, gradz []string
 	)
 
@@ -151,10 +150,6 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 	}
 	error := regexp.MustCompile(`(?i)[^_]error`)
 	for _, line := range lines {
-		if skip > 0 {
-			skip--
-			continue
-		}
 		if strings.Contains(strings.ToLower(line), "error") &&
 			error.MatchString(line) {
 			return result, time, grad, ErrFileContainsError
@@ -472,6 +467,8 @@ func (prog *Molpro) Derivative(dir string, names []string,
 				for len(e2d) <= v {
 					e2d = append(e2d, CountFloat{Val: 0, Count: 1})
 				}
+				// if it was loaded, the count is
+				// already 0 from the checkpoint
 				if !e2d[v].Loaded {
 					e2d[v].Count = 1
 				}
@@ -616,6 +613,7 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 						nodes = nodes[1:]
 					}
 				}
+				// This should be using the PBS from Config
 				WritePBS(subfile,
 					&Job{"pts", cmdfile, 35, node, queue,
 						Conf.Int(NumJobs)}, ptsMaple)
@@ -637,6 +635,7 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 	}
 	// if end reached with no calcs, which can happen on continue
 	// from checkpoints
+	// TODO DRY out with above
 	if len(calcs) == 0 && end {
 		if len(nodes) > 0 {
 			tmp := strings.Split(nodes[0], ":")
