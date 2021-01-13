@@ -245,20 +245,6 @@ XXO = 80.0 Deg`)
 			t.Errorf("got %q, wanted %q", err, ErrFileContainsError)
 		}
 	})
-	// There was a problem on Sequoia where the new zmat params
-	// were inexplicably not in the frequency calculation
-	t.Run("Sequoia", func(t *testing.T) {
-		p, _ := LoadMolpro("testfiles/load/molpro.in")
-		_, zmat, _ := p.HandleOutput("testfiles/read/seq")
-		want := `ALX=                 1.20291856 ANG
-OX=                  1.26606700 ANG
-`
-		p.UpdateZmat(zmat)
-		p.WriteInput("testfiles/seq.freq", freq)
-		if !reflect.DeepEqual(zmat, want) {
-			t.Errorf("got %q, wanted %q\n", zmat, want)
-		}
-	})
 }
 
 func TestReadLog(t *testing.T) {
