@@ -188,7 +188,6 @@ func TestReadOut(t *testing.T) {
 			err:      nil,
 		},
 	}
-
 	for _, test := range tests {
 		if test.eline != nil {
 			Conf.Set(EnergyLine, test.eline)
@@ -227,24 +226,35 @@ O  1 OX  2 XXO  4 90.0
 AlX = 0.85 Ang
 OX = 1.1 Ang
 XXO = 80.0 Deg`)
-	t.Run("warning in outfile", func(t *testing.T) {
-		_, _, err := mp.HandleOutput("testfiles/opt")
-		if err != nil {
-			t.Error("got an error, didn't want one")
-		}
-	})
-	t.Run("no warning, normal case", func(t *testing.T) {
-		_, _, err := mp.HandleOutput("testfiles/nowarn")
-		if err != nil {
-			t.Error("got an error, didn't want one")
-		}
-	})
-	t.Run("Error in output", func(t *testing.T) {
-		_, _, err := mp.HandleOutput("testfiles/read/error")
-		if err != ErrFileContainsError {
-			t.Errorf("got %q, wanted %q", err, ErrFileContainsError)
-		}
-	})
+	tests := []struct {
+		msg  string
+		file string
+		err  error
+	}{
+		{
+			msg:  "warning in outfile",
+			file: "testfiles/opt",
+			err:  nil,
+		},
+		{
+			msg:  "no warning, normal case",
+			file: "testfiles/nowarn",
+			err:  nil,
+		},
+		{
+			msg:  "Error in output",
+			file: "testfiles/read/error",
+			err:  ErrFileContainsError,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.msg, func(t *testing.T) {
+			_, _, err := mp.HandleOutput(test.file)
+			if err != test.err {
+				t.Errorf("got %q, wanted %q\n", err, test.err)
+			}
+		})
+	}
 }
 
 func TestReadLog(t *testing.T) {
@@ -341,6 +351,8 @@ func TestBuildPoints(t *testing.T) {
 	}
 }
 
+// TODO test other two buildpoints functions
+
 func TestZipXYZ(t *testing.T) {
 	fcoords := []float64{
 		0.000000000, 2.391678166, 0.000000000,
@@ -373,6 +385,7 @@ func TestIndex(t *testing.T) {
 		{9, []int{1, 2}, []int{1, 9}},
 		{9, []int{2, 2}, []int{10}},
 		{9, []int{1, 1, 1}, []int{0}},
+		{9, []int{1, 1, 1, 1}, []int{0}},
 	}
 	for _, test := range tests {
 		got := Index(test.ncoords, false, test.ids...)
@@ -383,12 +396,6 @@ func TestIndex(t *testing.T) {
 	}
 }
 
-// water example:
-// options for steps:
-// 1 2 3 4 5 6 7 8 9 -1 -2 -3 -4 -5 -6 -7 -8 -9
-// indices:
-// 0 1 2 3 4 5 6 7 8  9 10 11 12 13 14 15 16 17
-// grid is then 17x17 = 2ncoords-1 x 2ncoords-1
 func TestE2dIndex(t *testing.T) {
 	tests := []struct {
 		ncoords int
