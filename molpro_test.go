@@ -43,7 +43,8 @@ hf,accuracy=16,energy=1.0d-10
 }
 
 func TestFormatZmat(t *testing.T) {
-	got := FormatZmat(
+	m := new(Molpro)
+	m.FormatZmat(
 		`X
 X 1 1.0
 Al 1 AlX 2 90.0
@@ -54,6 +55,7 @@ AlX = 0.85 Ang
 OX = 1.1 Ang
 XXO = 80.0 Deg`,
 	)
+	got := m.Geometry
 	want := `X
 X 1 1.0
 Al 1 AlX 2 90.0
@@ -74,8 +76,7 @@ func TestWriteInputMolpro(t *testing.T) {
 	write := "testfiles/write/opt.inp"
 	right := "testfiles/right/opt.inp"
 	mp, _ := LoadMolpro(load)
-	mp.Geometry = FormatZmat(
-		`X
+	mp.FormatZmat(`X
 X 1 1.0
 Al 1 AlX 2 90.0
 Al 1 AlX 2 90.0 3 180.0
@@ -83,8 +84,7 @@ O  1 OX  2 XXO  3 90.0
 O  1 OX  2 XXO  4 90.0
 AlX = 0.85 Ang
 OX = 1.1 Ang
-XXO = 80.0 Deg`,
-	)
+XXO = 80.0 Deg`)
 	mp.WriteInput(write, opt)
 	if !compareFile(write, right) {
 		t.Errorf("mismatch between %s and %s\n", write, right)
@@ -216,8 +216,8 @@ func TestReadOut(t *testing.T) {
 }
 
 func TestHandleOutput(t *testing.T) {
-	mp := Molpro{Geometry: FormatZmat(
-		`X
+	mp := new(Molpro)
+	mp.FormatZmat(`X
 X 1 1.0
 Al 1 AlX 2 90.0
 Al 1 AlX 2 90.0 3 180.0
@@ -226,8 +226,7 @@ O  1 OX  2 XXO  4 90.0
 
 AlX = 0.85 Ang
 OX = 1.1 Ang
-XXO = 80.0 Deg`,
-	)}
+XXO = 80.0 Deg`)
 	t.Run("warning in outfile", func(t *testing.T) {
 		_, _, err := mp.HandleOutput("testfiles/opt")
 		if err != nil {
@@ -254,7 +253,7 @@ XXO = 80.0 Deg`,
 		want := `ALX=                 1.20291856 ANG
 OX=                  1.26606700 ANG
 `
-		p.Geometry = UpdateZmat(p.Geometry, zmat)
+		p.UpdateZmat(zmat)
 		p.WriteInput("testfiles/seq.freq", freq)
 		if !reflect.DeepEqual(zmat, want) {
 			t.Errorf("got %q, wanted %q\n", zmat, want)

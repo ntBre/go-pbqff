@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -82,16 +83,33 @@ func (m *Molpro) WriteInput(filename string, p Procedure) {
 }
 
 // FormatZmat formats a z-matrix for use in Molpro input
-func FormatZmat(geom string) string {
+func (m *Molpro) FormatZmat(geom string) (err error) {
 	var out []string
+	err = errors.New("improper z-matrix")
 	split := strings.Split(geom, "\n")
 	for i, line := range split {
 		if strings.Contains(line, "=") {
 			out = append(append(append(out, split[:i]...), "}"), split[i:]...)
+			err = nil
 			break
 		}
 	}
-	return strings.Join(out, "\n")
+	m.Geometry = strings.Join(out, "\n")
+	return
+}
+
+// UpdateZmat updates an old zmat with new parameters
+func (m *Molpro) UpdateZmat(new string) {
+	old := m.Geometry
+	lines := strings.Split(old, "\n")
+	for i, line := range lines {
+		if strings.Contains(line, "}") {
+			lines = lines[:i+1]
+			break
+		}
+	}
+	updated := strings.Join(lines, "\n")
+	m.Geometry = updated + "\n" + new
 }
 
 // ReadOut reads a molpro output file and returns the resulting
@@ -337,16 +355,27 @@ func (m *Molpro) BuildPoints(filename string, atomNames []string, target *[]Coun
 				basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
 				fname := basename + ".inp"
 				if write {
-					// write the molpro input file and add it to the list of commands
+					// write the molpro input file
+					// and add it to the list of
+					// commands
 					m.WriteInput(fname, none)
 					end := li == len(lines)-1
 					for len(*target) <= geom {
 						*target = append(*target, CountFloat{Count: 1})
 					}
 					Push(dir+"/inp", pf, count, []string{fname},
-						[]Calc{{Name: basename, Scale: 1.0, Targets: []Target{{1, target, geom}}}}, ch, end)
+						[]Calc{{
+							Name:  basename,
+							Scale: 1.0,
+							Targets: []Target{
+								{1, target, geom},
+							},
+						}}, ch, end)
 				} else {
-					ch <- Calc{Name: basename, Scale: 1.0, Targets: []Target{{1, target, geom}}}
+					ch <- Calc{
+						Name:    basename,
+						Scale:   1.0,
+						Targets: []Target{{1, target, geom}}}
 				}
 				geom++
 				buf.Reset()

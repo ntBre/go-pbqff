@@ -190,11 +190,18 @@ func TestSummarize(t *testing.T) {
 }
 
 func TestUpdateZmat(t *testing.T) {
-	t.Run("maple", func(t *testing.T) {
-		prog, _ := LoadMolpro("testfiles/opt.inp")
-		_, zmat, _ := prog.HandleOutput("testfiles/nowarn")
-		got := UpdateZmat(FormatZmat(
-			`X
+	tests := []struct {
+		msg  string
+		load string
+		out  string
+		geom string
+		want string
+	}{
+		{
+			msg:  "maple",
+			load: "testfiles/opt.inp",
+			out:  "testfiles/nowarn",
+			geom: `X
 X 1 1.0
 Al 1 AlX 2 90.0
 Al 1 AlX 2 90.0 3 180.0
@@ -203,8 +210,7 @@ O  1 OX  2 XXO  4 90.0
 AlX = 0.85 Ang
 OX = 1.1 Ang
 XXO = 80.0 Deg`,
-		), zmat)
-		want := `X
+			want: `X
 X 1 1.0
 Al 1 AlX 2 90.0
 Al 1 AlX 2 90.0 3 180.0
@@ -214,15 +220,13 @@ O  1 OX  2 XXO  4 90.0
 NH=                  1.91310288 BOHR
 XNH=               112.21209367 DEGREE
 D1=                119.99647304 DEGREE
-`
-		if got != want {
-			t.Errorf("got\n%q, wanted\n%q\n", got, want)
-		}
-	})
-	t.Run("sequoia", func(t *testing.T) {
-		prog, _ := LoadMolpro("testfiles/opt.inp")
-		_, zmat, _ := prog.HandleOutput("testfiles/read/seq")
-		start := `X
+`,
+		},
+		{
+			msg:  "sequoia",
+			load: "testfiles/opt.inp",
+			out:  "testfiles/read/seq",
+			geom: `X
 X 1 1.0
 Al 1 AlX 2 90.0
 Al 1 AlX 2 90.0 3 180.0
@@ -231,9 +235,8 @@ O  1 OX  2 90.0  4 90.0
 }
 ALX=                 1.20291855 ANG
 OX=                  1.26606704 ANG
-`
-		got := UpdateZmat(start, zmat)
-		want := `X
+`,
+			want: `X
 X 1 1.0
 Al 1 AlX 2 90.0
 Al 1 AlX 2 90.0 3 180.0
@@ -242,11 +245,21 @@ O  1 OX  2 90.0  4 90.0
 }
 ALX=                 1.20291856 ANG
 OX=                  1.26606700 ANG
-`
-		if got != want {
-			t.Errorf("got\n%q, wanted\n%q\n", got, want)
-		}
-	})
+`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.msg, func(t *testing.T) {
+			prog, _ := LoadMolpro(test.load)
+			_, zmat, _ := prog.HandleOutput(test.out)
+			prog.FormatZmat(test.geom)
+			prog.UpdateZmat(zmat)
+			got := prog.Geometry
+			if got != test.want {
+				t.Errorf("got\n%q, wanted\n%q\n", got, test.want)
+			}
+		})
+	}
 }
 
 func TestXYZGeom(t *testing.T) {
@@ -292,4 +305,3 @@ func TestXYZGeom(t *testing.T) {
 		}
 	}
 }
-

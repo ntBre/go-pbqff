@@ -19,45 +19,6 @@ type Anpass struct {
 	Tail string
 }
 
-// BuildBody is a helper for building anpass file body
-func (a *Anpass) BuildBody(buf *bytes.Buffer, energies []float64) {
-	for i, line := range strings.Split(a.Body, "\n") {
-		if line != "" {
-			for _, field := range strings.Fields(line) {
-				f, _ := strconv.ParseFloat(field, 64)
-				fmt.Fprintf(buf, a.Fmt1, f)
-			}
-			fmt.Fprintf(buf, a.Fmt2+"\n", energies[i])
-		}
-	}
-}
-
-// WriteAnpass writes an anpass input file
-func (a *Anpass) WriteAnpass(filename string, energies []float64) {
-	var buf bytes.Buffer
-	buf.WriteString(a.Head)
-	a.BuildBody(&buf, energies)
-	buf.WriteString(a.Tail)
-	ioutil.WriteFile(filename, []byte(buf.String()), 0755)
-}
-
-// WriteAnpass2 writes an anpass input file for a stationary point
-func (a *Anpass) WriteAnpass2(filename, longLine string, energies []float64) {
-	var buf bytes.Buffer
-	buf.WriteString(a.Head)
-	a.BuildBody(&buf, energies)
-	for _, line := range strings.Split(a.Tail, "\n") {
-		if strings.Contains(line, "END OF DATA") {
-			buf.WriteString("STATIONARY POINT\n" +
-				longLine + "\n")
-		} else if strings.Contains(line, "!STATIONARY POINT") {
-			continue
-		}
-		buf.WriteString(line + "\n")
-	}
-	ioutil.WriteFile(filename, []byte(buf.String()), 0755)
-}
-
 // LoadAnpass reads a template anpass input file and stores the
 // results in an Anpass
 func LoadAnpass(filename string) (*Anpass, error) {
@@ -103,6 +64,45 @@ func LoadAnpass(filename string) (*Anpass, error) {
 		buf.WriteString(line + "\n")
 	}
 	return &a, nil
+}
+
+// BuildBody is a helper for building anpass file body
+func (a *Anpass) BuildBody(buf *bytes.Buffer, energies []float64) {
+	for i, line := range strings.Split(a.Body, "\n") {
+		if line != "" {
+			for _, field := range strings.Fields(line) {
+				f, _ := strconv.ParseFloat(field, 64)
+				fmt.Fprintf(buf, a.Fmt1, f)
+			}
+			fmt.Fprintf(buf, a.Fmt2+"\n", energies[i])
+		}
+	}
+}
+
+// WriteAnpass writes an anpass input file
+func (a *Anpass) WriteAnpass(filename string, energies []float64) {
+	var buf bytes.Buffer
+	buf.WriteString(a.Head)
+	a.BuildBody(&buf, energies)
+	buf.WriteString(a.Tail)
+	ioutil.WriteFile(filename, []byte(buf.String()), 0755)
+}
+
+// WriteAnpass2 writes an anpass input file for a stationary point
+func (a *Anpass) WriteAnpass2(filename, longLine string, energies []float64) {
+	var buf bytes.Buffer
+	buf.WriteString(a.Head)
+	a.BuildBody(&buf, energies)
+	for _, line := range strings.Split(a.Tail, "\n") {
+		if strings.Contains(line, "END OF DATA") {
+			buf.WriteString("STATIONARY POINT\n" +
+				longLine + "\n")
+		} else if strings.Contains(line, "!STATIONARY POINT") {
+			continue
+		}
+		buf.WriteString(line + "\n")
+	}
+	ioutil.WriteFile(filename, []byte(buf.String()), 0755)
 }
 
 // GetLongLine scans an anpass output file and return the "long line"

@@ -63,6 +63,9 @@ func DoCart() bool { return flags&CART > 0 }
 // set
 func DoGrad() bool { return flags&GRAD > 0 }
 
+// DoSIC if neither CART or GRAD
+func DoSIC() bool { return flags&(CART|GRAD) == 0 }
+
 // Global variables
 var (
 	brokenFloat      = math.NaN()
@@ -246,19 +249,6 @@ func Summarize(zpt float64, mpHarm, idHarm, spHarm, spFund, spCorr []float64) er
 	return nil
 }
 
-// UpdateZmat updates an old zmat with new parameters
-func UpdateZmat(old, new string) string {
-	lines := strings.Split(old, "\n")
-	for i, line := range lines {
-		if strings.Contains(line, "}") {
-			lines = lines[:i+1]
-			break
-		}
-	}
-	updated := strings.Join(lines, "\n")
-	return updated + "\n" + new
-}
-
 // WhichCluster sets the PBS template and energyLine depending on the
 // which computer is to be used
 // Optimize runs a Molpro optimization in the opt directory
@@ -331,7 +321,7 @@ func RefEnergy(prog *Molpro) (E0 float64) {
 
 // Frequency runs a Molpro harmonic frequency calculation in the freq
 // directory
-func Frequency(prog *Molpro, absPath string) ([]float64, bool) {
+func Frequency(prog *Molpro, absPath string) []float64 {
 	// write freq.inp and that mp.pbs
 	prog.WriteInput(absPath+"/freq.inp", freq)
 	WritePBS(absPath+"/mp.pbs",
@@ -353,10 +343,10 @@ func Frequency(prog *Molpro, absPath string) ([]float64, bool) {
 		if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 			err == ErrFileContainsError {
 			fmt.Fprintln(os.Stderr, "error in freq, aborting that calculation")
-			return nil, false
+			return nil
 		}
 	}
-	return prog.ReadFreqs(outfile), true
+	return prog.ReadFreqs(outfile)
 }
 
 // Resubmit copies the input file associated with name to
@@ -748,10 +738,8 @@ func main() {
 	fmt.Printf("Maximum CPU time (s):\n\tCur: %d\n\tMax: %d\n", cur, max)
 	var (
 		mpHarm    []float64
-		finished  bool
 		cart      string
 		zmat      string
-		err       error
 		atomNames []string
 		energies  []float64
 		cenergies []CountFloat
@@ -764,26 +752,36 @@ func main() {
 	)
 
 	if DoOpt() {
-		prog.Geometry = FormatZmat(Conf.Str(Geometry))
+		if Conf.Str(GeomType) != "zmat" {
+			panic("optimization requires a zmat geometry")
+		}
+		err := prog.FormatZmat(Conf.Str(Geometry))
+		if err != nil {
+			panic(err)
+		}
 		E0 = Optimize(prog)
 		cart, zmat, err = prog.HandleOutput("opt/opt")
 		if err != nil {
 			panic(err)
 		}
-		// only need this if running a freq
-		prog.Geometry = UpdateZmat(prog.Geometry, zmat)
-		// run the frequency in the background and don't wait
+		prog.UpdateZmat(zmat)
 		go func() {
 			absPath, _ := filepath.Abs("freq")
-			mpHarm, finished = Frequency(prog, absPath)
+			mpHarm = Frequency(prog, absPath)
 		}()
 	} else {
+		// asserting geomtype is cart or xyz
+		if !strings.Contains("cart,xyz", Conf.Str(GeomType)) {
+			panic("expecting cartesian geometry")
+		}
 		cart = Conf.Str(Geometry)
+		prog.Geometry = cart + "\n}\n"
+		E0 = RefEnergy(prog)
 	}
 
 	ch := make(chan Calc, Conf.Int(JobLimit))
 
-	if !(DoCart() || DoGrad()) {
+	if DoSIC() {
 		if *irdy == "" {
 			atomNames = intder.ConvertCart(cart)
 		} else {
@@ -795,19 +793,17 @@ func main() {
 			go func() {
 				prog.BuildPoints("pts/file07", atomNames, &cenergies, ch, true)
 			}()
-			// this works if no points were deleted, else
-			// need a resume from checkpoint thing
 		} else {
+			// this works if no points were deleted and
+			// the files are named the same way between
+			// runs, else need a resume from checkpoint
+			// thing
 			prog.BuildPoints("pts/file07", atomNames, &cenergies, nil, false)
 		}
 	} else {
-		names, coords = XYZGeom(Conf.Str(Geometry))
+		names, coords = XYZGeom(cart)
 		natoms = len(names)
 		ncoords = len(coords)
-		prog.Geometry = Conf.Str(Geometry) + "\n}\n"
-		if !DoOpt() {
-			E0 = RefEnergy(prog)
-		}
 		if DoCart() {
 			go func() {
 				prog.BuildCartPoints(names, coords, &fc2, &fc3, &fc4, ch)
@@ -822,7 +818,7 @@ func main() {
 	min, _ = Drain(prog, ncoords, ch, E0)
 	queueClear(ptsJobs)
 
-	if !(DoCart() || DoGrad()) {
+	if DoSIC() {
 		energies = FloatsFromCountFloats(cenergies)
 		// convert to relative energies
 		for i := range energies {
@@ -840,7 +836,7 @@ func main() {
 		if err != nil {
 			errExit(err, "running spectro")
 		}
-		if !finished {
+		if mpHarm == nil {
 			mpHarm = make([]float64, spec.Nfreqs)
 		}
 		res := summarize.Spectro(filepath.Join("freqs", "spectro2.out"))
@@ -866,6 +862,10 @@ func main() {
 			if err != nil {
 				errExit(err, "loading spectro input")
 			}
+			// I think the above should be a function
+			// AngToBohr and FormatGeom should take a
+			// []float64 for coords and handle the
+			// formatting internally
 			spec.FormatGeom(names, buf.String())
 			spec.WriteInput("spectro.in")
 			err = spec.DoSpectro(".")

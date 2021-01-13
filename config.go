@@ -14,9 +14,9 @@ import (
 type Key int
 
 // Keys in the configuration array. To add a new Keyword, add a Key
-// here, then add its field to Conf below. If it requires other
-// Keywords to fully process, add a method on Config and call it at
-// the end of ParseInfile in input.go.
+// here and to the String method below, then add its field to Conf
+// below. If it requires other Keywords to fully process, add a method
+// on Config and call it at the end of ParseInfile in input.go.
 const (
 	Cluster Key = iota
 	Program
@@ -46,35 +46,50 @@ const (
 
 func (k Key) String() string {
 	return []string{
-		"Cluster", "Program", "Queue",
-		"Delta", "Deltas", "Geometry",
-		"GeomType", "Flags", "Deriv",
-		"JobLimit", "ChunkSize", "CheckInt",
-		"SleepInt", "NumJobs", "IntderCmd",
-		"AnpassCmd", "SpectroCmd", "Ncoords",
-		"EnergyLine", "PBS",
+		"Cluster",
+		"Program",
+		"Queue",
+		"Delta",
+		"Deltas",
+		"Geometry",
+		"GeomType",
+		"Flags",
+		"Deriv",
+		"JobLimit",
+		"ChunkSize",
+		"CheckInt",
+		"SleepInt",
+		"NumJobs",
+		"IntderCmd",
+		"AnpassCmd",
+		"SpectroCmd",
+		"Ncoords",
+		"EnergyLine",
+		"PBS",
+		"MolproTmpl",
+		"AnpassTmpl",
+		"IntderTmpl",
 	}[k]
 }
 
-/* If generics are ever added, this becomes
+// If generics are ever added, this becomes
 
-type Keyword[T any] struct {
-  *regexp.Regexp
-  Extract func(string) T
-  Value T
-}
+// type Keyword[T any] struct {
+//   *regexp.Regexp
+//   Extract func(string) T
+//   Value T
+// }
 
-and I can get rid of all these stupid conversion methods
+// and I can get rid of all these stupid conversion methods
 
-At would become something like
+// At would become something like
 
-func (c *Config) [T any] At(k Key) T {
+// func (c *Config) [T any] At(k Key) T {
 
-Nope, no parameterized methods, need a different approach. I guess I
-would just use Config[Key].Value since that's basically what at was
-doing anyway, and the main advantage was not having to do the type
-casting myself.
-*/
+// Nope, no parameterized methods, need a different approach. I guess I
+// would just use Config[Key].Value since that's basically what at was
+// doing anyway, and the main advantage was not having to do the type
+// casting myself.
 
 type Keyword struct {
 	Re      *regexp.Regexp
