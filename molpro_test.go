@@ -262,44 +262,51 @@ OX=                  1.26606700 ANG
 }
 
 func TestReadLog(t *testing.T) {
-	t.Run("maple", func(t *testing.T) {
-		cart, zmat := ReadLog("testfiles/coords.log")
-		wantCart := `O 1.000000000 0.118481857 -2.183553663
+	tests := []struct {
+		name string
+		log  string
+		cart string
+		zmat string
+	}{
+		{
+			name: "maple",
+			log:  "testfiles/coords.log",
+			cart: `O 1.000000000 0.118481857 -2.183553663
 H 0.000000000 -1.563325812 -2.884671935
 C 0.000000000 -0.014536611 0.273763522
 N 0.000000000 -0.010373662 2.467030139
-`
-		wantZmat := `OH=                  0.96421314 ANG
+`,
+			zmat: `OH=                  0.96421314 ANG
 OC=                  1.30226003 ANG
 HOC=               109.53197453 DEG
 CN=                  1.16062880 ANG
 OCN=               176.79276221 DEG
-`
-		if cart != wantCart {
-			t.Errorf("got %v, wanted %v\n", cart, wantCart)
-		}
-		if zmat != wantZmat {
-			t.Errorf("got %v, wanted %v\n", zmat, wantZmat)
-		}
-	})
-
-	t.Run("sequoia", func(t *testing.T) {
-		cart, zmat := ReadLog("testfiles/read/seq.log")
-		wantCart := `AL 0.000000000 0.000000000 2.273186636
+`,
+		},
+		{
+			name: "sequoia",
+			log:  "testfiles/read/seq.log",
+			cart: `AL 0.000000000 0.000000000 2.273186636
 AL 0.000000000 0.000000000 -2.273186636
 O 0.000000000 2.392519895 0.000000000
 O 0.000000000 -2.392519895 0.000000000
-`
-		wantZmat := `ALX=                 1.20291856 ANG
+`,
+			zmat: `ALX=                 1.20291856 ANG
 OX=                  1.26606700 ANG
-`
-		if cart != wantCart {
-			t.Errorf("\ngot %q, \nwad %q\n", cart, wantCart)
-		}
-		if zmat != wantZmat {
-			t.Errorf("got %v, wanted %v\n", zmat, wantZmat)
-		}
-	})
+`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cart, zmat := ReadLog(test.log)
+			if cart != test.cart {
+				t.Errorf("got %v, wanted %v\n", cart, test.cart)
+			}
+			if zmat != test.zmat {
+				t.Errorf("got %v, wanted %v\n", zmat, test.zmat)
+			}
+		})
+	}
 }
 
 func TestReadFreqs(t *testing.T) {
@@ -327,9 +334,21 @@ func TestBuildPoints(t *testing.T) {
 		got = append(got, calc)
 	}
 	want := []Calc{
-		Calc{Name: "testfiles/read/inp/NHHH.00000", Targets: []Target{{1, cf, 0}}, cmdfile: "testfiles/read/inp/commands0.txt", Scale: 1},
-		Calc{Name: "testfiles/read/inp/NHHH.00001", Targets: []Target{{1, cf, 1}}, cmdfile: "testfiles/read/inp/commands0.txt", Scale: 1},
-		Calc{Name: "testfiles/read/inp/NHHH.00002", Targets: []Target{{1, cf, 2}}, cmdfile: "testfiles/read/inp/commands0.txt", Scale: 1},
+		{
+			Name:    "testfiles/read/inp/NHHH.00000",
+			Targets: []Target{{1, cf, 0}},
+			cmdfile: "testfiles/read/inp/commands0.txt",
+			Scale:   1},
+		{
+			Name:    "testfiles/read/inp/NHHH.00001",
+			Targets: []Target{{1, cf, 1}},
+			cmdfile: "testfiles/read/inp/commands0.txt",
+			Scale:   1},
+		{
+			Name:    "testfiles/read/inp/NHHH.00002",
+			Targets: []Target{{1, cf, 2}},
+			cmdfile: "testfiles/read/inp/commands0.txt",
+			Scale:   1},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got\n%v, wanted\n%v", got, want)
