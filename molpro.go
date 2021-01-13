@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
@@ -324,7 +325,8 @@ func (m *Molpro) AugmentHead() {
 // energy calculations and return an array of jobs to run. If write
 // is set to true, write the necessary files. Otherwise just return the list
 // of jobs.
-func (m *Molpro) BuildPoints(filename string, atomNames []string, target *[]CountFloat, ch chan Calc, write bool) {
+func (m *Molpro) BuildPoints(filename string, atomNames []string,
+	target *[]CountFloat, ch chan Calc, write bool) {
 	lines, err := ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -433,14 +435,10 @@ func Step(coords []float64, steps ...int) []float64 {
 // type Calc struct {Name string, Targets []Target}
 // type Target struct {Coeff float64, Slice *[]float64, Index int}
 
-var (
-	fourTwos, saved int
-)
-
 // Derivative is a helper for calling Make(2|3|4)D in the same way
-func Derivative(prog *Molpro, names []string, coords []float64, target *[]CountFloat, dims ...int) (fnames []string, calcs []Calc) {
+func (prog *Molpro) Derivative(dir string, names []string,
+	coords []float64, target *[]CountFloat, dims ...int) (fnames []string, calcs []Calc) {
 	var protos []ProtoCalc
-	dir := "pts/inp/"
 	ncoords := len(coords)
 	ndims := len(dims)
 	switch ndims {
@@ -454,7 +452,10 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]CountF
 	for _, p := range protos {
 		coords := Step(coords, p.Steps...)
 		prog.Geometry = ZipXYZ(names, coords) + "}\n"
-		temp := Calc{Name: dir + p.Name, Scale: p.Scale}
+		temp := Calc{
+			Name:  filepath.Join(dir, p.Name),
+			Scale: p.Scale,
+		}
 		for _, v := range Index(ncoords, false, p.Index...) {
 			for len(*target) <= v {
 				*target = append(*target, CountFloat{Val: 0, Count: 0})
@@ -478,14 +479,15 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]CountF
 					Target{Coeff: 1, Slice: &e2d, Index: v})
 			}
 		} else if len(p.Steps) == 2 && ndims == 4 {
-			fourTwos++
-			if id := E2dIndex(ncoords, p.Steps...)[0]; len(e2d) > id && e2d[id].Val != 0 {
+			// either take fourth derivative from finished
+			// e2d point or promise a source for later
+			if id := E2dIndex(ncoords, p.Steps...)[0]; len(e2d) > id &&
+				e2d[id].Val != 0 {
 				temp.Result = e2d[id].Val
 			} else {
 				temp.Src = &Source{&e2d, id}
 			}
 			temp.noRun = true
-			saved++
 		}
 		// if target was loaded, remove it from list of targets
 		// then only submit if len(Targets) > 0
@@ -498,10 +500,7 @@ func Derivative(prog *Molpro, names []string, coords []float64, target *[]CountF
 			}
 		}
 		if len(temp.Targets) > 0 {
-			fname := dir + p.Name + ".inp"
-			// if *debug {
-			// 	fmt.Println(ndims, len(protos), fname)
-			// }
+			fname := filepath.Join(dir, p.Name+".inp")
 			fnames = append(fnames, fname)
 			if strings.Contains(p.Name, "E0") {
 				temp.noRun = true
@@ -582,12 +581,16 @@ func ZipXYZ(names []string, coords []float64) string {
 		panic("ZipXYZ: coords not divisible by 3")
 	}
 	for i := range names {
-		fmt.Fprintf(&buf, "%s %.10f %.10f %.10f\n", names[i], coords[3*i], coords[3*i+1], coords[3*i+2])
+		fmt.Fprintf(&buf, "%s %.10f %.10f %.10f\n",
+			names[i], coords[3*i], coords[3*i+1], coords[3*i+2])
 	}
 	return buf.String()
 }
 
 // Push sends calculations to the queue
+
+// TODO should be able to replace files[f] with calcs[f].Name + ".inp"
+// and remove files as arg here and return in Derivative
 func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc, end bool) {
 	subfile := fmt.Sprintf("%s/main%d.pbs", dir, *pf)
 	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, *pf)
@@ -632,7 +635,8 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 			}
 		}
 	}
-	// if end reached with no calcs, which can happen on continue from checkpoints
+	// if end reached with no calcs, which can happen on continue
+	// from checkpoints
 	if len(calcs) == 0 && end {
 		if len(nodes) > 0 {
 			tmp := strings.Split(nodes[0], ":")
@@ -657,7 +661,8 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 
 // BuildCartPoints constructs the calculations needed to run a
 // Cartesian quartic force field
-func (m *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc4 *[]CountFloat, ch chan Calc) {
+func (m *Molpro) BuildCartPoints(names []string, coords []float64,
+	fc2, fc3, fc4 *[]CountFloat, ch chan Calc) {
 	var (
 		count *int
 		pf    *int
@@ -671,19 +676,25 @@ func (m *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc4
 	ncoords := len(coords)
 	for i := 1; i <= ncoords; i++ {
 		for j := 1; j <= i; j++ {
-			files, calcs := Derivative(m, names, coords, fc2, i, j)
+			files, calcs := m.Derivative(dir, names, coords, fc2, i, j)
 			end = i == ncoords && j == i && Conf.Int(Deriv) == 2
 			Push(dir, pf, count, files, calcs, ch, end)
 			if Conf.Int(Deriv) > 2 {
 				for k := 1; k <= j; k++ {
-					files, calcs := Derivative(m, names, coords, fc3, i, j, k)
-					end = i == ncoords && j == i && k == j && Conf.Int(Deriv) == 3
+					files, calcs := m.Derivative(dir, names, coords,
+						fc3, i, j, k)
+					end = i == ncoords && j == i && k == j &&
+						Conf.Int(Deriv) == 3
 					Push(dir, pf, count, files, calcs, ch, end)
 					if Conf.Int(Deriv) > 3 {
 						for l := 1; l <= k; l++ {
-							files, calcs := Derivative(m, names, coords, fc4, i, j, k, l)
-							end = i == ncoords && j == i && k == j && l == k && Conf.Int(Deriv) == 4
-							Push(dir, pf, count, files, calcs, ch, end)
+							files, calcs := m.Derivative(dir,
+								names, coords, fc4, i, j, k, l)
+							end = i == ncoords && j == i &&
+								k == j && l == k &&
+								Conf.Int(Deriv) == 4
+							Push(dir, pf, count,
+								files, calcs, ch, end)
 						}
 					}
 				}
@@ -694,7 +705,8 @@ func (m *Molpro) BuildCartPoints(names []string, coords []float64, fc2, fc3, fc4
 	return
 }
 
-func GradDerivative(prog *Molpro, names []string, coords []float64, target *[]CountFloat, dims ...int) (fnames []string, calcs []Calc) {
+func GradDerivative(prog *Molpro, names []string, coords []float64,
+	target *[]CountFloat, dims ...int) (fnames []string, calcs []Calc) {
 	dir := "pts/inp/"
 	ndims := len(dims)
 	ncoords := len(coords)

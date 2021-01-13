@@ -213,18 +213,6 @@ func HandleSignal(sig int, timeout time.Duration) error {
 	}
 }
 
-// GetNames takes a cartesian geometry and extracts the atom names
-func GetNames(cart string) (names []string) {
-	lines := strings.Split(cart, "\n")
-	for _, line := range lines {
-		fields := strings.Fields(line)
-		if len(fields) == 4 {
-			names = append(names, fields[0])
-		}
-	}
-	return
-}
-
 // Summarize prints a summary table of the vibrational frequency data
 func Summarize(zpt float64, mpHarm, idHarm, spHarm, spFund, spCorr []float64) error {
 	if len(mpHarm) != len(idHarm) ||
@@ -518,15 +506,6 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 				fmt.Fprintf(os.Stderr,
 					"total job time (wall): %.2f sec = %dm%.2fs\n",
 					realTime, minutes, secRem)
-				// this is deprecated now that all
-				// should be saved but leave to check
-				if Conf.Int(Deriv) == 4 {
-					fmt.Fprintf(os.Stderr,
-						"saved %d/%d (%.f%%) "+
-							"4th deriv components from e2d\n",
-						saved, fourTwos,
-						float64(saved)/float64(fourTwos)*100)
-				}
 				for k, v := range errMap {
 					fmt.Fprintf(os.Stderr, "%v: %d occurrences\n", k, v)
 				}

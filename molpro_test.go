@@ -5,12 +5,11 @@ import (
 	"math"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"testing"
 )
-
-var names = []string{"Al", "O", "O", "Al"}
 
 func TestLoadMolpro(t *testing.T) {
 	got, _ := LoadMolpro("testfiles/load/molpro.in")
@@ -68,6 +67,79 @@ OX = 1.1 Ang
 XXO = 80.0 Deg`
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+}
+
+func TestUpdateZmat(t *testing.T) {
+	tests := []struct {
+		msg  string
+		load string
+		out  string
+		geom string
+		want string
+	}{
+		{
+			msg:  "maple",
+			load: "testfiles/opt.inp",
+			out:  "testfiles/nowarn",
+			geom: `X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 XXO  3 90.0
+O  1 OX  2 XXO  4 90.0
+AlX = 0.85 Ang
+OX = 1.1 Ang
+XXO = 80.0 Deg`,
+			want: `X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 XXO  3 90.0
+O  1 OX  2 XXO  4 90.0
+}
+NH=                  1.91310288 BOHR
+XNH=               112.21209367 DEGREE
+D1=                119.99647304 DEGREE
+`,
+		},
+		{
+			msg:  "sequoia",
+			load: "testfiles/opt.inp",
+			out:  "testfiles/read/seq",
+			geom: `X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 90.0  3 90.0
+O  1 OX  2 90.0  4 90.0
+}
+ALX=                 1.20291855 ANG
+OX=                  1.26606704 ANG
+`,
+			want: `X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 90.0  3 90.0
+O  1 OX  2 90.0  4 90.0
+}
+ALX=                 1.20291856 ANG
+OX=                  1.26606700 ANG
+`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.msg, func(t *testing.T) {
+			prog, _ := LoadMolpro(test.load)
+			_, zmat, _ := prog.HandleOutput(test.out)
+			prog.FormatZmat(test.geom)
+			prog.UpdateZmat(zmat)
+			got := prog.Geometry
+			if got != test.want {
+				t.Errorf("got\n%q, wanted\n%q\n", got, test.want)
+			}
+		})
 	}
 }
 
@@ -317,7 +389,7 @@ func TestReadFreqs(t *testing.T) {
 func TestBuildPoints(t *testing.T) {
 	prog, _ := LoadMolpro("testfiles/load/molpro.in")
 	cart, _, _ := prog.HandleOutput("testfiles/opt")
-	names := GetNames(cart)
+	names, _ := XYZGeom(cart)
 	os.Mkdir("testfiles/read/inp", 0755)
 	defer os.RemoveAll("testfiles/read/inp")
 	fmt.Println("dir: ", path.Dir("testfiles/read/file07"))
@@ -351,7 +423,106 @@ func TestBuildPoints(t *testing.T) {
 	}
 }
 
-// TODO test other two buildpoints functions
+func TestDerivative(t *testing.T) {
+	prog := new(Molpro)
+	target := new([]CountFloat)
+	dir := t.TempDir()
+	tmp := Conf
+	defer func() {
+		Conf = tmp
+	}()
+	tests := []struct {
+		names  []string
+		coords []float64
+		dims   []int
+		files  []string
+		calcs  []Calc
+	}{
+		{
+			names: []string{"O", "H"},
+			coords: []float64{
+				0.1, 0.2, 0.3,
+				0.4, 0.5, 0.6,
+			},
+			dims: []int{1, 1},
+			files: []string{
+				filepath.Join(dir, "job.0000000000.inp"),
+				filepath.Join(dir, "E0.inp"),
+				filepath.Join(dir, "job.0000000001.inp"),
+			},
+			calcs: []Calc{
+				{
+					Name: filepath.Join(dir, "job.0000000000"),
+					Targets: []Target{
+						{
+							Coeff: 1,
+							Slice: target,
+							Index: 0,
+						},
+						{
+							Coeff: 1,
+							Slice: &e2d,
+							Index: 0,
+						},
+					},
+					Scale: angbohr * angbohr / 4,
+				},
+				{
+					Name: filepath.Join(dir, "E0"),
+					Targets: []Target{
+						{
+							Coeff: -2,
+							Slice: target,
+							Index: 0,
+						},
+					},
+					noRun: true,
+					Scale: angbohr * angbohr / 4,
+				},
+				{
+					Name: filepath.Join(dir, "job.0000000001"),
+					Targets: []Target{
+						{
+							Coeff: 1,
+							Slice: target,
+							Index: 0,
+						},
+						{
+							Coeff: 1,
+							Slice: &e2d,
+							Index: 78,
+						},
+					},
+					Scale: angbohr * angbohr / 4,
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		Conf = Config{}
+		deltas := make([]float64, len(test.coords))
+		for i := range test.coords {
+			deltas[i] = 1.0
+		}
+		Conf.Set(Deltas, deltas)
+		files, calcs := prog.Derivative(dir, test.names,
+			test.coords, target, test.dims...)
+		if !reflect.DeepEqual(files, test.files) {
+			t.Errorf("got\n%v, wanted\n%v\n", files, test.files)
+		}
+		if !reflect.DeepEqual(calcs, test.calcs) {
+			t.Errorf("got\n%v, wanted\n%v\n", calcs, test.calcs)
+		}
+	}
+}
+
+func TestBuildCartPoints(t *testing.T) {
+	t.Error("WRITEME")
+}
+
+func TestBuildGradPoints(t *testing.T) {
+	t.Error("WRITEME")
+}
 
 func TestZipXYZ(t *testing.T) {
 	fcoords := []float64{
@@ -360,6 +531,7 @@ func TestZipXYZ(t *testing.T) {
 		2.274263181, 0.000000000, 0.000000000,
 		0.000000000, -2.391678166, 0.000000000,
 	}
+	names := []string{"Al", "O", "O", "Al"}
 	got := ZipXYZ(names, fcoords)
 	want := `Al 0.0000000000 2.3916781660 0.0000000000
 O -2.2742631810 0.0000000000 0.0000000000
@@ -374,21 +546,44 @@ Al 0.0000000000 -2.3916781660 0.0000000000
 func TestIndex(t *testing.T) {
 	tests := []struct {
 		ncoords int
+		nosort  bool
 		ids     []int
 		want    []int
 	}{
+		{
+			ncoords: 6,
+			ids:     []int{1, 1},
+			nosort:  true,
+			want:    []int{0},
+		},
 		{
 			ncoords: 9,
 			ids:     []int{1, 1},
 			want:    []int{0},
 		},
-		{9, []int{1, 2}, []int{1, 9}},
-		{9, []int{2, 2}, []int{10}},
-		{9, []int{1, 1, 1}, []int{0}},
-		{9, []int{1, 1, 1, 1}, []int{0}},
+		{
+			ncoords: 9,
+			ids:     []int{1, 2},
+			want:    []int{1, 9},
+		},
+		{
+			ncoords: 9,
+			ids:     []int{2, 2},
+			want:    []int{10},
+		},
+		{
+			ncoords: 9,
+			ids:     []int{1, 1, 1},
+			want:    []int{0},
+		},
+		{
+			ncoords: 9,
+			ids:     []int{1, 1, 1, 1},
+			want:    []int{0},
+		},
 	}
 	for _, test := range tests {
-		got := Index(test.ncoords, false, test.ids...)
+		got := Index(test.ncoords, test.nosort, test.ids...)
 		want := test.want
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, wanted %v\n", got, want)
@@ -408,6 +603,8 @@ func TestE2dIndex(t *testing.T) {
 		{9, []int{2, 2}, []int{19}},
 		{9, []int{1, -9}, []int{17, 306}},
 		{9, []int{-9, -9}, []int{323}},
+		{6, []int{1, 1}, []int{0}},
+		{6, []int{-1, -1}, []int{78}},
 	}
 	for _, test := range tests {
 		got := E2dIndex(test.ncoords, test.ids...)
