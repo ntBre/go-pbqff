@@ -805,9 +805,7 @@ func TestBuildGradPoints(t *testing.T) {
 	fc2, fc3, fc4 :=
 		new([]CountFloat), new([]CountFloat), new([]CountFloat)
 	n := len(coords)
-	want := 2*n*n + n +
-		(4*n*n*n+6*n*n+2*n)/3 +
-		(4*n*n*n*n+12*n*n*n+11*n*n+3*n)/6 // wrong for grads
+	want := (4*n*n*n + 12*n*n + 11*n) / 3
 	ch := make(chan Calc, want) // buffered to size of expected calcs
 	mp := new(Molpro)
 	go mp.BuildGradPoints(dir, names, coords, fc2, fc3, fc4, ch)

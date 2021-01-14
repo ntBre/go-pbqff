@@ -3,7 +3,6 @@ package main
 // Make1D makes the Job slices for finite differences first
 // derivative force constants
 func Make1D(i int) []ProtoCalc {
-	// Not sure about this one
 	scale := angbohr / (2 * Conf.FlSlice(Deltas)[i-1])
 	return []ProtoCalc{
 		{1, HashName(), []int{i}, []int{i}, scale},
@@ -38,8 +37,8 @@ func Make2D(i, j int) []ProtoCalc {
 	}
 }
 
-// Make3D makes the ProtoCalc slices for finite differences third derivative
-// force constants
+// Make3D makes the ProtoCalc slices for finite differences third
+// derivative force constants
 func Make3D(i, j, k int) []ProtoCalc {
 	scale := angbohr * angbohr * angbohr /
 		(8 * Conf.FlSlice(Deltas)[i-1] *
