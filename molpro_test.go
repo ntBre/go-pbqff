@@ -707,8 +707,117 @@ func TestBuildCartPoints(t *testing.T) {
 	}
 }
 
+// This only tests a 3rd derivative
+func TestGradDerivative(t *testing.T) {
+	prog := new(Molpro)
+	target := new([]CountFloat)
+	dir := t.TempDir()
+	tmp := Conf
+	glob := Global
+	defer func() {
+		Conf = tmp
+		Global = glob
+	}()
+	Global.JobNum = 0 // HashName just increases, have to reset
+	tests := []struct {
+		names  []string
+		coords []float64
+		dims   []int
+		calcs  []Calc
+	}{
+		{
+			names: []string{"O", "H"},
+			coords: []float64{
+				0.1, 0.2, 0.3,
+				0.4, 0.5, 0.6,
+			},
+			dims: []int{1, 1},
+			calcs: []Calc{
+				{
+					Name: filepath.Join(dir, "job.0000000000"),
+					Targets: []Target{
+						{
+							Coeff: 1,
+							Slice: target,
+							Index: 0,
+						},
+					},
+					Scale: angbohr * angbohr / 4,
+				},
+				{
+					Name: filepath.Join(dir, "E0"),
+					Targets: []Target{
+						{
+							Coeff: -2,
+							Slice: target,
+							Index: 0,
+						},
+					},
+					noRun: true,
+					Scale: angbohr * angbohr / 4,
+				},
+				{
+					Name: filepath.Join(dir, "job.0000000001"),
+					Targets: []Target{
+						{
+							Coeff: 1,
+							Slice: target,
+							Index: 0,
+						},
+					},
+					Scale: angbohr * angbohr / 4,
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		Conf = Config{}
+		deltas := make([]float64, len(test.coords))
+		for i := range test.coords {
+			deltas[i] = 1.0
+		}
+		Conf.Set(Deltas, deltas)
+		calcs := prog.GradDerivative(dir, test.names,
+			test.coords, target, test.dims...)
+		if !reflect.DeepEqual(calcs, test.calcs) {
+			t.Errorf("got\n%v, wanted\n%v\n", calcs, test.calcs)
+		}
+	}
+}
+
 func TestBuildGradPoints(t *testing.T) {
-	t.Error("WRITEME")
+	tmp := Conf
+	defer func() {
+		Conf = tmp
+	}()
+	Conf.Set(Deltas, []float64{
+		0.005, 0.005, 0.005,
+		0.005, 0.005, 0.005,
+		0.005, 0.005, 0.005,
+	})
+	dir := t.TempDir()
+	names := []string{"O", "H", "H"}
+	coords := []float64{
+		0.1, 0.2, 0.3,
+		0.4, 0.5, 0.6,
+		0.4, 0.5, 0.6,
+	}
+	fc2, fc3, fc4 :=
+		new([]CountFloat), new([]CountFloat), new([]CountFloat)
+	n := len(coords)
+	want := 2*n*n + n +
+		(4*n*n*n+6*n*n+2*n)/3 +
+		(4*n*n*n*n+12*n*n*n+11*n*n+3*n)/6 // wrong for grads
+	ch := make(chan Calc, want) // buffered to size of expected calcs
+	mp := new(Molpro)
+	go mp.BuildGradPoints(dir, names, coords, fc2, fc3, fc4, ch)
+	got := make([]Calc, 0)
+	for calc := range ch {
+		got = append(got, calc)
+	}
+	if lgot := len(got); lgot != want {
+		t.Errorf("got %d, wanted %d calcs\n", lgot, want)
+	}
 }
 
 func TestE2dIndex(t *testing.T) {
@@ -734,4 +843,8 @@ func TestE2dIndex(t *testing.T) {
 				test.ncoords, test.ids, got, want)
 		}
 	}
+}
+
+func TestIndex(t *testing.T) {
+	t.Error("WRITEME")
 }

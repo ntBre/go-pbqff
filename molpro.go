@@ -385,19 +385,12 @@ func (m *Molpro) BuildPoints(filename string, atomNames []string,
 	return
 }
 
-// Index3 returns the index in the third derivative array expected by SPECTRO
-// corresponding to x, y, and z
-var jobNum int
-
 // HashName returns a hashed filename
 func HashName() string {
-	// var h maphash.Hash
-	// h.SetSeed(maphash.MakeSeed())
-	// return "job" + strconv.FormatUint(h.Sum64(), 16)
 	defer func() {
-		jobNum++
+		Global.JobNum++
 	}()
-	return fmt.Sprintf("job.%010d", jobNum)
+	return fmt.Sprintf("job.%010d", Global.JobNum)
 }
 
 // ProtoCalc is a precursor to a Calc with information for setting up
@@ -693,9 +686,8 @@ func (m *Molpro) BuildCartPoints(dir string, names []string, coords []float64,
 }
 
 // GradDerivative is the Derivative analog for Gradients
-func GradDerivative(prog *Molpro, names []string, coords []float64,
+func (m *Molpro) GradDerivative(dir string, names []string, coords []float64,
 	target *[]CountFloat, dims ...int) (calcs []Calc) {
-	dir := "pts/inp/"
 	ndims := len(dims)
 	ncoords := len(coords)
 	var (
@@ -717,8 +709,8 @@ func GradDerivative(prog *Molpro, names []string, coords []float64,
 	}
 	for _, p := range protos {
 		coords := Step(coords, p.Steps...)
-		prog.Geometry = ZipXYZ(names, coords) + "}\n"
-		temp := Calc{Name: dir + p.Name, Scale: p.Scale}
+		m.Geometry = ZipXYZ(names, coords) + "}\n"
+		temp := Calc{Name: filepath.Join(dir, p.Name), Scale: p.Scale}
 		var index int
 		for g := 1; g <= dimmax; g++ {
 			switch len(dims) {
@@ -737,7 +729,8 @@ func GradDerivative(prog *Molpro, names []string, coords []float64,
 			for len(*target) <= index {
 				*target = append(*target, CountFloat{})
 			}
-			// every time this index is added as a target, increment its count
+			// every time this index is added as a target,
+			// increment its count
 			if !(*target)[index].Loaded {
 				(*target)[index].Count++
 			}
@@ -747,18 +740,19 @@ func GradDerivative(prog *Molpro, names []string, coords []float64,
 		for t := 0; t < len(temp.Targets); {
 			targ := temp.Targets[t]
 			if (*targ.Slice)[targ.Index].Loaded {
-				temp.Targets = append(temp.Targets[:t], temp.Targets[t+1:]...)
+				temp.Targets = append(temp.Targets[:t],
+					temp.Targets[t+1:]...)
 			} else {
 				t++
 			}
 		}
 		if len(temp.Targets) > 0 {
-			fname := dir + p.Name + ".inp"
+			fname := filepath.Join(dir, p.Name+".inp")
 			if strings.Contains(p.Name, "E0") {
 				temp.noRun = true
 			}
 			if !temp.noRun {
-				prog.WriteInput(fname, none)
+				m.WriteInput(fname, none)
 			}
 			calcs = append(calcs, temp)
 		}
@@ -781,18 +775,20 @@ func (m *Molpro) BuildGradPoints(dir string, names []string, coords []float64,
 	*pf = 0
 	ncoords := len(coords)
 	for i := 1; i <= ncoords; i++ {
-		calcs := GradDerivative(m, names, coords, fc2, i)
+		calcs := m.GradDerivative(dir, names, coords, fc2, i)
 		end = i == ncoords && Conf.Int(Deriv) == 2
 		Push(dir, pf, count, calcs, ch, end)
 		if Conf.Int(Deriv) > 2 {
 			for j := 1; j <= i; j++ {
-				calcs := GradDerivative(m, names, coords, fc3, i, j)
+				calcs := m.GradDerivative(dir, names, coords, fc3, i, j)
 				end = i == ncoords && j == i && Conf.Int(Deriv) == 3
 				Push(dir, pf, count, calcs, ch, end)
 				if Conf.Int(Deriv) > 3 {
 					for k := 1; k <= j; k++ {
-						calcs := GradDerivative(m, names, coords, fc4, i, j, k)
-						end = i == ncoords && j == i && k == j && Conf.Int(Deriv) == 4
+						calcs := m.GradDerivative(dir, names, coords,
+							fc4, i, j, k)
+						end = i == ncoords && j == i &&
+							k == j && Conf.Int(Deriv) == 4
 						Push(dir, pf, count, calcs, ch, end)
 					}
 				}

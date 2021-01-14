@@ -81,7 +81,8 @@ var (
 )
 
 var Global struct {
-	Nodes []string
+	Nodes  []string
+	JobNum int
 }
 
 const (
