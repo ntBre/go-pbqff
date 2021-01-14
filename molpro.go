@@ -361,14 +361,13 @@ func (m *Molpro) BuildPoints(filename string, atomNames []string,
 					for len(*target) <= geom {
 						*target = append(*target, CountFloat{Count: 1})
 					}
-					Push(dir+"/inp", pf, count, []string{fname},
-						[]Calc{{
-							Name:  basename,
-							Scale: 1.0,
-							Targets: []Target{
-								{1, target, geom},
-							},
-						}}, ch, end)
+					Push(dir+"/inp", pf, count, []Calc{{
+						Name:  basename,
+						Scale: 1.0,
+						Targets: []Target{
+							{1, target, geom},
+						},
+					}}, ch, end)
 				} else {
 					ch <- Calc{
 						Name:    basename,
@@ -432,7 +431,7 @@ func Step(coords []float64, steps ...int) []float64 {
 
 // Derivative is a helper for calling Make(2|3|4)D in the same way
 func (prog *Molpro) Derivative(dir string, names []string,
-	coords []float64, target *[]CountFloat, dims ...int) (fnames []string, calcs []Calc) {
+	coords []float64, target *[]CountFloat, dims ...int) (calcs []Calc) {
 	var protos []ProtoCalc
 	ncoords := len(coords)
 	ndims := len(dims)
@@ -498,7 +497,6 @@ func (prog *Molpro) Derivative(dir string, names []string,
 		}
 		if len(temp.Targets) > 0 {
 			fname := filepath.Join(dir, p.Name+".inp")
-			fnames = append(fnames, fname)
 			if strings.Contains(p.Name, "E0") {
 				temp.noRun = true
 			}
@@ -588,7 +586,7 @@ func ZipXYZ(names []string, coords []float64) string {
 
 // TODO should be able to replace files[f] with calcs[f].Name + ".inp"
 // and remove files as arg here and return in Derivative
-func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc, end bool) {
+func Push(dir string, pf, count *int, calcs []Calc, ch chan Calc, end bool) {
 	subfile := fmt.Sprintf("%s/main%d.pbs", dir, *pf)
 	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, *pf)
 	var (
@@ -601,9 +599,9 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 		ch <- calcs[f]
 		if !calcs[f].noRun {
 			submitted++
-			AddCommand(cmdfile, files[f])
+			AddCommand(cmdfile, calcs[f].Name+".inp")
 			if *count == Conf.Int(ChunkSize) ||
-				(f == len(files)-1 && end) {
+				(f == len(calcs)-1 && end) {
 				if len(nodes) > 0 {
 					tmp := strings.Split(nodes[0], ":")
 					// defer to Input[Queue] when selecting a queue
@@ -675,25 +673,25 @@ func (m *Molpro) BuildCartPoints(names []string, coords []float64,
 	ncoords := len(coords)
 	for i := 1; i <= ncoords; i++ {
 		for j := 1; j <= i; j++ {
-			files, calcs := m.Derivative(dir, names, coords, fc2, i, j)
+			calcs := m.Derivative(dir, names, coords, fc2, i, j)
 			end = i == ncoords && j == i && Conf.Int(Deriv) == 2
-			Push(dir, pf, count, files, calcs, ch, end)
+			Push(dir, pf, count, calcs, ch, end)
 			if Conf.Int(Deriv) > 2 {
 				for k := 1; k <= j; k++ {
-					files, calcs := m.Derivative(dir, names, coords,
+					calcs := m.Derivative(dir, names, coords,
 						fc3, i, j, k)
 					end = i == ncoords && j == i && k == j &&
 						Conf.Int(Deriv) == 3
-					Push(dir, pf, count, files, calcs, ch, end)
+					Push(dir, pf, count, calcs, ch, end)
 					if Conf.Int(Deriv) > 3 {
 						for l := 1; l <= k; l++ {
-							files, calcs := m.Derivative(dir,
+							calcs := m.Derivative(dir,
 								names, coords, fc4, i, j, k, l)
 							end = i == ncoords && j == i &&
 								k == j && l == k &&
 								Conf.Int(Deriv) == 4
 							Push(dir, pf, count,
-								files, calcs, ch, end)
+								calcs, ch, end)
 						}
 					}
 				}
@@ -705,7 +703,7 @@ func (m *Molpro) BuildCartPoints(names []string, coords []float64,
 }
 
 func GradDerivative(prog *Molpro, names []string, coords []float64,
-	target *[]CountFloat, dims ...int) (fnames []string, calcs []Calc) {
+	target *[]CountFloat, dims ...int) (calcs []Calc) {
 	dir := "pts/inp/"
 	ndims := len(dims)
 	ncoords := len(coords)
@@ -765,7 +763,6 @@ func GradDerivative(prog *Molpro, names []string, coords []float64,
 		}
 		if len(temp.Targets) > 0 {
 			fname := dir + p.Name + ".inp"
-			fnames = append(fnames, fname)
 			if strings.Contains(p.Name, "E0") {
 				temp.noRun = true
 			}
@@ -793,19 +790,19 @@ func (m *Molpro) BuildGradPoints(names []string, coords []float64, fc2, fc3, fc4
 	dir := "pts/inp"
 	ncoords := len(coords)
 	for i := 1; i <= ncoords; i++ {
-		files, calcs := GradDerivative(m, names, coords, fc2, i)
+		calcs := GradDerivative(m, names, coords, fc2, i)
 		end = i == ncoords && Conf.Int(Deriv) == 2
-		Push(dir, pf, count, files, calcs, ch, end)
+		Push(dir, pf, count, calcs, ch, end)
 		if Conf.Int(Deriv) > 2 {
 			for j := 1; j <= i; j++ {
-				files, calcs := GradDerivative(m, names, coords, fc3, i, j)
+				calcs := GradDerivative(m, names, coords, fc3, i, j)
 				end = i == ncoords && j == i && Conf.Int(Deriv) == 3
-				Push(dir, pf, count, files, calcs, ch, end)
+				Push(dir, pf, count, calcs, ch, end)
 				if Conf.Int(Deriv) > 3 {
 					for k := 1; k <= j; k++ {
-						files, calcs := GradDerivative(m, names, coords, fc4, i, j, k)
+						calcs := GradDerivative(m, names, coords, fc4, i, j, k)
 						end = i == ncoords && j == i && k == j && Conf.Int(Deriv) == 4
-						Push(dir, pf, count, files, calcs, ch, end)
+						Push(dir, pf, count, calcs, ch, end)
 					}
 				}
 			}

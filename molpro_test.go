@@ -481,7 +481,6 @@ func TestDerivative(t *testing.T) {
 		names  []string
 		coords []float64
 		dims   []int
-		files  []string
 		calcs  []Calc
 	}{
 		{
@@ -491,11 +490,6 @@ func TestDerivative(t *testing.T) {
 				0.4, 0.5, 0.6,
 			},
 			dims: []int{1, 1},
-			files: []string{
-				filepath.Join(dir, "job.0000000000.inp"),
-				filepath.Join(dir, "E0.inp"),
-				filepath.Join(dir, "job.0000000001.inp"),
-			},
 			calcs: []Calc{
 				{
 					Name: filepath.Join(dir, "job.0000000000"),
@@ -551,11 +545,8 @@ func TestDerivative(t *testing.T) {
 			deltas[i] = 1.0
 		}
 		Conf.Set(Deltas, deltas)
-		files, calcs := prog.Derivative(dir, test.names,
+		calcs := prog.Derivative(dir, test.names,
 			test.coords, target, test.dims...)
-		if !reflect.DeepEqual(files, test.files) {
-			t.Errorf("got\n%v, wanted\n%v\n", files, test.files)
-		}
 		if !reflect.DeepEqual(calcs, test.calcs) {
 			t.Errorf("got\n%v, wanted\n%v\n", calcs, test.calcs)
 		}
@@ -566,11 +557,6 @@ func TestPush(t *testing.T) {
 	dir := t.TempDir()
 	var pf, count int
 	count = 1
-	files := []string{
-		"job1.inp",
-		"job2.inp",
-		"job3.inp",
-	}
 	calcs := []Calc{
 		{Name: "job1"},
 		{Name: "job2"},
@@ -587,7 +573,7 @@ func TestPush(t *testing.T) {
 		return exec.Command("qsub", "-f", str).String()
 	}
 	Conf.Set(ChunkSize, 2)
-	Push(dir, &pf, &count, files, calcs, ch, true)
+	Push(dir, &pf, &count, calcs, ch, true)
 	got := make([]Calc, 0)
 	for c := 0; c < 3; c++ {
 		got = append(got, <-ch)
