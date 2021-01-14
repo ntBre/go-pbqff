@@ -236,17 +236,33 @@ func TestXYZGeom(t *testing.T) {
 }
 
 func TestCartPoints(t *testing.T) {
-	got := CartPoints(9)
-	want := 5784
-	if got != want {
-		t.Errorf("got %v, wanted %v\n", got, want)
+	tests := []struct {
+		nc   int
+		want int
+	}{
+		{9, 5784},
+		{18, 79500},
+	}
+	for _, test := range tests {
+		got := CartPoints(test.nc)
+		if got != test.want {
+			t.Errorf("got %v, wanted %v\n", got, test.want)
+		}
 	}
 }
 
 func TestGradPoints(t *testing.T) {
-	got := GradPoints(9)
-	want := 1320
-	if got != want {
-		t.Errorf("got %v, wanted %v\n", got, want)
+	tests := []struct {
+		nc   int
+		want int
+	}{
+		{9, 1320},
+		{18, 9120},
+	}
+	for _, test := range tests {
+		got := GradPoints(test.nc)
+		if got != test.want {
+			t.Errorf("got %v, wanted %v\n", got, test.want)
+		}
 	}
 }
