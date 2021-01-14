@@ -33,7 +33,7 @@
   4d:
   (1) diagonal : n, 4 calcs each = 4n
   (2) 2,1 : n(n-1), 6 calcs each = 6n(n-1)
-  (3) 1,1,1 : n(n-1)(n-2)/6, 8 calcs each = 4/3n(n^2 + 3n + 2)
+  (3) 1,1,1 : n(n-1)(n-2)/6, 8 calcs each = 4/3n(n^2 - 3n + 2)
   
   3d:
   (1) diagonal : n, 3 calcs each = 3n

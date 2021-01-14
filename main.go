@@ -550,9 +550,14 @@ func queueClear(jobs []string) error {
 	return err
 }
 
-func totalPoints(n int) int {
+func CartPoints(n int) int {
 	return 2 * n * (n*n*n + 2*n*n + 8*n + 1) / 3
 }
+
+func GradPoints(n int) int {
+	return n * (4*n*n + 12*n + 8) / 3
+}
+
 func DupOutErr(infile string) {
 	// set up output and err files and dup their fds to stdout and stderr
 	// https://github.com/golang/go/issues/325
@@ -576,19 +581,24 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	// TODO update this in spectro package not to stutter
 	// -> spectro.Command
 	spectro.SpectroCommand = Conf.Str(SpectroCmd)
-	if DoCart() {
-		nc := Conf.Int(Ncoords)
-		fmt.Printf("%d coords requires %d points\n",
-			nc, totalPoints(nc))
+	nc := Conf.Int(Ncoords)
+	switch {
+	case DoCart():
+		fmt.Printf("%d coords requires %d Cartesian points\n",
+			nc, CartPoints(nc))
 		if *count {
 			os.Exit(0)
 		}
-	} else if *count {
-		fmt.Println("-count only implemented for Cartesians")
+	case DoGrad():
+		fmt.Printf("%d coords requires %d gradient points\n",
+			nc, GradPoints(nc))
+		if *count {
+			os.Exit(0)
+		}
+	case *count:
+		fmt.Println("-count only implemented for gradients and Cartesians")
 		os.Exit(1)
 	}
-	// TODO make these input arguments with these defaults, then
-	// use from Config
 	mpName := Conf.Str(MolproTmpl)
 	idName := Conf.Str(IntderTmpl)
 	apName := Conf.Str(AnpassTmpl)

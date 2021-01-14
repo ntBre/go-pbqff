@@ -234,3 +234,19 @@ func TestXYZGeom(t *testing.T) {
 		}
 	}
 }
+
+func TestCartPoints(t *testing.T) {
+	got := CartPoints(9)
+	want := 5784
+	if got != want {
+		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+}
+
+func TestGradPoints(t *testing.T) {
+	got := GradPoints(9)
+	want := 1320
+	if got != want {
+		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+}

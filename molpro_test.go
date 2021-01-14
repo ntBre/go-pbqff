@@ -843,6 +843,24 @@ func TestE2dIndex(t *testing.T) {
 	}
 }
 
+// only tests one possibility
 func TestIndex(t *testing.T) {
-	t.Error("WRITEME")
+	tests := []struct {
+		ncoords int
+		nosort  bool
+		id      []int
+		want    []int
+	}{
+		{
+			ncoords: 9,
+			id:      []int{1, 1},
+			want:    []int{0},
+		},
+	}
+	for _, test := range tests {
+		got := Index(test.ncoords, test.nosort, test.id...)
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf("got %v, wanted %v\n", got, test.want)
+		}
+	}
 }
