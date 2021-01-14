@@ -788,11 +788,13 @@ func main() {
 		ncoords = len(coords)
 		if DoCart() {
 			go func() {
-				prog.BuildCartPoints(names, coords, &fc2, &fc3, &fc4, ch)
+				prog.BuildCartPoints("pts/inp", names, coords,
+					&fc2, &fc3, &fc4, ch)
 			}()
 		} else if DoGrad() {
 			go func() {
-				prog.BuildGradPoints(names, coords, &fc2, &fc3, &fc4, ch)
+				prog.BuildGradPoints("pts/inp", names, coords,
+					&fc2, &fc3, &fc4, ch)
 			}()
 		}
 	}

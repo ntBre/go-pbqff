@@ -468,6 +468,63 @@ func TestStep(t *testing.T) {
 	}
 }
 
+func TestSelectNode(t *testing.T) {
+	conf := Conf
+	nodes := Global.Nodes
+	defer func() {
+		Conf = conf
+		Global.Nodes = nodes
+	}()
+	tests := []struct {
+		queue string
+		nodes []string
+		q     string
+		node  string
+	}{
+		{
+			queue: "r410",
+			nodes: []string{
+				"r410:cn113",
+				"r410:cn114",
+				"r410:cn115",
+			},
+			q:    "r410",
+			node: "cn113",
+		},
+		{
+			queue: "",
+			nodes: []string{
+				"r410:cn113",
+				"r410:cn114",
+				"r410:cn115",
+			},
+			q:    "r410",
+			node: "cn113",
+		},
+		{
+			queue: "workq",
+			nodes: []string{
+				"r410:cn113",
+				"r410:cn114",
+				"r410:cn115",
+			},
+			q:    "workq",
+			node: "",
+		},
+	}
+	for _, test := range tests {
+		Conf.Set(Queue, test.queue)
+		Global.Nodes = test.nodes
+		gn, gq := SelectNode()
+		if gn != test.node {
+			t.Errorf("got %v, wanted %v\n", gn, test.node)
+		}
+		if gq != test.q {
+			t.Errorf("got %v, wanted %v\n", gq, test.q)
+		}
+	}
+}
+
 // This only tests a 2nd derivative
 func TestDerivative(t *testing.T) {
 	prog := new(Molpro)
@@ -595,8 +652,6 @@ func TestPush(t *testing.T) {
 			ChunkNum: 1,
 		},
 	}
-	// things to test:
-	// - factor out nodes part I marked and test that separately
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, wanted %v\n", got, want)
 	}
@@ -616,7 +671,40 @@ func TestPush(t *testing.T) {
 }
 
 func TestBuildCartPoints(t *testing.T) {
-	t.Error("WRITEME")
+	// test to make sure we get the right number of points
+	tmp := Conf
+	defer func() {
+		Conf = tmp
+	}()
+	Conf.Set(Deltas, []float64{
+		0.005, 0.005, 0.005,
+		0.005, 0.005, 0.005,
+		0.005, 0.005, 0.005,
+	})
+	Conf.Set(Deriv, 4)
+	names := []string{"O", "H", "H"}
+	coords := []float64{
+		0.1, 0.2, 0.3,
+		0.4, 0.5, 0.6,
+		0.4, 0.5, 0.6,
+	}
+	fc2, fc3, fc4 :=
+		new([]CountFloat), new([]CountFloat), new([]CountFloat)
+	n := len(coords)
+	want := 2*n*n + n +
+		(4*n*n*n+6*n*n+2*n)/3 +
+		(4*n*n*n*n+12*n*n*n+11*n*n+3*n)/6
+	ch := make(chan Calc, want) // buffered to size of expected calcs
+	mp := new(Molpro)
+	dir := t.TempDir()
+	go mp.BuildCartPoints(dir, names, coords, fc2, fc3, fc4, ch)
+	got := make([]Calc, 0)
+	for calc := range ch {
+		got = append(got, calc)
+	}
+	if lgot := len(got); lgot != want {
+		t.Errorf("got %d, wanted %d calcs\n", lgot, want)
+	}
 }
 
 func TestBuildGradPoints(t *testing.T) {

@@ -632,7 +632,6 @@ func Push(dir string, pf, count *int, calcs []Calc, ch chan Calc, end bool) {
 	}
 	// if end reached with no calcs, which can happen on continue
 	// from checkpoints
-	// TODO DRY out with above
 	if len(calcs) == 0 && end {
 		node, queue := SelectNode()
 		WritePBS(subfile,
@@ -650,7 +649,7 @@ func Push(dir string, pf, count *int, calcs []Calc, ch chan Calc, end bool) {
 
 // BuildCartPoints constructs the calculations needed to run a
 // Cartesian quartic force field
-func (m *Molpro) BuildCartPoints(names []string, coords []float64,
+func (m *Molpro) BuildCartPoints(dir string, names []string, coords []float64,
 	fc2, fc3, fc4 *[]CountFloat, ch chan Calc) {
 	var (
 		count *int
@@ -661,7 +660,6 @@ func (m *Molpro) BuildCartPoints(names []string, coords []float64,
 	pf = new(int)
 	*count = 1
 	*pf = 0
-	dir := "pts/inp"
 	ncoords := len(coords)
 	for i := 1; i <= ncoords; i++ {
 		for j := 1; j <= i; j++ {
@@ -770,7 +768,7 @@ func GradDerivative(prog *Molpro, names []string, coords []float64,
 
 // BuildGradPoints constructs the calculations needed to run a
 // Cartesian quartic force field using gradients
-func (m *Molpro) BuildGradPoints(names []string, coords []float64,
+func (m *Molpro) BuildGradPoints(dir string, names []string, coords []float64,
 	fc2, fc3, fc4 *[]CountFloat, ch chan Calc) {
 	var (
 		count *int
@@ -781,7 +779,6 @@ func (m *Molpro) BuildGradPoints(names []string, coords []float64,
 	pf = new(int)
 	*count = 1
 	*pf = 0
-	dir := "pts/inp"
 	ncoords := len(coords)
 	for i := 1; i <= ncoords; i++ {
 		calcs := GradDerivative(m, names, coords, fc2, i)

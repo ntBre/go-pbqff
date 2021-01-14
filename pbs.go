@@ -111,7 +111,7 @@ ssh -t sequoia pkill -{{.Signal}} pbqff
 func AddCommand(cmdfile, infile string) {
 	f, err := os.OpenFile(cmdfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
 	if err != nil {
-		panic("Cannot open commands file")
+		panic("Cannot open commands file: " + cmdfile)
 	}
 	fmt.Fprintf(f, "%s %s --no-xml-output\n", mapleCmd, infile)
 }
