@@ -430,7 +430,7 @@ func Step(coords []float64, steps ...int) []float64 {
 // type Target struct {Coeff float64, Slice *[]float64, Index int}
 
 // Derivative is a helper for calling Make(2|3|4)D in the same way
-func (prog *Molpro) Derivative(dir string, names []string,
+func (m *Molpro) Derivative(dir string, names []string,
 	coords []float64, target *[]CountFloat, dims ...int) (calcs []Calc) {
 	var protos []ProtoCalc
 	ncoords := len(coords)
@@ -445,7 +445,7 @@ func (prog *Molpro) Derivative(dir string, names []string,
 	}
 	for _, p := range protos {
 		coords := Step(coords, p.Steps...)
-		prog.Geometry = ZipXYZ(names, coords) + "}\n"
+		m.Geometry = ZipXYZ(names, coords) + "}\n"
 		temp := Calc{
 			Name:  filepath.Join(dir, p.Name),
 			Scale: p.Scale,
@@ -501,7 +501,7 @@ func (prog *Molpro) Derivative(dir string, names []string,
 				temp.noRun = true
 			}
 			if !temp.noRun {
-				prog.WriteInput(fname, none)
+				m.WriteInput(fname, none)
 			}
 			calcs = append(calcs, temp)
 		}
@@ -582,17 +582,24 @@ func ZipXYZ(names []string, coords []float64) string {
 	return buf.String()
 }
 
-// Push sends calculations to the queue
+// SelectNode returns a node and queue from the Global node list
+func SelectNode() (node, queue string) {
+	queue = Conf.Str(Queue)
+	if len(Global.Nodes) > 0 {
+		tmp := strings.Split(Global.Nodes[0], ":")
+		if queue == "" || tmp[0] == queue {
+			node = tmp[1]
+			queue = tmp[0]
+			Global.Nodes = Global.Nodes[1:]
+		}
+	}
+	return
+}
 
-// TODO should be able to replace files[f] with calcs[f].Name + ".inp"
-// and remove files as arg here and return in Derivative
+// Push sends calculations to the queue
 func Push(dir string, pf, count *int, calcs []Calc, ch chan Calc, end bool) {
 	subfile := fmt.Sprintf("%s/main%d.pbs", dir, *pf)
 	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, *pf)
-	var (
-		node  string
-		queue string = Conf.Str(Queue)
-	)
 	for f := range calcs {
 		calcs[f].CmdFile = cmdfile
 		calcs[f].ChunkNum = *pf
@@ -602,15 +609,7 @@ func Push(dir string, pf, count *int, calcs []Calc, ch chan Calc, end bool) {
 			AddCommand(cmdfile, calcs[f].Name+".inp")
 			if *count == Conf.Int(ChunkSize) ||
 				(f == len(calcs)-1 && end) {
-				if len(nodes) > 0 {
-					tmp := strings.Split(nodes[0], ":")
-					// defer to Input[Queue] when selecting a queue
-					if queue == "" || tmp[0] == queue {
-						node = tmp[1]
-						queue = tmp[0]
-						nodes = nodes[1:]
-					}
-				}
+				node, queue := SelectNode()
 				// This should be using the PBS from Config
 				WritePBS(subfile,
 					&Job{"pts", cmdfile, 35, node, queue,
@@ -635,14 +634,7 @@ func Push(dir string, pf, count *int, calcs []Calc, ch chan Calc, end bool) {
 	// from checkpoints
 	// TODO DRY out with above
 	if len(calcs) == 0 && end {
-		if len(nodes) > 0 {
-			tmp := strings.Split(nodes[0], ":")
-			if queue == "" || tmp[0] == queue {
-				node = tmp[1]
-				queue = tmp[0]
-				nodes = nodes[1:]
-			}
-		}
+		node, queue := SelectNode()
 		WritePBS(subfile,
 			&Job{"pts", cmdfile, 35, node, queue, Conf.Int(NumJobs)},
 			ptsMaple)
@@ -702,6 +694,7 @@ func (m *Molpro) BuildCartPoints(names []string, coords []float64,
 	return
 }
 
+// GradDerivative is the Derivative analog for Gradients
 func GradDerivative(prog *Molpro, names []string, coords []float64,
 	target *[]CountFloat, dims ...int) (calcs []Calc) {
 	dir := "pts/inp/"
@@ -777,7 +770,8 @@ func GradDerivative(prog *Molpro, names []string, coords []float64,
 
 // BuildGradPoints constructs the calculations needed to run a
 // Cartesian quartic force field using gradients
-func (m *Molpro) BuildGradPoints(names []string, coords []float64, fc2, fc3, fc4 *[]CountFloat, ch chan Calc) {
+func (m *Molpro) BuildGradPoints(names []string, coords []float64,
+	fc2, fc3, fc4 *[]CountFloat, ch chan Calc) {
 	var (
 		count *int
 		pf    *int

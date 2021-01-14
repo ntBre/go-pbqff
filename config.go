@@ -286,7 +286,7 @@ var Conf = Config{
 		Re: regexp.MustCompile(`(?i)queue=`),
 		Extract: func(str string) interface{} {
 			switch str {
-			case "workq", "r410":
+			case "workq", "r410", "":
 			default:
 				panic("unsupported option for keyword queue")
 			}

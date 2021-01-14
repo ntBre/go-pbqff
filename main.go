@@ -74,12 +74,15 @@ var (
 	paraJobs         []string // counters for parallel jobs
 	paraCount        map[string]int
 	errMap           map[error]int
-	nodes            []string
 	nocheck          bool
 	flags            int
 	submitted        int
 	StartCPU         int64
 )
+
+var Global struct {
+	Nodes []string
+}
 
 const (
 	angbohr  = 0.529177249 // angstrom per bohr
@@ -608,8 +611,8 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	}
 	errMap = make(map[error]int)
 	paraCount = make(map[string]int)
-	nodes = PBSnodes()
-	fmt.Printf("nodes: %q\n", nodes)
+	Global.Nodes = PBSnodes()
+	fmt.Printf("nodes: %q\n", Global.Nodes)
 	return prog, intder, anpass
 }
 

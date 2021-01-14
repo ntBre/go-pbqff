@@ -55,8 +55,6 @@ date
 rm -rf $TMPDIR
 `
 
-// trying --memfree, seemed to have no time cost on 2nd derivatives with plenty of nodes
-// now check --progress
 const pbsMaple = `#!/bin/sh
 #PBS -N {{.Name}}
 #PBS -S /bin/bash
