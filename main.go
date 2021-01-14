@@ -114,8 +114,8 @@ type Calc struct {
 	Result   float64
 	ID       string
 	noRun    bool
-	cmdfile  string
-	chunkNum int
+	CmdFile  string
+	ChunkNum int
 	Resub    *Calc
 	Src      *Source
 	Scale    float64
@@ -401,8 +401,8 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 			} else if job.Resub == nil &&
 				(err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 					err == ErrFileContainsError || err == ErrBlankOutput ||
-					(err == ErrFileNotFound && CheckLog(job.cmdfile,
-						job.Name) && CheckProg(job.cmdfile))) {
+					(err == ErrFileNotFound && CheckLog(job.CmdFile,
+						job.Name) && CheckProg(job.CmdFile))) {
 				// THIS DOESNT CATCH FILE EXISTS BUT IS HUNG
 				if err == ErrFileContainsError {
 					fmt.Fprintf(os.Stderr,
@@ -457,14 +457,14 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 				if !job.noRun {
 					finished++
 					check++
-					paraCount[paraJobs[job.chunkNum]]--
-					if paraCount[paraJobs[job.chunkNum]] == 0 {
-						queueClear([]string{paraJobs[job.chunkNum]})
+					paraCount[paraJobs[job.ChunkNum]]--
+					if paraCount[paraJobs[job.ChunkNum]] == 0 {
+						queueClear([]string{paraJobs[job.ChunkNum]})
 						if *debug {
 							fmt.Printf("clearing paracount of"+
 								"chunk %d, jobid %s\n",
-								job.chunkNum,
-								paraJobs[job.chunkNum])
+								job.ChunkNum,
+								paraJobs[job.ChunkNum])
 						}
 					}
 				}

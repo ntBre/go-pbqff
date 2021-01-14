@@ -596,8 +596,8 @@ func Push(dir string, pf, count *int, files []string, calcs []Calc, ch chan Calc
 		queue string = Conf.Str(Queue)
 	)
 	for f := range calcs {
-		calcs[f].cmdfile = cmdfile
-		calcs[f].chunkNum = *pf
+		calcs[f].CmdFile = cmdfile
+		calcs[f].ChunkNum = *pf
 		ch <- calcs[f]
 		if !calcs[f].noRun {
 			submitted++

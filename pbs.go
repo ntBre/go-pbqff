@@ -22,7 +22,7 @@ type Job struct {
 	NumJobs  int
 }
 
-const mapleCmd = `molpro -t 1 `
+const mapleCmd = `molpro -t 1`
 
 const ptsMaple = `#!/bin/sh
 #PBS -N {{.Name}}

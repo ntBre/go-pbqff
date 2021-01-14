@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"os"
 	"os/exec"
@@ -422,17 +424,17 @@ func TestBuildPoints(t *testing.T) {
 		{
 			Name:    "testfiles/read/inp/NHHH.00000",
 			Targets: []Target{{1, cf, 0}},
-			cmdfile: "testfiles/read/inp/commands0.txt",
+			CmdFile: "testfiles/read/inp/commands0.txt",
 			Scale:   1},
 		{
 			Name:    "testfiles/read/inp/NHHH.00001",
 			Targets: []Target{{1, cf, 1}},
-			cmdfile: "testfiles/read/inp/commands0.txt",
+			CmdFile: "testfiles/read/inp/commands0.txt",
 			Scale:   1},
 		{
 			Name:    "testfiles/read/inp/NHHH.00002",
 			Targets: []Target{{1, cf, 2}},
-			cmdfile: "testfiles/read/inp/commands0.txt",
+			CmdFile: "testfiles/read/inp/commands0.txt",
 			Scale:   1},
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -563,25 +565,68 @@ func TestDerivative(t *testing.T) {
 func TestPush(t *testing.T) {
 	dir := t.TempDir()
 	var pf, count int
-	files := []string{}
-	calcs := []Calc{}
-	ch := make(chan Calc)
+	count = 1
+	files := []string{
+		"job1.inp",
+		"job2.inp",
+		"job3.inp",
+	}
+	calcs := []Calc{
+		{Name: "job1"},
+		{Name: "job2"},
+		{Name: "job3"},
+	}
+	ch := make(chan Calc, 3)
 	tmp := Submit
+	tmp2 := Conf
 	defer func() {
 		Submit = tmp
+		Conf = tmp2
 	}()
 	Submit = func(str string) string {
 		return exec.Command("qsub", "-f", str).String()
 	}
+	Conf.Set(ChunkSize, 2)
 	Push(dir, &pf, &count, files, calcs, ch, true)
+	got := make([]Calc, 0)
+	for c := 0; c < 3; c++ {
+		got = append(got, <-ch)
+	}
+	want := []Calc{
+		{
+			Name:     "job1",
+			CmdFile:  filepath.Join(dir, "commands0.txt"),
+			ChunkNum: 0,
+		},
+		{
+			Name:     "job2",
+			CmdFile:  filepath.Join(dir, "commands0.txt"),
+			ChunkNum: 0,
+		},
+		{
+			Name:     "job3",
+			CmdFile:  filepath.Join(dir, "commands1.txt"),
+			ChunkNum: 1,
+		},
+	}
 	// things to test:
-	// does calc.cmdfile get set
-	// does calc.chunknum get set
-	// does the command get added to cmdfile, with and without noRun
-	// check both branches of if *count ==
-	// check if len(calcs) == 0 && end condition
-	// factor out nodes part I marked and test that separately
-	t.Error("WRITEME")
+	// - factor out nodes part I marked and test that separately
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+	var buf bytes.Buffer
+	right := filepath.Join(dir, "right")
+	fmt.Fprint(&buf,
+		"molpro -t 1 job1.inp --no-xml-output\n",
+		"molpro -t 1 job2.inp --no-xml-output\n")
+	ioutil.WriteFile(right, buf.Bytes(), 0755)
+	if !compareFile(want[0].CmdFile, right) {
+		byt, _ := ioutil.ReadFile(right)
+		fmt.Println(string(byt))
+		byt, _ = ioutil.ReadFile(want[0].CmdFile)
+		fmt.Println(string(byt))
+		t.Errorf("commands file mismatch\n")
+	}
 }
 
 func TestBuildCartPoints(t *testing.T) {
@@ -590,73 +635,6 @@ func TestBuildCartPoints(t *testing.T) {
 
 func TestBuildGradPoints(t *testing.T) {
 	t.Error("WRITEME")
-}
-
-func TestZipXYZ(t *testing.T) {
-	fcoords := []float64{
-		0.000000000, 2.391678166, 0.000000000,
-		-2.274263181, 0.000000000, 0.000000000,
-		2.274263181, 0.000000000, 0.000000000,
-		0.000000000, -2.391678166, 0.000000000,
-	}
-	names := []string{"Al", "O", "O", "Al"}
-	got := ZipXYZ(names, fcoords)
-	want := `Al 0.0000000000 2.3916781660 0.0000000000
-O -2.2742631810 0.0000000000 0.0000000000
-O 2.2742631810 0.0000000000 0.0000000000
-Al 0.0000000000 -2.3916781660 0.0000000000
-`
-	if got != want {
-		t.Errorf("got\n%q, wanted\n%q\n", got, want)
-	}
-}
-
-func TestIndex(t *testing.T) {
-	tests := []struct {
-		ncoords int
-		nosort  bool
-		ids     []int
-		want    []int
-	}{
-		{
-			ncoords: 6,
-			ids:     []int{1, 1},
-			nosort:  true,
-			want:    []int{0},
-		},
-		{
-			ncoords: 9,
-			ids:     []int{1, 1},
-			want:    []int{0},
-		},
-		{
-			ncoords: 9,
-			ids:     []int{1, 2},
-			want:    []int{1, 9},
-		},
-		{
-			ncoords: 9,
-			ids:     []int{2, 2},
-			want:    []int{10},
-		},
-		{
-			ncoords: 9,
-			ids:     []int{1, 1, 1},
-			want:    []int{0},
-		},
-		{
-			ncoords: 9,
-			ids:     []int{1, 1, 1, 1},
-			want:    []int{0},
-		},
-	}
-	for _, test := range tests {
-		got := Index(test.ncoords, test.nosort, test.ids...)
-		want := test.want
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("got %v, wanted %v\n", got, want)
-		}
-	}
 }
 
 func TestE2dIndex(t *testing.T) {
