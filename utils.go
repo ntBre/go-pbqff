@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -26,24 +26,24 @@ func CleanSplit(str, sep string) []string {
 
 // RunProgram runs a program, redirecting STDIN from filename.in
 // and STDOUT to filename.out
-func RunProgram(progName, filename string) error {
-	current, err := os.Getwd()
+func RunProgram(progName, filename string) (err error) {
+	infile := filename + ".in"
+	outfile := filename + ".out"
+	cmd := exec.Command(progName)
+	cmd.Stdin, err = os.Open(infile)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	fpath := path.Dir(filename)
-	if err = os.Chdir(fpath); err != nil {
-		panic(err)
-	}
-	file := path.Base(filename)
-	infile := file + ".in"
-	outfile := file + ".out"
-	out, err := exec.Command("bash", "-c", progName+" < "+infile+" > "+outfile).Output()
-	os.Chdir(current)
+	cmd.Stdout, err = os.Create(outfile)
+	cmd.Dir = filepath.Dir(filename)
 	if err != nil {
-		return fmt.Errorf("error RunProgram: failed with %v running %q on %q"+
-			"\nstdout: %q",
-			err, progName, infile, out)
+		fmt.Println("RunProgram: opening stdout")
+		return err
+	}
+	err = cmd.Run()
+	if err != nil {
+		fmt.Println("RunProgram: running cmd")
+		return err
 	}
 	return nil
 }
@@ -127,4 +127,11 @@ func MakeDirs(root string) (err error) {
 func errExit(err error, msg string) {
 	fmt.Fprintf(os.Stderr, "pbqff: %v %s\n", err, msg)
 	os.Exit(1)
+}
+
+// TrimExt takes a file name and returns it with the extension removed
+// using filepath.Ext
+func TrimExt(filename string) string {
+	lext := len(filepath.Ext(filename))
+	return filename[:len(filename)-lext]
 }
