@@ -358,7 +358,9 @@ func Resubmit(name string, err error) string {
 	return Submit(name + "_redo.pbs")
 }
 
-// Drain drains the queue of jobs and receives on ch when ready for more
+// Drain drains the queue of jobs and receives on ch when ready for
+// more. prog is only used for its ReadOut method, and ncoords is used
+// to construct the zero gradient array.
 func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime float64) {
 	start := time.Now()
 	fmt.Println("step sizes: ", Conf.FlSlice(Deltas))
@@ -607,7 +609,7 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	if err != nil {
 		errExit(err, fmt.Sprintf("loading molpro input %q", mpName))
 	}
-	if !(DoCart() || DoGrad()) {
+	if DoSIC() {
 		intder, err = LoadIntder("intder.in")
 		if err != nil {
 			errExit(err, fmt.Sprintf("loading intder input %q", idName))
@@ -698,6 +700,8 @@ func GetCPULimit() (cur, max uint64) {
 	return lim.Cur, lim.Max
 }
 
+// CatchPanic recovers from a panic to clear the queue and then
+// continues the panic
 func CatchPanic() {
 	if r := recover(); r != nil {
 		fmt.Println("running queueClear before panic")
@@ -706,18 +710,20 @@ func CatchPanic() {
 	}
 }
 
+// CatchKill catches SIGTERM to clear the queue before exiting cleanly
+func CatchKill() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Signal(syscall.SIGTERM))
+	<-c
+	fmt.Println("running queueClear before SIGTERM")
+	queueClear(ptsJobs)
+	errExit(fmt.Errorf("received SIGTERM"), "")
+}
+
 func main() {
 	StartCPU = GetCPU()
 	defer CatchPanic()
-	// clear the queue if killed
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Signal(syscall.SIGTERM))
-	go func() {
-		<-c
-		fmt.Println("running queueClear before SIGTERM")
-		queueClear(ptsJobs)
-		errExit(fmt.Errorf("received SIGTERM"), "")
-	}()
+	go CatchKill()
 	prog, intder, anpass := initialize()
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)

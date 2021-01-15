@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -294,5 +295,58 @@ func TestDoSIC(t *testing.T) {
 			t.Errorf("DoSIC(%s): got %v, wanted %v\n",
 				test.msg, got, test.want)
 		}
+	}
+}
+
+var id int
+
+func jobid() string {
+	defer func() { id++ }()
+	return fmt.Sprintf("%d", id)
+}
+
+func mockPush(calcs []Calc, ch chan Calc) {
+	for _, calc := range calcs {
+		ch <- calc
+		jobid := jobid()
+		ptsJobs = append(ptsJobs, jobid)
+		paraJobs = append(paraJobs, jobid)
+		paraCount[jobid] = Conf.Int(ChunkSize)
+		submitted++
+	}
+	close(ch)
+}
+
+func TestDrain(t *testing.T) {
+	conf := Conf
+	defer func() {
+		Conf = conf
+	}()
+	Conf.Set(JobLimit, 10)
+	Conf.Set(Deltas, []float64{
+		0.005, 0.005, 0.005,
+		0.005, 0.005, 0.005,
+	})
+	Conf.Set(SleepInt, 0)
+	Conf.Set(ChunkSize, 64)
+	paraCount = make(map[string]int)
+	prog := new(Molpro)
+	ncoords := 6
+	ch := make(chan Calc, Conf.Int(JobLimit))
+	E0 := 0.0
+	calcs := []Calc{
+		{
+			// happy path, find energy in ReadOut
+			Name: "testfiles/opt",
+		},
+	}
+	go mockPush(calcs, ch)
+	min, time := Drain(prog, ncoords, ch, E0)
+	wmin, wtime := -56.499802779375, 867.46
+	if min != wmin {
+		t.Errorf("got %v, wanted %v\n", min, wmin)
+	}
+	if time != wtime {
+		t.Errorf("got %v, wanted %v\n", time, wtime)
 	}
 }
