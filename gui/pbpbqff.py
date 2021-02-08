@@ -38,7 +38,10 @@ spectro=/ddn/home6/r2533/programs/spec3jm.ifort-O0.static.x
 
 # what I really want is a bunch of checkboxes/dropdowns, then generate
 # the input files. there should also be documentation for the options
-# on hover.
+# on hover. after clicking generate is when the textbox should appear
+# to let you edit by hand if needed, then button for write to file
+# like webmo. I'd also like to actually run the job from the gui so you
+# don't have to know about the & disown -h part.
 
 class MyWindow(Gtk.Window):
     def __init__(self):
