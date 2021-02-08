@@ -317,6 +317,9 @@ func mockPush(calcs []Calc, ch chan Calc) {
 	close(ch)
 }
 
+// TODO
+// This is only testing that it runs, add targets to calcs and see if
+// the values that come out are right
 func TestDrain(t *testing.T) {
 	conf := Conf
 	defer func() {
@@ -334,10 +337,30 @@ func TestDrain(t *testing.T) {
 	ncoords := 6
 	ch := make(chan Calc, Conf.Int(JobLimit))
 	E0 := 0.0
+	cf := []CountFloat{
+		{1.0, 1, false},
+	}
 	calcs := []Calc{
 		{
-			// happy path, find energy in ReadOut
+			// find energy in ReadOut
 			Name: "testfiles/opt",
+		},
+		{
+			// name contains E0
+			Name: "some/job/E0",
+		},
+		{
+			// .Result set
+			Name:   "some/job",
+			Result: 3.14,
+		},
+		{
+			// .Src set
+			Name: "some/job",
+			Src: &Source{
+				Index: 0,
+				Slice: &cf,
+			},
 		},
 	}
 	go mockPush(calcs, ch)

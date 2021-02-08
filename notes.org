@@ -1,3 +1,27 @@
+* main logic
+if DoOpt
+   format geometry as molpro zmat
+   call optimize to get the reference energy
+   update the zmat params
+   call frequency in the background
+else
+   format geometry as molpro xyz
+   call refenergy to get the reference energy
+
+if not Cart or Grad <=> SICs
+   if intder is not ready
+      get atom names by converting the cartesian geometry
+   else
+      take atom names directly from command line
+   :implicit: obtain the reference energy inside of intder
+   if DoPts
+      write pts intder input file
+      run intder
+      build all of the points files using the results and submit them
+   else
+      create a list of existing files to examine
+else
+   
 * Counting points
   [[file:~/Projects/go/src/github.com/ntBre/misc/matrview/main.go::func main() {][See code here]]
   |------------+------------------------------+-------|

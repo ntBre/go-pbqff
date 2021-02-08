@@ -240,7 +240,7 @@ it's nice to include some of these for future reference. Example:
 
 \lstinputlisting[
 caption={pbqff input for an SIC calculation}
-]{../examples/sic/sic.in}
+]{../tests/sic/sic.in}
 
 One thing to note is that there is no brace between the Z-matrix
 itself and the values of the parameters, as you might expect if you
@@ -257,7 +257,7 @@ nice to be explicit when possible. Example:
 
 \lstinputlisting[
 caption={pbqff input for a Cartesian calculation}
-]{../examples/cart/cart.in}
+]{../tests/cart/cart.in}
 
 Of note here is a first example of an XYZ geometry. You can see that
 the number of atoms line and comment are present. Alignment and
@@ -280,7 +280,7 @@ don't want to use gradients though. Example:
 
 \lstinputlisting[
 caption={pbqff input for a gradient calculation}
-]{../examples/grad/grad.in}
+]{../tests/grad/grad.in}
 
 \section{Template Files}
 
@@ -312,7 +312,7 @@ the input.
 
 \lstinputlisting[
 caption={Basic Molpro template file example}
-]{../examples/sic/molpro.in}
+]{../tests/sic/molpro.in}
 
 For a gradient calculation, a couple minor changes are required, as
 shown in the listing below. In this case, the gradient is what needs
@@ -329,7 +329,7 @@ both DF-HF and DF-CCSD(T) for the energy calculations.
 
 \lstinputlisting[
 caption={Molpro template file example for a gradient calculation}
-]{../examples/grad/molpro.in}
+]{../tests/grad/molpro.in}
 
 No additional convergence criteria are specified in this gradient
 listing, so make sure you include those if you are doing
@@ -364,7 +364,7 @@ question, not a pbqff question.
 {\tiny
 \lstinputlisting[
 caption={Example spectro input file for water}
-]{../examples/grad/spectro.in}
+]{../tests/grad/spectro.in}
 }
 
 Apologies for the size, but those integer input parameters take up a
@@ -399,7 +399,7 @@ generated using taylor.py and its ilk.
 \lstinputlisting[
 caption={Partial example intder input file for water},
 lastline=17
-]{../examples/sic/intder.in}
+]{../tests/sic/intder.in}
 }
 
 \subsection{anpass}
@@ -424,7 +424,7 @@ has no effect on the calculation.
 \lstinputlisting[
 caption={Partial example anpass input file for water},
 lastline=12
-]{../examples/sic/anpass.in}
+]{../tests/sic/anpass.in}
 
 \section{Running the Program}
 
