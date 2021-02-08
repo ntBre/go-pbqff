@@ -417,7 +417,8 @@ func (i *Intder) WriteFreqs(filename string, names []string) {
 	i.SecondLine()
 	buf.WriteString(i.Head + "\n" + i.Geometry + "\n")
 	for i, name := range names {
-		num, ok := ptable[strings.ToUpper(name)]
+		name = strings.ToUpper(name)
+		num, ok := ptable[name]
 		if !ok {
 			fmt.Fprintf(os.Stderr,
 				"error WriteFreqs: element %q not found in ptable", name)
