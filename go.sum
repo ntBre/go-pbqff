@@ -26,6 +26,8 @@ github.com/ntBre/chemutils v0.0.0-20210203005237-4677c55b649b h1:xwzk6qxKJmZrx+w
 github.com/ntBre/chemutils v0.0.0-20210203005237-4677c55b649b/go.mod h1:1Z6LCgkX63a/zHuoYrByQj1dEMbyKs4TWKbTxt9Bjd0=
 github.com/ntBre/chemutils v0.0.0-20210208224657-a5f3e67a5e3b h1:ngc/ODgpd2qsXE1QqZrnqFOLzpFvyCICc85GmF9ywOg=
 github.com/ntBre/chemutils v0.0.0-20210208224657-a5f3e67a5e3b/go.mod h1:1Z6LCgkX63a/zHuoYrByQj1dEMbyKs4TWKbTxt9Bjd0=
+github.com/ntBre/chemutils v0.0.0-20210218221956-561f841a0f0c h1:cTDzd4DjSWT6Mxbko+k2v5vy+s2+6UTo9OxCBPs2rzE=
+github.com/ntBre/chemutils v0.0.0-20210218221956-561f841a0f0c/go.mod h1:1Z6LCgkX63a/zHuoYrByQj1dEMbyKs4TWKbTxt9Bjd0=
 golang.org/x/exp v0.0.0-20180321215751-8460e604b9de/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20180807140117-3d87b88a115f/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20190125153040-c74c464bbbf2/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
