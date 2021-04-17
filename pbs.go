@@ -139,7 +139,7 @@ func Submit(filename string) string {
 	// -f option to run qsub in foreground
 	out, err := exec.Command("qsub", "-f", filename).Output()
 	for err != nil {
-		fmt.Printf("having trouble submitting %s\n", filename)
+		fmt.Printf("having trouble submitting %s with error %v\n", filename, err)
 		time.Sleep(time.Second)
 		out, err = exec.Command("qsub", "-f", filename).Output()
 	}
