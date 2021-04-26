@@ -53,7 +53,7 @@ func ParseInfile(filename string) {
 	}
 	// Post-parse processing on some of the keywords
 	Conf.WhichProgram()
-	Conf.WhichCluster() // Cluster EnergyLine overwrites Program
+	Conf.WhichCluster() // Cluster EnergyLine overwrites ChemProg
 	if Conf.ProcessGeom() {
 		Conf.ParseDeltas()
 	}

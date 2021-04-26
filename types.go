@@ -93,3 +93,6 @@ func (g *GarbageHeap) Dump() {
 	}
 	g.heap = []string{}
 }
+
+type Program interface {
+}

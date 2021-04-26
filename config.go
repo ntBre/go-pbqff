@@ -19,7 +19,7 @@ type Key int
 // on Config and call it at the end of ParseInfile in input.go.
 const (
 	Cluster Key = iota
-	Program
+	ChemProg
 	Queue
 	Delta
 	Deltas
@@ -47,7 +47,7 @@ const (
 func (k Key) String() string {
 	return []string{
 		"Cluster",
-		"Program",
+		"ChemProg",
 		"Queue",
 		"Delta",
 		"Deltas",
@@ -157,9 +157,9 @@ func (c *Config) WhichCluster() {
 }
 
 // WhichProgram is a helper function for setting Config.EnergyLine
-// based on the selected Program
+// based on the selected ChemProg
 func (c *Config) WhichProgram() {
-	switch c.Str(Program) {
+	switch c.Str(ChemProg) {
 	case "cccr":
 		c.Set(EnergyLine, regexp.MustCompile(`^\s*CCCRE\s+=`))
 	case "cart", "gocart":
@@ -277,7 +277,7 @@ var Conf = Config{
 		Extract: StringKeyword,
 		Value:   "maple",
 	},
-	Program: {
+	ChemProg: {
 		Re:      regexp.MustCompile(`(?i)program=`),
 		Extract: StringKeyword,
 		Value:   "sic",

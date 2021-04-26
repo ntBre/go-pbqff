@@ -12,11 +12,11 @@ func TestProcessInput(t *testing.T) {
 	defer func() {
 		Conf = tmp
 	}()
-	Conf[Program].Value = "test"
+	Conf[ChemProg].Value = "test"
 	ProcessInput("program=notatest")
-	if Conf[Program].Value != "notatest" {
+	if Conf[ChemProg].Value != "notatest" {
 		t.Errorf("got %q, wanted %q\n",
-			Conf[Program].Value, "notatest")
+			Conf[ChemProg].Value, "notatest")
 	}
 }
 
@@ -44,7 +44,7 @@ func TestParseInfile(t *testing.T) {
 			in: "testfiles/test.in",
 			want: []interface{}{
 				Cluster: "maple",
-				Program: "molpro",
+				ChemProg: "molpro",
 				Geometry: `X
 X 1 1.0
 Al 1 AlX 2 90.0
