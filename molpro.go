@@ -83,7 +83,8 @@ func (m *Molpro) WriteInput(filename string, p Procedure) {
 	ioutil.WriteFile(filename, buf.Bytes(), 0755)
 }
 
-// FormatZmat formats a z-matrix for use in Molpro input
+// FormatZmat formats a z-matrix for use in Molpro input and places it
+// in the Geometry field of m
 func (m *Molpro) FormatZmat(geom string) (err error) {
 	var out []string
 	err = errors.New("improper z-matrix")
@@ -96,6 +97,13 @@ func (m *Molpro) FormatZmat(geom string) (err error) {
 		}
 	}
 	m.Geometry = strings.Join(out, "\n")
+	return
+}
+
+// FormatCart formats a Cartesian geometry for use in Molpro input and
+// places it in the Geometry field of m
+func (m *Molpro) FormatCart(geom string) (err error) {
+	m.Geometry = geom + "\n}\n"
 	return
 }
 

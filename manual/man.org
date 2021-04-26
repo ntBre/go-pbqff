@@ -5,6 +5,15 @@
    - HandleOutput
 ** Freq
    - UpdateZmat
+** NoOpt
+   - FormatCart
+   - RefEnergy
+** Pts
+   - BuildPoints
+     - actually need BuildPoints, BuildCartPoints, and BuildGradPoints
+       now, but should do something to combine these
+
+* Initialization
 
 * Geometry
   Running pbqff with a geometry optimization requires the input
@@ -19,4 +28,63 @@
 
   If an optimization is not requested, by using "flags=noopt" in the
   input file, a Cartesian geometry will be read from the pbqff input
-  file and a single-point energy calculation at
+  file and a single-point energy calculation at the input geometry
+  will be run to obtain the reference energy.
+
+  # TODO I don't think you need a reference energy for a gradient,
+  # just a waste of time
+
+* Points
+** SICs
+   If an optimization was carried out, pbqff will attempt to match the
+   optimized Cartesian geometry to the pattern in the template INTDER
+   input file. If this fails, you will need to use the -irdy flag
+   followed by a space-delimited list of atom names in quotes and
+   manually put the optimized geometry into the INTDER input file. You
+   should also use "flags=noopt" if you have to use -irdy.
+
+   # TODO automatically skip opt if irdy
+
+   # TODO should ConvertCart from input file instead of requiring irdy
+   # if noopt for SICs; actually get rid of irdy because irdy => noopt
+   # and noopt => irdy so just use noopt and require Cartesian
+   # geometry in input file to be matched to input pattern. can
+   # preserve irdy for asserting that the order is correct in input
+   # file in case of matching problems
+
+   After running INTDER, the resulting file07 file is used to generate
+   and submit the points files. If the -freqs flag is used, instead of
+   writing and submitting the files, only the list of jobs to be read
+   is returned. This requires that no files have been deleted from the
+   previous run.
+
+   # TODO maybe some kind of check here? I think it will error out
+   # with a length mismatch somehow but not sure
+   
+** Carts/Grads
+   Call the respective Build*Points function to write and submit the
+   jobs.
+
+** All
+   Monitor the list of submitted jobs, handling those that finish and
+   submitting more as space allows. For SICs, this handling consists
+   entirely of extracting the energies, while for Carts and Grads, the
+   handling involves extracting the energies and computing the
+   corresponding force constants directly.
+
+* Freqs
+** SICS
+   The energies from the points are converted to relative energies,
+   fed to ANPASS, run once for a rough fit, and then refit to the new
+   equilibrium geometry. Then INTDER is run to obtain the new geometry
+   in Cartesian coordinates and again to convert the force constants
+   to Cartesian coordinates.
+
+** Carts/Grads
+   Write the computed force constants to the files needed by SPECTRO.
+   
+** All
+   Run SPECTRO and summarize the results
+
+   # TODO make this spectro part shared between the two, right now it
+   # is duplicated in the if/else statement

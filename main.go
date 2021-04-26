@@ -673,13 +673,14 @@ func main() {
 			mpHarm = prog.Frequency(absPath)
 		}()
 	} else {
-		// asserting geomtype is cart or xyz
+		// assert geomtype is cart or xyz
 		if !strings.Contains("cart,xyz", Conf.Str(GeomType)) {
 			panic("expecting cartesian geometry")
 		}
-		cart = Conf.Str(Geometry)
-		// TODO this is a Molpro format
-		prog.Geometry = cart + "\n}\n"
+		err := prog.FormatCart(Conf.Str(Geometry))
+		if err != nil {
+			panic(err)
+		}
 		E0 = prog.RefEnergy()
 	}
 
