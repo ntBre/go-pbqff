@@ -769,10 +769,6 @@ func main() {
 			if err != nil {
 				errExit(err, "loading spectro input")
 			}
-			// I think the above should be a function
-			// AngToBohr and FormatGeom should take a
-			// []float64 for coords and handle the
-			// formatting internally
 			spec.FormatGeom(names, buf.String())
 			spec.WriteInput("spectro.in")
 			err = spec.DoSpectro(".")
