@@ -1,0 +1,22 @@
+* Prog interface
+** Opt
+   - FormatZmat 
+   - Optimize
+   - HandleOutput
+** Freq
+   - UpdateZmat
+
+* Geometry
+  Running pbqff with a geometry optimization requires the input
+  geometry in the pbqff input file to be in a Zmat format and for the
+  template quantum chemical program input file to contain an
+  optimization directive. If an optimization is requested, the
+  reference energy will be taken from the optimization output and a
+  harmonic frequency calculation will be submitted upon its finishing.
+
+  # TODO harmonic frequency should probably be separate from
+  # optimization, at least separable
+
+  If an optimization is not requested, by using "flags=noopt" in the
+  input file, a Cartesian geometry will be read from the pbqff input
+  file and a single-point energy calculation at

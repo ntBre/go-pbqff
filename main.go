@@ -191,11 +191,7 @@ func (prog *Molpro) RefEnergy() (E0 float64) {
 		return
 	}
 
-	if DoOpt() {
-		prog.WriteInput(dir+infile, opt)
-	} else {
-		prog.WriteInput(dir+infile, none)
-	}
+	prog.WriteInput(dir+infile, none)
 	WritePBS(dir+pbsfile,
 		&Job{
 			Name:     MakeName(Conf.Str(Geometry)) + "-ref",
@@ -682,6 +678,7 @@ func main() {
 			panic("expecting cartesian geometry")
 		}
 		cart = Conf.Str(Geometry)
+		// TODO this is a Molpro format
 		prog.Geometry = cart + "\n}\n"
 		E0 = prog.RefEnergy()
 	}
