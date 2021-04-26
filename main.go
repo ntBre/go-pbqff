@@ -643,7 +643,6 @@ func main() {
 		mpHarm    []float64
 		cart      string
 		zmat      string
-		atomNames []string
 		energies  []float64
 		cenergies []CountFloat
 		min       float64
@@ -688,22 +687,22 @@ func main() {
 
 	if DoSIC() {
 		if *irdy == "" {
-			atomNames = intder.ConvertCart(cart)
+			names = intder.ConvertCart(cart)
 		} else {
-			atomNames = strings.Fields(*irdy)
+			names = strings.Fields(*irdy)
 		}
 		if DoPts() {
 			intder.WritePts("pts/intder.in")
 			RunIntder("pts/intder")
 			go func() {
-				prog.BuildPoints("pts/file07", atomNames, &cenergies, ch, true)
+				prog.BuildPoints("pts/file07", names, &cenergies, ch, true)
 			}()
 		} else {
 			// this works if no points were deleted and
 			// the files are named the same way between
 			// runs, else need a resume from checkpoint
 			// thing
-			prog.BuildPoints("pts/file07", atomNames, &cenergies, nil, false)
+			prog.BuildPoints("pts/file07", names, &cenergies, nil, false)
 		}
 	} else {
 		names, coords = XYZGeom(cart)
@@ -725,6 +724,7 @@ func main() {
 	min, _ = Drain(prog, ncoords, ch, E0)
 	queueClear(ptsJobs)
 
+	// TODO DRY this out some day
 	if DoSIC() {
 		energies = FloatsFromCountFloats(cenergies)
 		// convert to relative energies
@@ -732,12 +732,12 @@ func main() {
 			energies[i] -= min
 		}
 		longLine := DoAnpass(anpass, energies)
-		coords, intderHarms := DoIntder(intder, atomNames, longLine)
+		coords, intderHarms := DoIntder(intder, names, longLine)
 		spec, err := spectro.Load("spectro.in")
 		if err != nil {
 			errExit(err, "loading spectro input")
 		}
-		spec.FormatGeom(atomNames, coords)
+		spec.FormatGeom(names, coords)
 		spec.WriteInput("freqs/spectro.in")
 		err = spec.DoSpectro("freqs/")
 		if err != nil {
