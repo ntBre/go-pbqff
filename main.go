@@ -152,7 +152,7 @@ func Summarize(zpt float64, mpHarm, idHarm, spHarm, spFund, spCorr []float64) er
 // WhichCluster sets the PBS template and energyLine depending on the
 // which computer is to be used
 // Optimize runs a Molpro optimization in the opt directory
-func Optimize(prog *Molpro) (E0 float64) {
+func (prog *Molpro) Optimize() (E0 float64) {
 	// write opt.inp and mp.pbs
 	prog.WriteInput("opt/opt.inp", opt)
 	WritePBS("opt/mp.pbs",
@@ -181,7 +181,7 @@ func Optimize(prog *Molpro) (E0 float64) {
 
 // RefEnergy runs a Molpro single point energy calculation in the
 // pts/inp directory
-func RefEnergy(prog *Molpro) (E0 float64) {
+func (prog *Molpro) RefEnergy() (E0 float64) {
 	dir := "pts/inp/"
 	infile := "ref.inp"
 	pbsfile := "ref.pbs"
@@ -221,20 +221,22 @@ func RefEnergy(prog *Molpro) (E0 float64) {
 
 // Frequency runs a Molpro harmonic frequency calculation in the freq
 // directory
-func Frequency(prog *Molpro, absPath string) []float64 {
+func (prog *Molpro) Frequency(absPath string) []float64 {
 	// write freq.inp and that mp.pbs
-	prog.WriteInput(absPath+"/freq.inp", freq)
-	WritePBS(absPath+"/mp.pbs",
+	inp := filepath.Join(absPath, "freq.inp")
+	pbs := filepath.Join(absPath, "mp.pbs")
+	prog.WriteInput(inp, freq)
+	WritePBS(pbs,
 		&Job{
 			Name:     MakeName(Conf.Str(Geometry)) + "-freq",
-			Filename: absPath + "/freq.inp",
+			Filename: inp,
 			Signal:   35,
 			NumJobs:  Conf.Int(NumJobs),
 		}, pbsMaple)
 	// submit freq, wait in separate goroutine
 	// doesn't matter if this finishes
-	Submit(absPath + "/mp.pbs")
-	outfile := absPath + "/freq.out"
+	Submit(pbs)
+	outfile := filepath.Join(absPath, "freq.out")
 	_, _, _, err := prog.ReadOut(outfile)
 	for err != nil {
 		HandleSignal(35, time.Minute)
@@ -488,9 +490,7 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 	infile := args[0]
 	DupOutErr(infile)
 	ParseInfile(infile)
-	// TODO update this in spectro package not to stutter
-	// -> spectro.Command
-	spectro.SpectroCommand = Conf.Str(SpectroCmd)
+	spectro.Command = Conf.Str(SpectroCmd)
 	nc := Conf.Int(Ncoords)
 	switch {
 	case DoCart():
@@ -666,7 +666,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		E0 = Optimize(prog)
+		E0 = prog.Optimize()
 		cart, zmat, err = prog.HandleOutput("opt/opt")
 		if err != nil {
 			panic(err)
@@ -674,7 +674,7 @@ func main() {
 		prog.UpdateZmat(zmat)
 		go func() {
 			absPath, _ := filepath.Abs("freq")
-			mpHarm = Frequency(prog, absPath)
+			mpHarm = prog.Frequency(absPath)
 		}()
 	} else {
 		// asserting geomtype is cart or xyz
@@ -683,7 +683,7 @@ func main() {
 		}
 		cart = Conf.Str(Geometry)
 		prog.Geometry = cart + "\n}\n"
-		E0 = RefEnergy(prog)
+		E0 = prog.RefEnergy()
 	}
 
 	ch := make(chan Calc, Conf.Int(JobLimit))
