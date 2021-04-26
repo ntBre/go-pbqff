@@ -3,13 +3,14 @@ package main
 import "testing"
 
 func TestSIC(t *testing.T) {
-	// TODO 
+	// TODO testing full QFF procedure using dummy interface
+	// implementations
 }
 
 func TestCart(t *testing.T) {
-	// TODO 
+	// TODO
 }
 
 func TestGrad(t *testing.T) {
-	// TODO 
+	// TODO
 }

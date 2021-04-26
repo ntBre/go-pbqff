@@ -73,7 +73,7 @@ cd $WORKDIR
 mkdir -p $TMPDIR
 
 date
-molpro -t 1 {{.Filename}} --no-xml-output
+molpro -t 1 --no-xml-output {{.Filename}}
 date
 
 rm -rf $TMPDIR

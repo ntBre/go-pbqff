@@ -182,6 +182,7 @@ func (prog *Molpro) Optimize() (E0 float64) {
 // RefEnergy runs a Molpro single point energy calculation in the
 // pts/inp directory
 func (prog *Molpro) RefEnergy() (E0 float64) {
+	// TODO use filepath
 	dir := "pts/inp/"
 	infile := "ref.inp"
 	pbsfile := "ref.pbs"
