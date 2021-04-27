@@ -685,6 +685,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		cart = prog.Geometry
 		E0 = prog.RefEnergy()
 	}
 

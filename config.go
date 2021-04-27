@@ -180,6 +180,7 @@ func (c *Config) ProcessGeom() (cart bool) {
 		ncoords int
 		start   int
 		end     int
+		incr    int
 	)
 	if c.At(Geometry) == nil {
 		panic("no geometry given")
@@ -191,14 +192,16 @@ func (c *Config) ProcessGeom() (cart bool) {
 		start = 2
 		end = len(lines)
 		cart = true
+		incr = 3
 	case "zmat":
 		end = len(lines)
+		incr = 1
 	default:
 		panic("unable to determine geometry type")
 	}
 	for _, line := range lines[start:end] {
 		if !strings.Contains(line, "=") {
-			ncoords++
+			ncoords += incr
 		}
 	}
 	c.Set(Ncoords, ncoords)
