@@ -188,8 +188,12 @@ func (prog *Molpro) RefEnergy() (E0 float64) {
 	pbsfile := "ref.pbs"
 	outfile := "ref.out"
 	E0, _, _, err := prog.ReadOut(dir + outfile)
+	wait := time.Minute
 	if *read && err == nil {
 		return
+	}
+	if *test {
+		wait = time.Second
 	}
 
 	prog.WriteInput(dir+infile, none)
@@ -203,7 +207,7 @@ func (prog *Molpro) RefEnergy() (E0 float64) {
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit(dir + pbsfile)
 	for err != nil {
-		HandleSignal(35, time.Minute)
+		HandleSignal(35, wait)
 		E0, _, _, err = prog.ReadOut(dir + outfile)
 		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 			err == ErrFileContainsError || err == ErrBlankOutput) ||
@@ -485,7 +489,7 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 		os.Exit(1)
 	}
 	infile := args[0]
-	DupOutErr(infile)
+	// DupOutErr(infile)
 	ParseInfile(infile)
 	spectro.Command = Conf.Str(SpectroCmd)
 	nc := Conf.Int(Ncoords)

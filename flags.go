@@ -38,6 +38,7 @@ var (
 	nodel  = flag.Bool("nodel", false, "don't delete used output files")
 	format = flag.Bool("fmt", false,
 		"parse existing output files and print them in anpass format")
+	test = flag.Bool("test", false, "shorten wait for signal")
 )
 
 // ParseFlags parses command line flags and returns a slice of
