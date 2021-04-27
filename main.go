@@ -374,6 +374,11 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 				if !job.noRun {
 					finished++
 					check++
+					// concurrency bug here if one
+					// of these hasn't been made
+					// long enough yet. must be
+					// parajobs because index out
+					// of range error
 					paraCount[paraJobs[job.ChunkNum]]--
 					if paraCount[paraJobs[job.ChunkNum]] == 0 {
 						queueClear([]string{paraJobs[job.ChunkNum]})
@@ -391,6 +396,7 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 		if shortenBy < 1 {
 			fmt.Fprintln(os.Stderr, "Didn't shorten, sleeping")
 			time.Sleep(time.Duration(Conf.Int(SleepInt)) * time.Second)
+			fmt.Println(points)
 		}
 		if check >= Conf.Int(CheckInt) {
 			if !nocheck {

@@ -5,7 +5,7 @@ base="/home/brent/Projects/go/src/github.com/ntBre/chemutils"
 export PATH="$base/qsub":"$base/molpro":$PATH
 
 cd tests/cart
-pbqff -o -test cart.in
+pbqff -o -test -nodel cart.in
 
 # cd ../grad
 # pbqff -o grad.in
