@@ -321,6 +321,7 @@ func mockPush(calcs []Calc, ch chan Calc) {
 // This is only testing that it runs, add targets to calcs and see if
 // the values that come out are right
 func TestDrain(t *testing.T) {
+	submitted = 0
 	conf := Conf
 	defer func() {
 		Conf = conf

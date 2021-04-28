@@ -379,7 +379,10 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 					// of these hasn't been made
 					// long enough yet. must be
 					// parajobs because index out
-					// of range error
+					// of range error => wait
+					for len(paraJobs) <= job.ChunkNum {
+						time.Sleep(time.Second)
+					}
 					paraCount[paraJobs[job.ChunkNum]]--
 					if paraCount[paraJobs[job.ChunkNum]] == 0 {
 						queueClear([]string{paraJobs[job.ChunkNum]})

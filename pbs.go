@@ -138,7 +138,6 @@ func WritePBS(infile string, job *Job, pbs string) {
 // Submit submits the pbs script defined by filename to the queue and
 // returns the jobid
 var Submit = func(filename string) string {
-	fmt.Println("calling qsub on", filename)
 	// -f option to run qsub in foreground
 	cmd := exec.Command(qsub, "-f", filename)
 	cmd.Stderr = os.Stderr
