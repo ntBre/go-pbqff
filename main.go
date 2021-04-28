@@ -183,10 +183,10 @@ func (prog *Molpro) Optimize() (E0 float64) {
 // pts/inp directory
 func (prog *Molpro) RefEnergy() (E0 float64) {
 	// TODO use filepath
-	dir := "pts/inp/"
-	infile := "ref.inp"
-	pbsfile := "ref.pbs"
-	outfile := "ref.out"
+	dir := filepath.Join(prog.Dir, "pts/inp/")
+	infile := filepath.Join(dir, "ref.inp")
+	pbsfile := filepath.Join(dir, "ref.pbs")
+	outfile := filepath.Join(dir, "ref.out")
 	E0, _, _, err := prog.ReadOut(dir + outfile)
 	wait := time.Minute
 	if *read && err == nil {
@@ -196,25 +196,26 @@ func (prog *Molpro) RefEnergy() (E0 float64) {
 		wait = time.Second
 	}
 
-	prog.WriteInput(dir+infile, none)
-	WritePBS(dir+pbsfile,
+	prog.WriteInput(infile, none)
+	WritePBS(pbsfile,
 		&Job{
 			Name:     MakeName(Conf.Str(Geometry)) + "-ref",
-			Filename: dir + infile,
+			Filename: infile,
 			Signal:   35,
 			NumJobs:  Conf.Int(NumJobs),
 		}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
-	Submit(dir + pbsfile)
+	Submit(pbsfile)
 	for err != nil {
 		HandleSignal(35, wait)
-		E0, _, _, err = prog.ReadOut(dir + outfile)
+		E0, _, _, err = prog.ReadOut(outfile)
 		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 			err == ErrFileContainsError || err == ErrBlankOutput) ||
 			err == ErrFileNotFound {
 
-			fmt.Fprintln(os.Stderr, "resubmitting for", err)
-			Submit(dir + pbsfile)
+			fmt.Fprintf(os.Stderr, "resubmitting %s for %v\n",
+				pbsfile, err)
+			Submit(pbsfile)
 		}
 	}
 	return
@@ -396,11 +397,10 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 		if shortenBy < 1 {
 			fmt.Fprintln(os.Stderr, "Didn't shorten, sleeping")
 			time.Sleep(time.Duration(Conf.Int(SleepInt)) * time.Second)
-			fmt.Println(points)
 		}
 		if check >= Conf.Int(CheckInt) {
 			if !nocheck {
-				MakeCheckpoint()
+				MakeCheckpoint(prog.Dir)
 			}
 			check = 1
 			fmt.Fprintf(os.Stderr, "CPU time: %.3f s\n",
@@ -487,15 +487,11 @@ func DupOutErr(infile string) {
 	syscall.Dup2(int(errfile.Fd()), 2)
 }
 
-func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
-	// parse flags for overwrite before mkdirs
-	args := ParseFlags()
-	if len(args) < 1 {
-		fmt.Fprintf(os.Stderr, "pbqff: no input file supplied\n")
-		os.Exit(1)
+func initialize(infile string) (prog *Molpro, intder *Intder, anpass *Anpass) {
+	if !*test {
+		DupOutErr(infile)
 	}
-	infile := args[0]
-	// DupOutErr(infile)
+	dir := filepath.Dir(infile)
 	ParseInfile(infile)
 	spectro.Command = Conf.Str(SpectroCmd)
 	nc := Conf.Int(Ncoords)
@@ -516,14 +512,15 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 		fmt.Println("-count only implemented for gradients and Cartesians")
 		os.Exit(1)
 	}
-	mpName := Conf.Str(MolproTmpl)
-	idName := Conf.Str(IntderTmpl)
-	apName := Conf.Str(AnpassTmpl)
+	mpName := filepath.Join(dir, Conf.Str(MolproTmpl))
+	idName := filepath.Join(dir, Conf.Str(IntderTmpl))
+	apName := filepath.Join(dir, Conf.Str(AnpassTmpl))
 	var err error
 	prog, err = LoadMolpro(mpName)
 	if err != nil {
 		errExit(err, fmt.Sprintf("loading molpro input %q", mpName))
 	}
+	prog.Dir = dir
 	if DoSIC() {
 		intder, err = LoadIntder("intder.in")
 		if err != nil {
@@ -535,7 +532,7 @@ func initialize() (prog *Molpro, intder *Intder, anpass *Anpass) {
 		}
 	}
 	if !*read {
-		MakeDirs(".")
+		MakeDirs(dir)
 	}
 	errMap = make(map[error]int)
 	paraCount = make(map[string]int)
@@ -639,7 +636,13 @@ func main() {
 	StartCPU = GetCPU()
 	defer CatchPanic()
 	go CatchKill()
-	prog, intder, anpass := initialize()
+	args := ParseFlags()
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "pbqff: no input file supplied\n")
+		os.Exit(1)
+	}
+	infile := args[0]
+	prog, intder, anpass := initialize(infile)
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
 		if err != nil {

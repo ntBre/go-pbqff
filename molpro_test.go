@@ -627,7 +627,7 @@ func TestPush(t *testing.T) {
 		Conf = tmp2
 	}()
 	Submit = func(str string) string {
-		return exec.Command("qsub", "-f", str).String()
+		return exec.Command(qsub, "-f", str).String()
 	}
 	Conf.Set(ChunkSize, 2)
 	Push(dir, &pf, &count, calcs, ch, true)

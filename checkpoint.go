@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 )
 
 var (
@@ -12,7 +13,7 @@ var (
 )
 
 // MakeCheckpoint makes a checkpoint
-func MakeCheckpoint() {
+func MakeCheckpoint(dir string) {
 	for a, arr := range arrs {
 		temp := make([]CountFloat, 0, len(*arrs[a]))
 		for _, v := range *arr {
@@ -27,7 +28,7 @@ func MakeCheckpoint() {
 		if err != nil {
 			panic(err)
 		}
-		ioutil.WriteFile(fnames[a], aJSON, 0755)
+		ioutil.WriteFile(filepath.Join(dir, fnames[a]), aJSON, 0755)
 	}
 }
 

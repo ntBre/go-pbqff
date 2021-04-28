@@ -29,6 +29,7 @@ type Procedure int
 
 // Molpro holds the data for writing molpro input files
 type Molpro struct {
+	Dir      string
 	Head     string
 	Geometry string
 	Tail     string
@@ -369,13 +370,14 @@ func (m *Molpro) BuildPoints(filename string, atomNames []string,
 					for len(*target) <= geom {
 						*target = append(*target, CountFloat{Count: 1})
 					}
-					Push(dir+"/inp", pf, count, []Calc{{
-						Name:  basename,
-						Scale: 1.0,
-						Targets: []Target{
-							{1, target, geom},
-						},
-					}}, ch, end)
+					Push(filepath.Join(dir, "/inp"),
+						pf, count, []Calc{{
+							Name:  basename,
+							Scale: 1.0,
+							Targets: []Target{
+								{1, target, geom},
+							},
+						}}, ch, end)
 				} else {
 					ch <- Calc{
 						Name:    basename,
@@ -652,6 +654,7 @@ func Push(dir string, pf, count *int, calcs []Calc, ch chan Calc, end bool) {
 // Cartesian quartic force field
 func (m *Molpro) BuildCartPoints(dir string, names []string, coords []float64,
 	fc2, fc3, fc4 *[]CountFloat, ch chan Calc) {
+	dir = filepath.Join(m.Dir, dir)
 	var (
 		count *int
 		pf    *int

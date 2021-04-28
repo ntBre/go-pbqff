@@ -12,6 +12,10 @@ import (
 	"time"
 )
 
+var (
+	qsub = "qsub"
+)
+
 // Job holds the information for a pbs job
 type Job struct {
 	Name     string
@@ -134,12 +138,17 @@ func WritePBS(infile string, job *Job, pbs string) {
 // Submit submits the pbs script defined by filename to the queue and
 // returns the jobid
 var Submit = func(filename string) string {
+	fmt.Println("calling qsub on", filename)
 	// -f option to run qsub in foreground
-	out, err := exec.Command("qsub", "-f", filename).Output()
+	cmd := exec.Command(qsub, "-f", filename)
+	cmd.Stderr = os.Stderr
+	out, err := cmd.Output()
 	for err != nil {
-		fmt.Printf("having trouble submitting %s\n", filename)
+		fmt.Printf("Submit: having trouble submitting %s with %v\n", filename, err)
 		time.Sleep(time.Second)
-		out, err = exec.Command("qsub", "-f", filename).Output()
+		cmd := exec.Command(qsub, "-f", filename)
+		cmd.Stderr = os.Stderr
+		out, err = cmd.Output()
 	}
 	jobid := string(out)
 	jobid = strings.TrimSuffix(jobid, filepath.Ext(jobid))
