@@ -273,128 +273,130 @@ func IntKeyword(str string) interface{} {
 	return v
 }
 
-var Conf = Config{
-	Cluster: {
-		Re:      regexp.MustCompile(`(?i)queuetype=`),
-		Extract: StringKeyword,
-		Value:   "maple",
-	},
-	ChemProg: {
-		Re:      regexp.MustCompile(`(?i)program=`),
-		Extract: StringKeyword,
-		Value:   "sic",
-	},
-	Queue: { // TODO these queues are maple-specific
-		Re: regexp.MustCompile(`(?i)queue=`),
-		Extract: func(str string) interface{} {
-			switch str {
-			case "workq", "r410", "":
-			default:
-				panic("unsupported option for keyword queue")
-			}
-			return str
+func NewConfig() Config {
+	return Config{
+		Cluster: {
+			Re:      regexp.MustCompile(`(?i)queuetype=`),
+			Extract: StringKeyword,
+			Value:   "maple",
 		},
-		// possible problem using this in template if ""
-		// doesn't satisify {{if .Field}} = False
-		// just delete and leave nil if not
-		Value: "",
-	},
-	Delta: {
-		Re:      regexp.MustCompile(`(?i)delta=`),
-		Extract: FloatKeyword,
-		Value:   0.005,
-	},
-	Deltas: {
-		Re:      regexp.MustCompile(`(?i)deltas=`),
-		Extract: StringKeyword,
-	},
-	Geometry: {
-		Re:      regexp.MustCompile(`(?i)geometry=`),
-		Extract: StringKeyword,
-	},
-	GeomType: {
-		Re:      regexp.MustCompile(`(?i)geomtype=`),
-		Extract: StringKeyword,
-		Value:   "zmat",
-	},
-	Flags: {
-		Re: regexp.MustCompile(`(?i)flags=`),
-		Extract: func(str string) interface{} {
-			switch str {
-			case "noopt":
-				flags = flags &^ OPT
-			default:
-				panic("unsupported option for keyword flag")
-			}
-			return str
+		ChemProg: {
+			Re:      regexp.MustCompile(`(?i)program=`),
+			Extract: StringKeyword,
+			Value:   "sic",
 		},
-	},
-	Deriv: {
-		Re:      regexp.MustCompile(`(?i)deriv=`),
-		Extract: IntKeyword,
-		Value:   4,
-	},
-	JobLimit: {
-		Re:      regexp.MustCompile(`(?i)joblimit=`),
-		Extract: IntKeyword,
-		Value:   1024,
-	},
-	ChunkSize: {
-		Re:      regexp.MustCompile(`(?i)chunksize=`),
-		Extract: IntKeyword,
-		Value:   64,
-	},
-	CheckInt: {
-		Re: regexp.MustCompile(`(?i)checkint=`),
-		Extract: func(str string) interface{} {
-			switch str {
-			case "no":
-				nocheck = true
-				return 0
-			default:
-				return IntKeyword(str)
-			}
+		Queue: { // TODO these queues are maple-specific
+			Re: regexp.MustCompile(`(?i)queue=`),
+			Extract: func(str string) interface{} {
+				switch str {
+				case "workq", "r410", "":
+				default:
+					panic("unsupported option for keyword queue")
+				}
+				return str
+			},
+			// possible problem using this in template if ""
+			// doesn't satisify {{if .Field}} = False
+			// just delete and leave nil if not
+			Value: "",
 		},
-		Value: 100,
-	},
-	SleepInt: {
-		Re:      regexp.MustCompile(`(?i)sleepint=`),
-		Extract: IntKeyword,
-		Value:   60,
-	},
-	NumJobs: {
-		Re:      regexp.MustCompile(`(?i)numjobs=`),
-		Extract: IntKeyword,
-		Value:   8,
-	},
-	IntderCmd: {
-		Re:      regexp.MustCompile(`(?i)intder=`),
-		Extract: StringKeyword,
-	},
-	AnpassCmd: {
-		Re:      regexp.MustCompile(`(?i)anpass=`),
-		Extract: StringKeyword,
-	},
-	SpectroCmd: {
-		Re:      regexp.MustCompile(`(?i)spectro=`),
-		Extract: StringKeyword,
-	},
-	EnergyLine: {
-		Value: regexp.MustCompile(`energy=`),
-	},
-	MolproTmpl: {
-		Re:      regexp.MustCompile(`(?i)molprotmpl=`),
-		Extract: StringKeyword,
-		Value:   "molpro.in",
-	},
-	AnpassTmpl: {
-		Re:      regexp.MustCompile(`(?i)anpasstmpl=`),
-		Extract: StringKeyword,
-		Value:   "anpass.in",
-	},
-	IntderTmpl: {
-		Re:      regexp.MustCompile(`(?i)intdertmpl=`),
-		Extract: StringKeyword,
-		Value:   "intder.in",
-	},
+		Delta: {
+			Re:      regexp.MustCompile(`(?i)delta=`),
+			Extract: FloatKeyword,
+			Value:   0.005,
+		},
+		Deltas: {
+			Re:      regexp.MustCompile(`(?i)deltas=`),
+			Extract: StringKeyword,
+		},
+		Geometry: {
+			Re:      regexp.MustCompile(`(?i)geometry=`),
+			Extract: StringKeyword,
+		},
+		GeomType: {
+			Re:      regexp.MustCompile(`(?i)geomtype=`),
+			Extract: StringKeyword,
+			Value:   "zmat",
+		},
+		Flags: {
+			Re: regexp.MustCompile(`(?i)flags=`),
+			Extract: func(str string) interface{} {
+				switch str {
+				case "noopt":
+					flags = flags &^ OPT
+				default:
+					panic("unsupported option for keyword flag")
+				}
+				return str
+			},
+		},
+		Deriv: {
+			Re:      regexp.MustCompile(`(?i)deriv=`),
+			Extract: IntKeyword,
+			Value:   4,
+		},
+		JobLimit: {
+			Re:      regexp.MustCompile(`(?i)joblimit=`),
+			Extract: IntKeyword,
+			Value:   1024,
+		},
+		ChunkSize: {
+			Re:      regexp.MustCompile(`(?i)chunksize=`),
+			Extract: IntKeyword,
+			Value:   64,
+		},
+		CheckInt: {
+			Re: regexp.MustCompile(`(?i)checkint=`),
+			Extract: func(str string) interface{} {
+				switch str {
+				case "no":
+					nocheck = true
+					return 0
+				default:
+					return IntKeyword(str)
+				}
+			},
+			Value: 100,
+		},
+		SleepInt: {
+			Re:      regexp.MustCompile(`(?i)sleepint=`),
+			Extract: IntKeyword,
+			Value:   60,
+		},
+		NumJobs: {
+			Re:      regexp.MustCompile(`(?i)numjobs=`),
+			Extract: IntKeyword,
+			Value:   8,
+		},
+		IntderCmd: {
+			Re:      regexp.MustCompile(`(?i)intder=`),
+			Extract: StringKeyword,
+		},
+		AnpassCmd: {
+			Re:      regexp.MustCompile(`(?i)anpass=`),
+			Extract: StringKeyword,
+		},
+		SpectroCmd: {
+			Re:      regexp.MustCompile(`(?i)spectro=`),
+			Extract: StringKeyword,
+		},
+		EnergyLine: {
+			Value: regexp.MustCompile(`energy=`),
+		},
+		MolproTmpl: {
+			Re:      regexp.MustCompile(`(?i)molprotmpl=`),
+			Extract: StringKeyword,
+			Value:   "molpro.in",
+		},
+		AnpassTmpl: {
+			Re:      regexp.MustCompile(`(?i)anpasstmpl=`),
+			Extract: StringKeyword,
+			Value:   "anpass.in",
+		},
+		IntderTmpl: {
+			Re:      regexp.MustCompile(`(?i)intdertmpl=`),
+			Extract: StringKeyword,
+			Value:   "intder.in",
+		},
+	}
 }
