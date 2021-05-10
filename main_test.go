@@ -63,11 +63,17 @@ func TestReadFile(t *testing.T) {
 }
 
 func TestMakeName(t *testing.T) {
+	tmp := Conf
+	defer func() {
+		Conf = tmp
+	}()
 	tests := []struct {
-		geom string
-		want string
+		gtype string
+		geom  string
+		want  string
 	}{
 		{
+			gtype: "zmat",
 			geom: ` X
 X 1 1.0
 Al 1 AlX 2 90.0
@@ -82,6 +88,7 @@ XXO = 80.0 Deg
 			want: "Al2O2",
 		},
 		{
+			gtype: "zmat",
 			geom: ` X
 C 1 1.0
 O 2 co 1 90.0
@@ -93,6 +100,7 @@ ch=                  1.09346324 ANG
 			want: "CHO",
 		},
 		{
+			gtype: "xyz",
 			geom: ` H          0.0000000000        0.7574590974        0.5217905143
  O          0.0000000000        0.0000000000       -0.0657441568
  H          0.0000000000       -0.7574590974        0.5217905143
@@ -102,6 +110,7 @@ ch=                  1.09346324 ANG
 	}
 	for _, test := range tests {
 		got := MakeName(test.geom)
+		Conf.Set(GeomType, test.gtype)
 		want := test.want
 		if got != want {
 			t.Errorf("got %v, wanted %v\n", got, want)

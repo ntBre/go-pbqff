@@ -52,16 +52,19 @@ func RunProgram(progName, filename string) (err error) {
 func MakeName(geom string) (name string) {
 	atoms := make(map[string]int)
 	split := strings.Split(geom, "\n")
-	// TODO handle no comment/natom lines in xyz
-	if Conf.Str(GeomType) == "xyz" {
-		split = split[2:]
-	}
+	var skip int
 	for _, line := range split {
 		fields := strings.Fields(line)
-		// not a dummy atom and not a coordinate lol
-		if len(fields) >= 1 &&
+		// not a dummy atom and not a coordinate
+		switch {
+		case Conf.Str(GeomType) == "xyz" && len(fields) == 1:
+			// natoms line in xyz
+			skip++
+		case skip > 0:
+			skip--
+		case len(fields) >= 1 &&
 			!strings.Contains(strings.ToUpper(fields[0]), "X") &&
-			!strings.Contains(line, "=") {
+			!strings.Contains(line, "="):
 			atoms[strings.ToLower(fields[0])]++
 		}
 	}
