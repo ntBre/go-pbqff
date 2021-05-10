@@ -33,6 +33,7 @@ func compConf(kws []interface{}, conf Config) (bool, string) {
 
 func TestParseInfile(t *testing.T) {
 	tmp := Conf
+	Conf = NewConfig()
 	defer func() {
 		Conf = tmp
 	}()
@@ -43,7 +44,7 @@ func TestParseInfile(t *testing.T) {
 		{
 			in: "testfiles/test.in",
 			want: []interface{}{
-				Cluster: "maple",
+				Cluster:  "maple",
 				ChemProg: "molpro",
 				Geometry: `X
 X 1 1.0
