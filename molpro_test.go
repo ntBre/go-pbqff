@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"sync"
 	"testing"
 )
 
@@ -531,6 +532,7 @@ func TestDerivative(t *testing.T) {
 	target := new([]CountFloat)
 	dir := t.TempDir()
 	tmp := Conf
+	Global.JobNum = 0
 	defer func() {
 		Conf = tmp
 	}()
@@ -808,11 +810,19 @@ func TestBuildGradPoints(t *testing.T) {
 	want := (4*n*n*n + 12*n*n + 11*n) / 3
 	ch := make(chan Calc, want) // buffered to size of expected calcs
 	mp := new(Molpro)
-	go mp.BuildGradPoints(dir, names, coords, fc2, fc3, fc4, ch)
+	var wg sync.WaitGroup
+	// I think the temp directory was deleted once before the
+	// goroutine finished, so add waitgroup
+	wg.Add(1)
+	go func() {
+		mp.BuildGradPoints(dir, names, coords, fc2, fc3, fc4, ch)
+		wg.Done()
+	}()
 	got := make([]Calc, 0)
 	for calc := range ch {
 		got = append(got, calc)
 	}
+	wg.Wait()
 	if lgot := len(got); lgot != want {
 		t.Errorf("got %d, wanted %d calcs\n", lgot, want)
 	}
