@@ -78,6 +78,7 @@ var (
 	flags            int
 	submitted        int
 	StartCPU         int64
+	Conf             = NewConfig()
 )
 
 var Global struct {
