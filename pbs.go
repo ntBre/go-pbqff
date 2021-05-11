@@ -114,6 +114,7 @@ ssh -t sequoia pkill -{{.Signal}} pbqff
 // AddCommand adds a molpro command to cmdfile
 func AddCommand(cmdfile, infile string) {
 	f, err := os.OpenFile(cmdfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
+	defer f.Close()
 	if err != nil {
 		msg := fmt.Sprintf("Cannot open commands file: %s with %v\n",
 			cmdfile, err)

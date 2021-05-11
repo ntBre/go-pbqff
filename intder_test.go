@@ -288,6 +288,7 @@ func workDir(filename string, f func(string), test bool) {
 		panic(err)
 	}
 	infile, _ := os.Open(filename)
+	defer infile.Close()
 	base := filepath.Base(filename)
 	outfile, _ := os.Create(temp + "/" + base)
 	io.Copy(outfile, infile)

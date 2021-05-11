@@ -40,10 +40,10 @@ type Molpro struct {
 // LoadMolpro loads a template molpro input file
 func LoadMolpro(filename string) (*Molpro, error) {
 	f, err := os.Open(filename)
+	defer f.Close()
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	var (
 		buf  bytes.Buffer
@@ -284,10 +284,10 @@ func ReadLog(filename string) (string, string) {
 // and return a slice of the harmonic frequencies
 func (m Molpro) ReadFreqs(filename string) (freqs []float64) {
 	f, err := os.Open(filename)
+	defer f.Close()
 	if err != nil {
 		panic(err)
 	}
-	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	var line string
 	for scanner.Scan() {

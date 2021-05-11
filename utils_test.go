@@ -33,10 +33,12 @@ func TestRunProgram(t *testing.T) {
 	base := filepath.Base(infile)
 	use := filepath.Join(tmp, base)
 	file, err := os.Open(infile)
+	defer file.Close()
 	if err != nil {
 		panic(err)
 	}
 	usefile, err := os.Create(use)
+	defer usefile.Close()
 	if err != nil {
 		panic(err)
 	}

@@ -30,11 +30,15 @@ func RunProgram(progName, filename string) (err error) {
 	infile := filename + ".in"
 	outfile := filename + ".out"
 	cmd := exec.Command(progName)
-	cmd.Stdin, err = os.Open(infile)
+	f, err := os.Open(infile)
+	defer f.Close()
+	cmd.Stdin = f
 	if err != nil {
 		return err
 	}
-	cmd.Stdout, err = os.Create(outfile)
+	of, err := os.Create(outfile)
+	cmd.Stdout = of
+	defer of.Close()
 	cmd.Dir = filepath.Dir(filename)
 	if err != nil {
 		fmt.Println("RunProgram: opening stdout")
@@ -87,10 +91,10 @@ func MakeName(geom string) (name string) {
 // ReadFile reads a file and returns a slice of strings of the lines
 func ReadFile(filename string) (lines []string, err error) {
 	f, err := os.Open(filename)
+	defer f.Close()
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		if line := strings.TrimSpace(scanner.Text()); line != "" {

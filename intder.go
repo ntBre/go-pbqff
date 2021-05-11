@@ -180,10 +180,10 @@ func Pattern(geom string, ndummy int, negate bool) ([][]int, []Dummy) {
 // stripped out
 func LoadIntder(filename string) (*Intder, error) {
 	f, err := os.Open(filename)
+	defer f.Close()
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	var (
 		buf    bytes.Buffer
@@ -441,10 +441,10 @@ func (i *Intder) WriteFreqs(filename string, names []string) {
 func (i *Intder) ReadGeom(filename string) string {
 	const target = "NEW CARTESIAN GEOMETRY (BOHR)"
 	f, err := os.Open(filename)
+	defer f.Close()
 	if err != nil {
 		panic(err)
 	}
-	defer f.Close()
 	var (
 		line string
 		geom bool
@@ -473,10 +473,10 @@ func (i *Intder) ReadGeom(filename string) string {
 // frequencies found therein
 func (i *Intder) ReadOut(filename string) (freqs []float64) {
 	f, err := os.Open(filename)
+	defer f.Close()
 	if err != nil {
 		panic(err)
 	}
-	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	mode := regexp.MustCompile(`^\s+MODE`)
 	var (
@@ -512,10 +512,10 @@ func (i *Intder) Read9903(filename string) {
 		buf4 bytes.Buffer
 	)
 	f, err := os.Open(filename)
+	defer f.Close()
 	if err != nil {
 		panic(err)
 	}
-	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	var (
 		line string

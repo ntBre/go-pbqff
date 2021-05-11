@@ -108,10 +108,10 @@ func (a *Anpass) WriteAnpass2(filename, longLine string, energies []float64) {
 // GetLongLine scans an anpass output file and return the "long line"
 func GetLongLine(filename string) (string, bool) {
 	f, err := os.Open(filename)
+	defer f.Close()
 	if err != nil {
 		panic(err)
 	}
-	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	var line, lastLine string
 	for scanner.Scan() {

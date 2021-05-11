@@ -50,6 +50,7 @@ func ParseOutput(file string, comment bool) (coords []float64, energy float64) {
 	if err != nil {
 		panic(err)
 	}
+	defer infile.Close()
 	scanner := bufio.NewScanner(infile)
 	var (
 		ingeom bool

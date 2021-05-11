@@ -27,6 +27,7 @@ func TestSubmit(t *testing.T) {
 func TestReadPBSNodes(t *testing.T) {
 	// cn074 has 6 jobs
 	f, _ := os.Open("testfiles/read/pbsnodes")
+	defer f.Close()
 	got := readPBSnodes(f)
 	want := []string{"workq:cn064", "workq:cn065", "workq:cn066", "workq:cn067"}
 	if !reflect.DeepEqual(got, want) {
