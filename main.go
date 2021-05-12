@@ -276,7 +276,9 @@ func Resubmit(name string, err error) string {
 // to construct the zero gradient array.
 func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime float64) {
 	start := time.Now()
-	fmt.Println("step sizes: ", Conf.FlSlice(Deltas))
+	if Conf.At(Deltas) != nil {
+		fmt.Println("step sizes: ", Conf.FlSlice(Deltas))
+	}
 	points := make([]Calc, 0)
 	var (
 		nJobs     int
@@ -526,11 +528,13 @@ func initialize(infile string) (prog *Molpro, intder *Intder, anpass *Anpass) {
 	}
 	prog.Dir = dir
 	if DoSIC() {
-		intder, err = LoadIntder("intder.in")
+		intder, err = LoadIntder(
+			filepath.Join(dir, "intder.in"))
 		if err != nil {
 			errExit(err, fmt.Sprintf("loading intder input %q", idName))
 		}
-		anpass, err = LoadAnpass("anpass.in")
+		anpass, err = LoadAnpass(
+			filepath.Join(dir, "anpass.in"))
 		if err != nil {
 			errExit(err, fmt.Sprintf("loading anpass input %q", apName))
 		}
@@ -750,7 +754,7 @@ func main() {
 		for i := range energies {
 			energies[i] -= min
 		}
-		longLine := DoAnpass(anpass, energies)
+		longLine := DoAnpass(anpass, prog.Dir, energies)
 		coords, intderHarms := DoIntder(intder, names, longLine)
 		spec, err := spectro.Load("spectro.in")
 		if err != nil {

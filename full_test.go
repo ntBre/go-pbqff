@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ntBre/chemutils/spectro"
@@ -12,8 +13,46 @@ import (
 )
 
 func TestSIC(t *testing.T) {
-	// TODO testing full QFF procedure using dummy interface
-	// implementations
+	*test = true
+	qsub = "/home/brent/Projects/go/src/github.com/ntBre/chemutils/qsub/qsub"
+	defer func() {
+		*test = false
+		qsub = "qsub"
+	}()
+	prog, intder, anpass := initialize("tests/sic/sic.in")
+	names := strings.Fields("H O H")
+	intder.WritePts("tests/sic/pts/intder.in")
+	RunIntder("tests/sic/pts/intder")
+	ch := make(chan Calc, Conf.Int(JobLimit))
+	var cenergies []CountFloat
+	go func() {
+		prog.BuildPoints("tests/sic/pts/file07",
+			names, &cenergies, ch, true)
+	}()
+	E0 := -76.369839620287
+	min, _ := Drain(prog, 0, ch, E0)
+	energies := FloatsFromCountFloats(cenergies)
+	for i := range energies {
+		energies[i] -= min
+	}
+	longLine := DoAnpass(anpass, prog.Dir, energies)
+	coords, _ := DoIntder(intder, names, longLine)
+	spec, err := spectro.Load("tests/sic/spectro.in")
+	if err != nil {
+		errExit(err, "loading spectro input")
+	}
+	spec.FormatGeom(names, coords)
+	spec.WriteInput("tests/sic/freqs/spectro.in")
+	err = spec.DoSpectro("tests/sic/freqs/")
+	if err != nil {
+		errExit(err, "running spectro")
+	}
+	res := summarize.Spectro(
+		filepath.Join("tests/sic/", "freqs", "spectro2.out"))
+	want := []float64{3753.1, 3656.8, 1599.9}
+	if !compfloat(res.Corr, want, 1e-1) {
+		t.Errorf("got %v, wanted %v\n", res.Corr, want)
+	}
 }
 
 func compfloat(a, b []float64, eps float64) bool {

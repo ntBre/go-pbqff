@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -142,14 +143,15 @@ func RunAnpass(filename string) {
 }
 
 // DoAnpass runs anpass
-func DoAnpass(anp *Anpass, energies []float64) string {
-	anp.WriteAnpass("freqs/anpass1.in", energies)
-	RunAnpass("freqs/anpass1")
-	longLine, ok := GetLongLine("freqs/anpass1.out")
+func DoAnpass(anp *Anpass, dir string, energies []float64) string {
+	anp.WriteAnpass(filepath.Join(dir, "freqs/anpass1.in"), energies)
+	RunAnpass(filepath.Join(dir, "freqs/anpass1"))
+	longLine, ok := GetLongLine(filepath.Join(dir, "freqs/anpass1.out"))
 	if !ok {
 		panic("Problem getting long line from anpass1.out")
 	}
-	anp.WriteAnpass2("freqs/anpass2.in", longLine, energies)
-	RunAnpass("freqs/anpass2")
+	anp.WriteAnpass2(filepath.Join(dir, "freqs/anpass2.in"),
+		longLine, energies)
+	RunAnpass(filepath.Join(dir, "freqs/anpass2"))
 	return longLine
 }
