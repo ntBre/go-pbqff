@@ -18,6 +18,7 @@ func TestSIC(t *testing.T) {
 	defer func() {
 		*test = false
 		qsub = "qsub"
+		submitted = 0
 	}()
 	prog, intder, anpass := initialize("tests/sic/sic.in")
 	names := strings.Fields("H O H")
@@ -73,6 +74,7 @@ func TestCart(t *testing.T) {
 	defer func() {
 		*test = false
 		qsub = "qsub"
+		submitted = 0
 	}()
 	prog, _, _ := initialize("tests/cart/cart.in")
 	prog.FormatCart(Conf.Str(Geometry))
