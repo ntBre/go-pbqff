@@ -36,7 +36,7 @@ func TestSIC(t *testing.T) {
 		energies[i] -= min
 	}
 	longLine := DoAnpass(anpass, prog.Dir, energies)
-	coords, _ := DoIntder(intder, names, longLine)
+	coords, _ := DoIntder(intder, names, longLine, prog.Dir)
 	spec, err := spectro.Load("tests/sic/spectro.in")
 	if err != nil {
 		errExit(err, "loading spectro input")
@@ -49,7 +49,7 @@ func TestSIC(t *testing.T) {
 	}
 	res := summarize.Spectro(
 		filepath.Join("tests/sic/", "freqs", "spectro2.out"))
-	want := []float64{3753.1, 3656.8, 1599.9}
+	want := []float64{3753.2, 3656.5, 1598.8}
 	if !compfloat(res.Corr, want, 1e-1) {
 		t.Errorf("got %v, wanted %v\n", res.Corr, want)
 	}

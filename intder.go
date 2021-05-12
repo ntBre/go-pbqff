@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
@@ -551,13 +552,16 @@ func RunIntder(filename string) {
 }
 
 // Tennis moves intder output files to the filenames expected by spectro
-func Tennis() {
-	err := os.Rename("freqs/file15", "freqs/fort.15")
+func Tennis(dir string) {
+	err := os.Rename(filepath.Join(dir, "freqs/file15"),
+		filepath.Join(dir, "freqs/fort.15"))
 	if err == nil {
-		err = os.Rename("freqs/file20", "freqs/fort.30")
+		err = os.Rename(filepath.Join(dir, "freqs/file20"),
+			filepath.Join(dir, "freqs/fort.30"))
 	}
 	if err == nil {
-		err = os.Rename("freqs/file24", "freqs/fort.40")
+		err = os.Rename(filepath.Join(dir, "freqs/file24"),
+			filepath.Join(dir, "freqs/fort.40"))
 	}
 	if err != nil {
 		panic(err)
@@ -565,14 +569,14 @@ func Tennis() {
 }
 
 // DoIntder runs freqs intder
-func DoIntder(intder *Intder, atomNames []string, longLine string) (string, []float64) {
-	intder.WriteGeom("freqs/intder_geom.in", longLine)
-	RunIntder("freqs/intder_geom")
-	coords := intder.ReadGeom("freqs/intder_geom.out")
-	intder.Read9903("freqs/fort.9903")
-	intder.WriteFreqs("freqs/intder.in", atomNames)
-	RunIntder("freqs/intder")
-	intderHarms := intder.ReadOut("freqs/intder.out")
-	Tennis()
+func DoIntder(intder *Intder, atomNames []string, longLine, dir string) (string, []float64) {
+	intder.WriteGeom(filepath.Join(dir, "freqs/intder_geom.in"), longLine)
+	RunIntder(filepath.Join(dir, "freqs/intder_geom"))
+	coords := intder.ReadGeom(filepath.Join(dir, "freqs/intder_geom.out"))
+	intder.Read9903(filepath.Join(dir, "freqs/fort.9903"))
+	intder.WriteFreqs(filepath.Join(dir, "freqs/intder.in"), atomNames)
+	RunIntder(filepath.Join(dir, "freqs/intder"))
+	intderHarms := intder.ReadOut(filepath.Join(dir, "freqs/intder.out"))
+	Tennis(dir)
 	return coords, intderHarms
 }

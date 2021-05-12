@@ -755,7 +755,8 @@ func main() {
 			energies[i] -= min
 		}
 		longLine := DoAnpass(anpass, prog.Dir, energies)
-		coords, intderHarms := DoIntder(intder, names, longLine)
+		coords, intderHarms := DoIntder(intder, names,
+			longLine, prog.Dir)
 		spec, err := spectro.Load("spectro.in")
 		if err != nil {
 			errExit(err, "loading spectro input")

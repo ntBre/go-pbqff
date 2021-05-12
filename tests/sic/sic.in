@@ -11,5 +11,5 @@ hoh=109.5 DEG
 flags=noopt
 sleepint=1
 intder=/home/brent/Packages/intder/intder
-anpass=/ddn/home6/r2533/programs/anpass/anpass_cerebro.x
-spectro=/ddn/home6/r2533/programs/spec3jm.ifort-O0.static.x
+anpass=/home/brent/Packages/anpass/anpass
+spectro=/home/brent/Downloads/spec3jm/backup/spectro.x
