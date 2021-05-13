@@ -72,7 +72,6 @@ func compfloat(a, b []float64, eps float64) bool {
 }
 
 func TestCart(t *testing.T) {
-	t.Skip()
 	*test = true
 	qsub = "/home/brent/Projects/go/src/github.com/ntBre/chemutils/qsub/qsub"
 	temp := Conf
@@ -128,6 +127,11 @@ func TestCart(t *testing.T) {
 }
 
 func TestGrad(t *testing.T) {
+	var (
+		fc2 []CountFloat
+		fc3 []CountFloat
+		fc4 []CountFloat
+	)
 	*test = true
 	qsub = "/home/brent/Projects/go/src/github.com/ntBre/chemutils/qsub/qsub"
 	temp := Conf
