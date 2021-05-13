@@ -775,6 +775,7 @@ func (m *Molpro) GradDerivative(dir string, names []string, coords []float64,
 // Cartesian quartic force field using gradients
 func (m *Molpro) BuildGradPoints(dir string, names []string, coords []float64,
 	fc2, fc3, fc4 *[]CountFloat, ch chan Calc) {
+	dir = filepath.Join(m.Dir, dir)
 	var (
 		count *int
 		pf    *int
