@@ -14,7 +14,7 @@ import (
 
 func TestSIC(t *testing.T) {
 	*test = true
-	qsub = "/home/brent/Projects/go/src/github.com/ntBre/chemutils/qsub/qsub"
+	qsub = "qsub/qsub"
 	temp := Conf
 	Conf = NewConfig()
 	defer func() {
@@ -73,7 +73,7 @@ func compfloat(a, b []float64, eps float64) bool {
 
 func TestCart(t *testing.T) {
 	*test = true
-	qsub = "/home/brent/Projects/go/src/github.com/ntBre/chemutils/qsub/qsub"
+	qsub = "qsub/qsub"
 	temp := Conf
 	Conf = NewConfig()
 	defer func() {
@@ -133,7 +133,7 @@ func TestGrad(t *testing.T) {
 		fc4 []CountFloat
 	)
 	*test = true
-	qsub = "/home/brent/Projects/go/src/github.com/ntBre/chemutils/qsub/qsub"
+	qsub = "qsub/qsub"
 	temp := Conf
 	Conf = NewConfig()
 	defer func() {

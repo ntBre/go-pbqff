@@ -1,0 +1,23 @@
+#!/bin/sh
+#PBS -N pts
+#PBS -S /bin/bash
+#PBS -j oe
+#PBS -o pts/inp/commands1.txt.out
+#PBS -W umask=022
+#PBS -l walltime=5000:00:00
+#PBS -l ncpus=8
+#PBS -l mem=64gb
+
+module load pbspro molpro
+
+export WORKDIR=$PBS_O_WORKDIR
+export TMPDIR=/tmp/$USER/$PBS_JOBID
+cd $WORKDIR
+mkdir -p $TMPDIR
+
+date
+hostname
+parallel -j 8 --joblog pts/inp/commands1.txt.pl.log --progress < commands1.txt 2> pts/inp/commands1.txt.prog
+date
+
+rm -rf $TMPDIR

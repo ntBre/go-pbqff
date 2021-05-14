@@ -1,0 +1,23 @@
+#!/bin/sh
+#PBS -N H2O-ref
+#PBS -S /bin/bash
+#PBS -j oe
+#PBS -o /dev/null
+#PBS -W umask=022
+#PBS -l walltime=5000:00:00
+#PBS -l ncpus=1
+#PBS -l mem=9gb
+
+module load pbspro molpro
+
+export WORKDIR=$PBS_O_WORKDIR
+export TMPDIR=/tmp/$USER/$PBS_JOBID
+cd $WORKDIR
+mkdir -p $TMPDIR
+
+date
+molpro -t 1 --no-xml-output ref.inp
+date
+
+rm -rf $TMPDIR
+ssh -t maple pkill -35 pbqff
