@@ -425,17 +425,17 @@ func TestBuildPoints(t *testing.T) {
 		{
 			Name:    "testfiles/read/inp/NHHH.00000",
 			Targets: []Target{{1, cf, 0}},
-			CmdFile: "testfiles/read/inp/commands0.txt",
+			CmdFile: "testfiles/read/inp/commands0",
 			Scale:   1},
 		{
 			Name:    "testfiles/read/inp/NHHH.00001",
 			Targets: []Target{{1, cf, 1}},
-			CmdFile: "testfiles/read/inp/commands0.txt",
+			CmdFile: "testfiles/read/inp/commands0",
 			Scale:   1},
 		{
 			Name:    "testfiles/read/inp/NHHH.00002",
 			Targets: []Target{{1, cf, 2}},
-			CmdFile: "testfiles/read/inp/commands0.txt",
+			CmdFile: "testfiles/read/inp/commands0",
 			Scale:   1},
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -640,17 +640,17 @@ func TestPush(t *testing.T) {
 	want := []Calc{
 		{
 			Name:     "job1",
-			CmdFile:  filepath.Join(dir, "commands0.txt"),
+			CmdFile:  filepath.Join(dir, "commands0"),
 			ChunkNum: 0,
 		},
 		{
 			Name:     "job2",
-			CmdFile:  filepath.Join(dir, "commands0.txt"),
+			CmdFile:  filepath.Join(dir, "commands0"),
 			ChunkNum: 0,
 		},
 		{
 			Name:     "job3",
-			CmdFile:  filepath.Join(dir, "commands1.txt"),
+			CmdFile:  filepath.Join(dir, "commands1"),
 			ChunkNum: 1,
 		},
 	}

@@ -9,9 +9,9 @@ import (
 // Resubmit if the returned bools are true
 
 // CheckLog checks a GNU parallel log file, assuming an extension of
-// .pl.log, for a jobname
+// .log, for a jobname
 func CheckLog(cmdfile, jobname string) bool {
-	ext := ".pl.log"
+	ext := ".log"
 	logfile := cmdfile + ext
 	logbytes, _ := ioutil.ReadFile(logfile)
 	return !strings.Contains(string(logbytes), jobname)

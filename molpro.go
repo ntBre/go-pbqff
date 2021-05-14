@@ -602,7 +602,7 @@ func SelectNode() (node, queue string) {
 // Push sends calculations to the queue
 func Push(dir string, pf, count *int, calcs []Calc, ch chan Calc, end bool) {
 	subfile := fmt.Sprintf("%s/main%d.pbs", dir, *pf)
-	cmdfile := fmt.Sprintf("%s/commands%d.txt", dir, *pf)
+	cmdfile := fmt.Sprintf("%s/commands%d", dir, *pf)
 	for f := range calcs {
 		calcs[f].CmdFile = cmdfile
 		calcs[f].ChunkNum = *pf
@@ -627,7 +627,7 @@ func Push(dir string, pf, count *int, calcs []Calc, ch chan Calc, end bool) {
 				*count = 1
 				*pf++
 				subfile = fmt.Sprintf("%s/main%d.pbs", dir, *pf)
-				cmdfile = fmt.Sprintf("%s/commands%d.txt", dir, *pf)
+				cmdfile = fmt.Sprintf("%s/commands%d", dir, *pf)
 			} else {
 				*count++
 			}

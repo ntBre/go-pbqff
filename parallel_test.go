@@ -9,10 +9,18 @@ func TestCheckLog(t *testing.T) {
 		jobname string
 		want    bool
 	}{
-		{"job not found", "testfiles/read/commands37.txt",
-			"pts/inp/job.0000002862", true},
-		{"job found", "testfiles/read/commands35.txt",
-			"pts/inp/job.0000002694", false},
+		{
+			msg:     "job not found",
+			cmdfile: "testfiles/read/commands37.txt",
+			jobname: "pts/inp/job.0000002862",
+			want:    true,
+		},
+		{
+			msg:     "job found",
+			cmdfile: "testfiles/read/commands35.txt",
+			jobname: "pts/inp/job.0000002694",
+			want:    false,
+		},
 	}
 	for _, test := range tests {
 		got := CheckLog(test.cmdfile, test.jobname)
