@@ -128,6 +128,7 @@ func AddCommand(cmdfile, infile string) {
 func WritePBS(infile string, job *Job, pbs string) {
 	var t *template.Template
 	f, err := os.Create(infile)
+	defer f.Close()
 	if err != nil {
 		panic(err)
 	}

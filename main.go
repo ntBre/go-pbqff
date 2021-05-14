@@ -582,6 +582,7 @@ func XYZGeom(geom string) (names []string, coords []float64) {
 // format expected by SPECTRO
 func PrintFortFile(fc []CountFloat, natoms, other int, filename string) int {
 	f, _ := os.Create(filename)
+	defer f.Close()
 	fmt.Fprintf(f, "%5d%5d", natoms, other)
 	for i := range fc {
 		if i%3 == 0 {

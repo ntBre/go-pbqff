@@ -291,6 +291,7 @@ func workDir(filename string, f func(string), test bool) {
 	defer infile.Close()
 	base := filepath.Base(filename)
 	outfile, _ := os.Create(temp + "/" + base)
+	defer outfile.Close()
 	io.Copy(outfile, infile)
 	os.Chdir(temp)
 	f(base)

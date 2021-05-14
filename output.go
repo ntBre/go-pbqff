@@ -47,10 +47,10 @@ func FormatOutput(dir string) {
 // geometry and reference energy
 func ParseOutput(file string, comment bool) (coords []float64, energy float64) {
 	infile, err := os.Open(file)
+	defer infile.Close()
 	if err != nil {
 		panic(err)
 	}
-	defer infile.Close()
 	scanner := bufio.NewScanner(infile)
 	var (
 		ingeom bool
