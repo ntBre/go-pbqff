@@ -53,7 +53,7 @@ mkdir -p $TMPDIR
 
 date
 hostname
-parallel -j {{.NumJobs}} --joblog {{.Filename}}.log --progress < {{.Filename}} 2> {{.Filename}}.prog
+parallel --retries 5 -j {{.NumJobs}} --joblog {{.Filename}}.log --progress < {{.Filename}} 2> {{.Filename}}.prog
 date
 
 rm -rf $TMPDIR
