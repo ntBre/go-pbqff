@@ -101,12 +101,12 @@ var (
 
 // Errors
 var (
-	ErrEnergyNotFound      = errors.New("Energy not found in Molpro output")
-	ErrFileNotFound        = errors.New("Molpro output file not found")
-	ErrEnergyNotParsed     = errors.New("Energy not parsed in Molpro output")
-	ErrFinishedButNoEnergy = errors.New("Molpro output finished but no energy found")
-	ErrFileContainsError   = errors.New("Molpro output file contains an error")
 	ErrBlankOutput         = errors.New("Molpro output file exists but is blank")
+	ErrEnergyNotFound      = errors.New("Energy not found in Molpro output")
+	ErrEnergyNotParsed     = errors.New("Energy not parsed in Molpro output")
+	ErrFileContainsError   = errors.New("Molpro output file contains an error")
+	ErrFileNotFound        = errors.New("Molpro output file not found")
+	ErrFinishedButNoEnergy = errors.New("Molpro output finished but no energy found")
 	ErrInputGeomNotFound   = errors.New("Geometry not found in input file")
 	ErrTimeout             = errors.New("Timeout waiting for signal")
 )

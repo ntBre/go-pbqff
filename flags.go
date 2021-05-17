@@ -22,23 +22,19 @@ Flags:
 )
 
 var (
-	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
-	overwrite  = flag.Bool("o", false, "overwrite existing inp directory")
-	pts        = flag.Bool("pts", false,
-		"start by running pts on optimized geometry from opt")
-	freqs = flag.Bool("freqs", false, "start from running anpass on the pts output")
-	debug = flag.Bool("debug", false,
-		"for debugging, print 2nd derivative energies array")
 	checkpoint = flag.Bool("c", false, "resume from checkpoint")
+	count      = flag.Bool("count", false, "read the input file and print the number of calculations needed then exit")
+	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+	debug      = flag.Bool("debug", false, "for debugging, print 2nd derivative energies array")
+	format     = flag.Bool("fmt", false, "parse existing output files and print them in anpass format")
+	freqs      = flag.Bool("freqs", false, "start from running anpass on the pts output")
+	irdy       = flag.String("irdy", "", "intder file is ready to be used in pts; specify the atom order")
+	// memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+	nodel      = flag.Bool("nodel", false, "don't delete used output files")
+	overwrite  = flag.Bool("o", false, "overwrite existing inp directory")
+	pts        = flag.Bool("pts", false, "start by running pts on optimized geometry from opt")
 	read       = flag.Bool("r", false, "read reference energy from pts/inp/ref.out")
-	irdy       = flag.String("irdy", "",
-		"intder file is ready to be used in pts; specify the atom order")
-	count = flag.Bool("count", false,
-		"read the input file and print the number of calculations needed then exit")
-	nodel  = flag.Bool("nodel", false, "don't delete used output files")
-	format = flag.Bool("fmt", false,
-		"parse existing output files and print them in anpass format")
-	test = flag.Bool("test", false, "shorten wait for signal")
+	test       = flag.Bool("test", false, "shorten wait for signal")
 )
 
 // ParseFlags parses command line flags and returns a slice of
