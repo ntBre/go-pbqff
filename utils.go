@@ -142,3 +142,14 @@ func TrimExt(filename string) string {
 	lext := len(filepath.Ext(filename))
 	return filename[:len(filename)-lext]
 }
+
+// PrettyPrint pretty prints arr wrapped to three columns
+func PrettyPrint(arr []CountFloat) {
+	for i, v := range arr {
+		if i%3 == 0 && i > 0 {
+			fmt.Print("\n")
+		}
+		fmt.Printf("%20.12f", v.Val)
+	}
+	fmt.Print("\n")
+}

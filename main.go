@@ -594,17 +594,6 @@ func PrintFortFile(fc []CountFloat, natoms, other int, filename string) int {
 	return len(fc)
 }
 
-// PrintE2D pretty prints the second derivative energy array
-func PrintE2D() {
-	for i := 0; i < len(e2d); i++ {
-		if i%3 == 0 && i > 0 {
-			fmt.Print("\n")
-		}
-		fmt.Printf("%20.12f", e2d[i].Val)
-	}
-	fmt.Print("\n")
-}
-
 // GetCPU returns the CPU time used by the current process in
 // nanoseconds
 func GetCPU() int64 {
@@ -811,7 +800,7 @@ func main() {
 		}
 	}
 	if *debug {
-		PrintE2D()
+		PrettyPrint(e2d)
 	}
 	fmt.Printf("total CPU time used: %.3f s\n", float64(GetCPU()-StartCPU)/1e9)
 }
