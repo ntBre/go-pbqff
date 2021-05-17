@@ -588,6 +588,10 @@ func ZipXYZ(names []string, coords []float64) string {
 // SelectNode returns a node and queue from the Global node list
 func SelectNode() (node, queue string) {
 	queue = Conf.Str(Queue)
+	// regenerate empty node list if empty
+	if len(Global.Nodes) == 0 {
+		Global.Nodes = PBSnodes()
+	}
 	if len(Global.Nodes) > 0 {
 		tmp := strings.Split(Global.Nodes[0], ":")
 		if queue == "" || tmp[0] == queue {
