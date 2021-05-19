@@ -487,6 +487,7 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 		check     int = 1
 	)
 	heap := new(GarbageHeap)
+	maxjobs := jobLimit
 	for {
 		shortenBy := 0
 		pollStart := time.Now()
@@ -526,7 +527,10 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 				ptsJobs = append(ptsJobs, points[i].Resub.ID)
 			} else if job.Resub != nil {
 				// should DRY this up, inside if is same as case 3 above
-				// should also check if resubmitted job has finished with qsub and set pointer to nil if it has without success
+				// should also check if resubmitted
+				// job has finished with qsub and set
+				// pointer to nil if it has without
+				// success
 				if energy, t, gradients, err = prog.ReadOut(job.Resub.Name + ".out"); err == nil {
 					success = true
 					if energy < min {
@@ -570,6 +574,11 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 		if shortenBy < 1 {
 			fmt.Fprintln(os.Stderr, "Didn't shorten, sleeping")
 			time.Sleep(time.Duration(sleep) * time.Second)
+			for _, p := range points {
+				if p.noRun {
+					maxjobs++
+				}
+			}
 		}
 		if check >= checkAfter {
 			if !nocheck {
@@ -585,7 +594,7 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 		fmt.Fprintf(os.Stderr, "finished %d/%d submitted, %v polling %d jobs\n", finished, submitted,
 			time.Since(pollStart).Round(time.Millisecond), nJobs)
 		// only receive more jobs if there is room
-		for count := 0; count < chunkSize && nJobs < jobLimit; count++ {
+		for count := 0; count < chunkSize && nJobs < maxjobs; count++ {
 			calc, ok := <-ch
 			if !ok && finished == submitted {
 				fmt.Fprintf(os.Stderr, "resubmitted %d/%d (%.1f%%), points execution time: %v\n",
