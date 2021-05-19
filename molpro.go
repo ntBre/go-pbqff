@@ -320,10 +320,10 @@ func (m *Molpro) AugmentHead() {
 	}
 }
 
-// BuildPoints uses ./pts/file07 to construct the single-point
-// energy calculations and return an array of jobs to run. If write
-// is set to true, write the necessary files. Otherwise just return the list
-// of jobs.
+// BuildPoints uses a file07 file from Intder to construct the
+// single-point energy calculations and return an array of jobs to
+// run. If write is set to true, write the necessary files. Otherwise
+// just return the list of jobs.
 func (m *Molpro) BuildPoints(filename string, atomNames []string,
 	target *[]CountFloat, ch chan Calc, write bool) {
 	lines, err := ReadFile(filename)
