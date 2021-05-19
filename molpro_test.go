@@ -416,7 +416,7 @@ func TestBuildPoints(t *testing.T) {
 	ch := make(chan Calc, 3)
 	paraCount = make(map[string]int)
 	cf := new([]CountFloat)
-	prog.BuildPoints("testfiles/read/file07", names, cf, ch, true)
+	prog.BuildPoints("testfiles/read/file07", names, cf, true)
 	var got []Calc
 	for calc := range ch {
 		got = append(got, calc)
@@ -632,7 +632,7 @@ func TestPush(t *testing.T) {
 		return exec.Command(qsub, "-f", str).String()
 	}
 	Conf.Set(ChunkSize, 2)
-	Push(dir, &pf, &count, calcs, ch, true)
+	Push(dir, pf, count, calcs)
 	got := make([]Calc, 0)
 	for c := 0; c < 3; c++ {
 		got = append(got, <-ch)

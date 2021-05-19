@@ -708,14 +708,14 @@ func main() {
 			intder.WritePts("pts/intder.in")
 			RunIntder("pts/intder")
 			go func() {
-				prog.BuildPoints("pts/file07", names, &cenergies, ch, true)
+				prog.BuildPoints("pts/file07", names, &cenergies, true)
 			}()
 		} else {
 			// this works if no points were deleted and
 			// the files are named the same way between
 			// runs, else need a resume from checkpoint
 			// thing
-			prog.BuildPoints("pts/file07", names, &cenergies, nil, false)
+			prog.BuildPoints("pts/file07", names, &cenergies, false)
 		}
 	} else {
 		names, coords = XYZGeom(cart)

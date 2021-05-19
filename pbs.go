@@ -111,18 +111,6 @@ rm -rf $TMPDIR
 ssh -t sequoia pkill -{{.Signal}} pbqff
 `
 
-// AddCommand adds a molpro command to cmdfile
-func AddCommand(cmdfile, infile string) {
-	f, err := os.OpenFile(cmdfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
-	defer f.Close()
-	if err != nil {
-		msg := fmt.Sprintf("Cannot open commands file: %s with %v\n",
-			cmdfile, err)
-		panic(msg)
-	}
-	fmt.Fprintf(f, "%s %s --no-xml-output\n", mapleCmd, infile)
-}
-
 // WritePBS writes a pbs infile based on the queue type and
 // the templates above, with job information from job
 func WritePBS(infile string, job *Job, pbs string) {

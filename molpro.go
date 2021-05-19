@@ -324,8 +324,9 @@ func (m *Molpro) AugmentHead() {
 // single-point energy calculations and return an array of jobs to
 // run. If write is set to true, write the necessary files. Otherwise
 // just return the list of jobs.
-func (m *Molpro) BuildPoints(filename string, atomNames []string,
-	target *[]CountFloat, ch chan Calc, write bool) {
+func (m *Molpro) BuildPoints(filename string, atomNames []string, target *[]CountFloat, write bool) func() []Calc {
+	// TODO I'd like a scanner here but not straightforward
+	// because it's nice to know that we're on the last line
 	lines, err := ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -333,18 +334,14 @@ func (m *Molpro) BuildPoints(filename string, atomNames []string,
 	l := len(atomNames)
 	i := 0
 	var (
-		buf   bytes.Buffer
-		geom  int
-		count *int
-		pf    *int
+		buf  strings.Builder
+		geom int
 	)
-	count = new(int)
-	pf = new(int)
-	*count = 1
-	*pf = 0
 	dir := path.Dir(filename)
 	name := strings.Join(atomNames, "")
 	m.AugmentHead()
+	calcs := make([]Calc, 0)
+	// read file07, assemble list of calcs, and write molpro files
 	for li, line := range lines {
 		if !strings.Contains(line, "#") {
 			ind := i % l
@@ -357,28 +354,22 @@ func (m *Molpro) BuildPoints(filename string, atomNames []string,
 				basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
 				fname := basename + ".inp"
 				if write {
-					// write the molpro input file
-					// and add it to the list of
-					// commands
 					m.WriteInput(fname, none)
-					end := li == len(lines)-1
-					for len(*target) <= geom {
-						*target = append(*target, CountFloat{Count: 1})
-					}
-					Push(filepath.Join(dir, "/inp"),
-						pf, count, []Calc{{
-							Name:  basename,
-							Scale: 1.0,
-							Targets: []Target{
-								{1, target, geom},
-							},
-						}}, ch, end)
-				} else {
-					ch <- Calc{
-						Name:    basename,
-						Scale:   1.0,
-						Targets: []Target{{1, target, geom}}}
 				}
+				for len(*target) <= geom {
+					*target = append(*target, CountFloat{Count: 1})
+				}
+				calcs = append(calcs, Calc{
+					Name:  basename,
+					Scale: 1.0,
+					Targets: []Target{
+						{
+							Coeff: 1,
+							Slice: target,
+							Index: geom,
+						},
+					},
+				})
 				geom++
 				buf.Reset()
 			}
@@ -386,11 +377,34 @@ func (m *Molpro) BuildPoints(filename string, atomNames []string,
 			i++
 		}
 	}
-	close(ch)
-	return
+	var (
+		start int
+		pf    int
+		count int
+	)
+	cs := Conf.Int(ChunkSize)
+	end := start + cs
+	return func() []Calc {
+		defer func() {
+			pf++
+			count++
+			start += cs
+			end = min(end+cs, len(calcs))
+		}()
+		return Push(filepath.Join(dir, "inp"),
+			pf, count, calcs[start:end])
+	}
 }
 
-// HashName returns a hashed filename
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// HashName returns a hashed filename. Well it used to, but now it
+// returns JobNum and increments it
 func HashName() string {
 	defer func() {
 		Global.JobNum++
@@ -599,54 +613,43 @@ func SelectNode() (node, queue string) {
 }
 
 // Push sends calculations to the queue
-func Push(dir string, pf, count *int, calcs []Calc, ch chan Calc, end bool) {
-	subfile := fmt.Sprintf("%s/main%d.pbs", dir, *pf)
-	cmdfile := fmt.Sprintf("%s/commands%d", dir, *pf)
-	for f := range calcs {
-		calcs[f].CmdFile = cmdfile
-		calcs[f].ChunkNum = *pf
-		ch <- calcs[f]
-		if !calcs[f].noRun {
+func Push(dir string, pf, count int, calcs []Calc) []Calc {
+	subfile := fmt.Sprintf("%s/main%d.pbs", dir, pf)
+	cmdfile := fmt.Sprintf("%s/commands%d", dir, pf)
+	f, err := os.Open(cmdfile)
+	defer f.Close()
+	if err != nil {
+		msg := fmt.Sprintf("Cannot open commands file: %s with %v\n", cmdfile, err)
+		panic(msg)
+	}
+	for c := range calcs {
+		calcs[c].CmdFile = cmdfile
+		calcs[c].ChunkNum = pf
+		if !calcs[c].noRun {
 			submitted++
-			AddCommand(cmdfile, calcs[f].Name+".inp")
-			if *count == Conf.Int(ChunkSize) ||
-				(f == len(calcs)-1 && end) {
-				node, queue := SelectNode()
-				// This should be using the PBS from Config
-				WritePBS(subfile,
-					&Job{"pts", cmdfile, 35, node, queue,
-						Conf.Int(NumJobs)}, ptsMaple)
-				jobid := Submit(subfile)
-				if *debug {
-					fmt.Println(subfile, jobid)
-				}
-				ptsJobs = append(ptsJobs, jobid)
-				paraJobs = append(paraJobs, jobid)
-				paraCount[jobid] = Conf.Int(ChunkSize)
-				*count = 1
-				*pf++
-				subfile = fmt.Sprintf("%s/main%d.pbs", dir, *pf)
-				cmdfile = fmt.Sprintf("%s/commands%d", dir, *pf)
-			} else {
-				*count++
-			}
+			fmt.Fprintf(f, "%s %s --no-xml-output\n",
+				mapleCmd, calcs[c].Name+".inp")
+		} else {
+			count++
 		}
 	}
+	node, queue := SelectNode()
+	// This should be using the PBS from Config
+	WritePBS(subfile,
+		&Job{"pts", cmdfile, 35, node, queue,
+			Conf.Int(NumJobs)}, ptsMaple)
+	jobid := Submit(subfile)
+	if *debug {
+		fmt.Println(subfile, jobid)
+	}
+	ptsJobs = append(ptsJobs, jobid)
+	paraJobs = append(paraJobs, jobid)
+	paraCount[jobid] = Conf.Int(ChunkSize)
+	count = 1
+	pf++
 	// if end reached with no calcs, which can happen on continue
 	// from checkpoints
-	if len(calcs) == 0 && end {
-		node, queue := SelectNode()
-		WritePBS(subfile,
-			&Job{"pts", cmdfile, 35, node, queue, Conf.Int(NumJobs)},
-			ptsMaple)
-		jobid := Submit(subfile)
-		if *debug {
-			fmt.Println(subfile, jobid)
-		}
-		ptsJobs = append(ptsJobs, jobid)
-		paraJobs = append(paraJobs, jobid)
-		paraCount[jobid] = Conf.Int(ChunkSize)
-	}
+	return calcs
 }
 
 // BuildCartPoints constructs the calculations needed to run a
@@ -655,36 +658,24 @@ func (m *Molpro) BuildCartPoints(dir string, names []string, coords []float64,
 	fc2, fc3, fc4 *[]CountFloat, ch chan Calc) {
 	dir = filepath.Join(m.Dir, dir)
 	var (
-		count *int
-		pf    *int
-		end   bool
+		count int
+		pf    int
 	)
-	count = new(int)
-	pf = new(int)
-	*count = 1
-	*pf = 0
 	ncoords := len(coords)
 	for i := 1; i <= ncoords; i++ {
 		for j := 1; j <= i; j++ {
 			calcs := m.Derivative(dir, names, coords, fc2, i, j)
-			end = i == ncoords && j == i && Conf.Int(Deriv) == 2
-			Push(dir, pf, count, calcs, ch, end)
+			Push(dir, pf, count, calcs)
 			if Conf.Int(Deriv) > 2 {
 				for k := 1; k <= j; k++ {
 					calcs := m.Derivative(dir, names, coords,
 						fc3, i, j, k)
-					end = i == ncoords && j == i && k == j &&
-						Conf.Int(Deriv) == 3
-					Push(dir, pf, count, calcs, ch, end)
+					Push(dir, pf, count, calcs)
 					if Conf.Int(Deriv) > 3 {
 						for l := 1; l <= k; l++ {
 							calcs := m.Derivative(dir,
 								names, coords, fc4, i, j, k, l)
-							end = i == ncoords && j == i &&
-								k == j && l == k &&
-								Conf.Int(Deriv) == 4
-							Push(dir, pf, count,
-								calcs, ch, end)
+							Push(dir, pf, count, calcs)
 						}
 					}
 				}
@@ -776,31 +767,22 @@ func (m *Molpro) BuildGradPoints(dir string, names []string, coords []float64,
 	fc2, fc3, fc4 *[]CountFloat, ch chan Calc) {
 	dir = filepath.Join(m.Dir, dir)
 	var (
-		count *int
-		pf    *int
-		end   bool
+		count int
+		pf    int
 	)
-	count = new(int)
-	pf = new(int)
-	*count = 1
-	*pf = 0
 	ncoords := len(coords)
 	for i := 1; i <= ncoords; i++ {
 		calcs := m.GradDerivative(dir, names, coords, fc2, i)
-		end = i == ncoords && Conf.Int(Deriv) == 2
-		Push(dir, pf, count, calcs, ch, end)
+		Push(dir, pf, count, calcs)
 		if Conf.Int(Deriv) > 2 {
 			for j := 1; j <= i; j++ {
 				calcs := m.GradDerivative(dir, names, coords, fc3, i, j)
-				end = i == ncoords && j == i && Conf.Int(Deriv) == 3
-				Push(dir, pf, count, calcs, ch, end)
+				Push(dir, pf, count, calcs)
 				if Conf.Int(Deriv) > 3 {
 					for k := 1; k <= j; k++ {
 						calcs := m.GradDerivative(dir, names, coords,
 							fc4, i, j, k)
-						end = i == ncoords && j == i &&
-							k == j && Conf.Int(Deriv) == 4
-						Push(dir, pf, count, calcs, ch, end)
+						Push(dir, pf, count, calcs)
 					}
 				}
 			}

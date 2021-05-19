@@ -30,8 +30,7 @@ func TestSIC(t *testing.T) {
 	ch := make(chan Calc, Conf.Int(JobLimit))
 	var cenergies []CountFloat
 	go func() {
-		prog.BuildPoints("tests/sic/pts/file07",
-			names, &cenergies, ch, true)
+		prog.BuildPoints("tests/sic/pts/file07", names, &cenergies, true)
 	}()
 	E0 := -76.369839620287
 	min, _ := Drain(prog, 0, ch, E0)
