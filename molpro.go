@@ -129,28 +129,18 @@ func (m *Molpro) UpdateZmat(new string) {
 func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, err error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
-	lines, err := ReadFile(filename)
+	f, err := os.Open(filename)
 	if err != nil {
 		return brokenFloat, 0, grad, ErrFileNotFound
 	}
+	scanner := bufio.NewScanner(f)
 	err = ErrEnergyNotFound
 	time = 0
 	result = brokenFloat
-	// ASSUME blank file is only created when PBS runs
-	// blank file has a single newline - which is stripped by this ReadLines
-	if len(lines) == 1 {
-		if strings.Contains(strings.ToUpper(lines[0]), "ERROR") {
-			return result, time, grad, ErrFileContainsError
-		}
-		return result, time, grad, ErrBlankOutput
-	} else if len(lines) == 0 {
-		return result, time, grad, ErrBlankOutput
-	}
-
 	var (
+		i                   int
 		gradx, grady, gradz []string
 	)
-
 	processGrad := func(line string) []string {
 		coords := strings.Fields(line)
 		coords = coords[3 : len(coords)-1] // trim front and back
@@ -158,14 +148,17 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 		return coords
 	}
 	error := regexp.MustCompile(`(?i)[^_]error`)
-	for _, line := range lines {
-		if strings.Contains(strings.ToLower(line), "error") &&
-			error.MatchString(line) {
+	for i = 0; scanner.Scan(); i++ {
+		line := scanner.Text()
+		switch {
+		case i == 0 && strings.Contains(strings.ToUpper(line), "ERROR"):
 			return result, time, grad, ErrFileContainsError
-		}
-		if Conf.RE(EnergyLine).MatchString(line) &&
+		case strings.Contains(strings.ToLower(line), "error") &&
+			error.MatchString(line):
+			return result, time, grad, ErrFileContainsError
+		case Conf.RE(EnergyLine).MatchString(line) &&
 			!strings.Contains(line, "gthresh") &&
-			!strings.Contains(line, "hf") {
+			!strings.Contains(line, "hf"):
 			split := strings.Fields(line)
 			for i := range split {
 				if strings.Contains(split[i], "=") {
@@ -182,20 +175,22 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 					}
 				}
 			}
-		} else if strings.Contains(line, "REAL TIME") {
+		case strings.Contains(line, "REAL TIME"):
 			fields := strings.Fields(line)
 			timeStr := fields[len(fields)-2]
 			time, _ = strconv.ParseFloat(timeStr, 64)
-		} else if strings.Contains(line, "GRADX") {
+		case strings.Contains(line, "GRADX"):
 			gradx = processGrad(line)
-		} else if strings.Contains(line, "GRADY") {
+		case strings.Contains(line, "GRADY"):
 			grady = processGrad(line)
-		} else if strings.Contains(line, "GRADZ") {
+		case strings.Contains(line, "GRADZ"):
 			gradz = processGrad(line)
-		}
-		if strings.Contains(line, molproTerminated) && err != nil {
+		case strings.Contains(line, molproTerminated) && err != nil:
 			err = ErrFinishedButNoEnergy
 		}
+	}
+	if i == 0 {
+		return result, time, grad, ErrBlankOutput
 	}
 	if gradx != nil {
 		grad = func(xs, ys, zs []string) []float64 {
