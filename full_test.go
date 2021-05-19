@@ -82,15 +82,11 @@ func TestCart(t *testing.T) {
 	prog.FormatCart(Conf.Str(Geometry))
 	cart := prog.Geometry
 	E0 := prog.RefEnergy()
-	ch := make(chan Calc, Conf.Int(JobLimit))
 	names, coords := XYZGeom(cart)
 	natoms := len(names)
 	ncoords := len(coords)
-	go func() {
-		prog.BuildCartPoints("pts/inp", names, coords,
-			&fc2, &fc3, &fc4, ch)
-	}()
-	Drain(prog, ncoords, E0, nil)
+	gen := prog.BuildCartPoints("pts/inp", names, coords, &fc2, &fc3, &fc4)
+	Drain(prog, ncoords, E0, gen)
 	N3N := natoms * 3 // from spectro manual pg 12
 	other3 := N3N * (N3N + 1) * (N3N + 2) / 6
 	other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24
@@ -116,7 +112,7 @@ func TestCart(t *testing.T) {
 		errExit(err, "running spectro")
 	}
 	res := summarize.Spectro(filepath.Join(prog.Dir, "spectro2.out"))
-	want := []float64{3753.1, 3656.8, 1599.9}
+	want := []float64{3753.2, 3656.5, 1598.5}
 	if !compfloat(res.Corr, want, 1e-1) {
 		t.Errorf("got %v, wanted %v\n", res.Corr, want)
 	}
@@ -142,13 +138,11 @@ func TestGrad(t *testing.T) {
 	prog.FormatCart(Conf.Str(Geometry))
 	cart := prog.Geometry
 	E0 := prog.RefEnergy()
-	ch := make(chan Calc, Conf.Int(JobLimit))
 	names, coords := XYZGeom(cart)
 	natoms := len(names)
 	ncoords := len(coords)
 	go func() {
-		prog.BuildGradPoints("pts/inp", names, coords,
-			&fc2, &fc3, &fc4, ch)
+		prog.BuildGradPoints("pts/inp", names, coords, &fc2, &fc3, &fc4)
 	}()
 	Drain(prog, ncoords, E0, nil)
 	N3N := natoms * 3 // from spectro manual pg 12

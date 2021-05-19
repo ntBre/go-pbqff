@@ -294,8 +294,9 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 	heap := new(GarbageHeap)
 	ok := true
 	var calcs []Calc
+	maxjobs := Conf.Int(JobLimit)
 	for {
-		for Conf.Int(JobLimit)-nJobs >= Conf.Int(ChunkSize) && ok {
+		for maxjobs-nJobs >= Conf.Int(ChunkSize) && ok {
 			calcs, ok = gen()
 			points = append(points, calcs...)
 			nJobs = len(points)
@@ -431,6 +432,7 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 		fmt.Fprintf(os.Stderr, "finished %d/%d submitted, %v polling %d jobs\n",
 			finished, submitted,
 			time.Since(pollStart).Round(time.Millisecond), nJobs)
+		// Termination
 		if nJobs == 0 {
 			fmt.Fprintf(os.Stderr,
 				"resubmitted %d/%d (%.1f%%),"+
@@ -697,7 +699,6 @@ func main() {
 		E0 = prog.RefEnergy()
 	}
 
-	ch := make(chan Calc, Conf.Int(JobLimit))
 	var gen func() ([]Calc, bool)
 
 	if DoSIC() {
@@ -722,15 +723,9 @@ func main() {
 		natoms = len(names)
 		ncoords = len(coords)
 		if DoCart() {
-			go func() {
-				prog.BuildCartPoints("pts/inp", names, coords,
-					&fc2, &fc3, &fc4, ch)
-			}()
+			prog.BuildCartPoints("pts/inp", names, coords, &fc2, &fc3, &fc4)
 		} else if DoGrad() {
-			go func() {
-				prog.BuildGradPoints("pts/inp", names, coords,
-					&fc2, &fc3, &fc4, ch)
-			}()
+			prog.BuildGradPoints("pts/inp", names, coords, &fc2, &fc3, &fc4)
 		}
 	}
 

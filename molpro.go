@@ -444,17 +444,26 @@ func Step(coords []float64, steps ...int) []float64 {
 
 // Derivative is a helper for calling Make(2|3|4)D in the same way
 func (m *Molpro) Derivative(dir string, names []string,
-	coords []float64, target *[]CountFloat, dims ...int) (calcs []Calc) {
-	var protos []ProtoCalc
+	coords []float64, i, j, k, l int) (calcs []Calc) {
+	var (
+		protos []ProtoCalc
+		target *[]CountFloat
+		ndims  int
+	)
 	ncoords := len(coords)
-	ndims := len(dims)
-	switch ndims {
-	case 2:
-		protos = Make2D(dims[0], dims[1])
-	case 3:
-		protos = Make3D(dims[0], dims[1], dims[2])
-	case 4:
-		protos = Make4D(dims[0], dims[1], dims[2], dims[3])
+	switch {
+	case k == 0 && l == 0:
+		protos = Make2D(i, j)
+		target = &fc2
+		ndims = 2
+	case l == 0:
+		protos = Make3D(i, j, k)
+		target = &fc3
+		ndims = 3
+	default:
+		protos = Make4D(i, j, k, l)
+		target = &fc4
+		ndims = 4
 	}
 	for _, p := range protos {
 		coords := Step(coords, p.Steps...)
@@ -655,36 +664,47 @@ func Push(dir string, pf, count int, calcs []Calc) []Calc {
 
 // BuildCartPoints constructs the calculations needed to run a
 // Cartesian quartic force field
-func (m *Molpro) BuildCartPoints(dir string, names []string, coords []float64,
-	fc2, fc3, fc4 *[]CountFloat, ch chan Calc) {
+func (m *Molpro) BuildCartPoints(dir string, names []string,
+	coords []float64, fc2, fc3, fc4 *[]CountFloat) func() ([]Calc, bool) {
 	dir = filepath.Join(m.Dir, dir)
-	var (
-		count int
-		pf    int
-	)
 	ncoords := len(coords)
-	for i := 1; i <= ncoords; i++ {
-		for j := 1; j <= i; j++ {
-			calcs := m.Derivative(dir, names, coords, fc2, i, j)
-			Push(dir, pf, count, calcs)
-			if Conf.Int(Deriv) > 2 {
-				for k := 1; k <= j; k++ {
-					calcs := m.Derivative(dir, names, coords,
-						fc3, i, j, k)
-					Push(dir, pf, count, calcs)
-					if Conf.Int(Deriv) > 3 {
-						for l := 1; l <= k; l++ {
-							calcs := m.Derivative(dir,
-								names, coords, fc4, i, j, k, l)
-							Push(dir, pf, count, calcs)
+	var (
+		start int
+		pf    int
+		count int
+	)
+	cs := Conf.Int(ChunkSize)
+	jnit, knit, lnit := 1, 0, 0
+	i, j, k, l := 1, jnit, knit, lnit
+	// returns a list of calcs and whether or not it should be
+	// called again
+	return func() ([]Calc, bool) {
+		defer func() {
+			pf++
+			count++
+			start += cs
+		}()
+		calcs := make([]Calc, 0)
+		for ; i <= ncoords; i++ {
+			for j = jnit; j <= i; j++ {
+				for k = knit; k <= j; k++ {
+					for l = lnit; l <= k; l++ {
+						calcs = append(calcs,
+							m.Derivative(dir, names, coords, i, j, k, l)...,
+						)
+						if len(calcs) >= Conf.Int(ChunkSize) {
+							jnit, knit, lnit = j, k, l+1
+							return Push(dir, pf, count, calcs), true
 						}
 					}
+					lnit = 0
 				}
+				knit = 0
 			}
+			jnit = 1
 		}
+		return Push(dir, pf, count, calcs), false
 	}
-	close(ch)
-	return
 }
 
 // GradDerivative is the Derivative analog for Gradients
@@ -765,13 +785,12 @@ func (m *Molpro) GradDerivative(dir string, names []string, coords []float64,
 // BuildGradPoints constructs the calculations needed to run a
 // Cartesian quartic force field using gradients
 func (m *Molpro) BuildGradPoints(dir string, names []string, coords []float64,
-	fc2, fc3, fc4 *[]CountFloat, ch chan Calc) {
+	fc2, fc3, fc4 *[]CountFloat) func() ([]Calc, bool) {
 	dir = filepath.Join(m.Dir, dir)
-	var (
-		count int
-		pf    int
-	)
 	ncoords := len(coords)
+	var (
+		pf, count int
+	)
 	for i := 1; i <= ncoords; i++ {
 		calcs := m.GradDerivative(dir, names, coords, fc2, i)
 		Push(dir, pf, count, calcs)
@@ -789,6 +808,5 @@ func (m *Molpro) BuildGradPoints(dir string, names []string, coords []float64,
 			}
 		}
 	}
-	close(ch)
-	return
+	return nil
 }

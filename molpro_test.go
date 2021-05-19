@@ -548,7 +548,7 @@ func TestDerivative(t *testing.T) {
 				0.1, 0.2, 0.3,
 				0.4, 0.5, 0.6,
 			},
-			dims: []int{1, 1},
+			dims: []int{1, 1, 0, 0},
 			calcs: []Calc{
 				{
 					Name: filepath.Join(dir, "job.0000000000"),
@@ -604,8 +604,8 @@ func TestDerivative(t *testing.T) {
 			deltas[i] = 1.0
 		}
 		Conf.Set(Deltas, deltas)
-		calcs := prog.Derivative(dir, test.names,
-			test.coords, target, test.dims...)
+		calcs := prog.Derivative(dir, test.names, test.coords,
+			test.dims[0], test.dims[1], test.dims[2], test.dims[3])
 		if !reflect.DeepEqual(calcs, test.calcs) {
 			t.Errorf("got\n%v, wanted\n%v\n", calcs, test.calcs)
 		}
@@ -699,7 +699,7 @@ func TestBuildCartPoints(t *testing.T) {
 	ch := make(chan Calc, want) // buffered to size of expected calcs
 	mp := new(Molpro)
 	dir := t.TempDir()
-	go mp.BuildCartPoints(dir, names, coords, fc2, fc3, fc4, ch)
+	go mp.BuildCartPoints(dir, names, coords, fc2, fc3, fc4)
 	got := make([]Calc, 0)
 	for calc := range ch {
 		got = append(got, calc)
@@ -815,7 +815,7 @@ func TestBuildGradPoints(t *testing.T) {
 	// goroutine finished, so add waitgroup
 	wg.Add(1)
 	go func() {
-		mp.BuildGradPoints(dir, names, coords, fc2, fc3, fc4, ch)
+		mp.BuildGradPoints(dir, names, coords, fc2, fc3, fc4)
 		wg.Done()
 	}()
 	got := make([]Calc, 0)
