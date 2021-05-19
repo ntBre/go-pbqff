@@ -391,9 +391,6 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 					// long enough yet. must be
 					// parajobs because index out
 					// of range error => wait
-					for len(paraJobs) <= job.ChunkNum {
-						time.Sleep(time.Second)
-					}
 					paraCount[paraJobs[job.ChunkNum]]--
 					if paraCount[paraJobs[job.ChunkNum]] == 0 {
 						queueClear([]string{paraJobs[job.ChunkNum]})
@@ -723,9 +720,9 @@ func main() {
 		natoms = len(names)
 		ncoords = len(coords)
 		if DoCart() {
-			prog.BuildCartPoints("pts/inp", names, coords, &fc2, &fc3, &fc4)
+			prog.BuildCartPoints("pts/inp", names, coords)
 		} else if DoGrad() {
-			prog.BuildGradPoints("pts/inp", names, coords, &fc2, &fc3, &fc4)
+			prog.BuildGradPoints("pts/inp", names, coords)
 		}
 	}
 

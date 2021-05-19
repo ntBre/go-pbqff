@@ -10,7 +10,7 @@ geometry={
 }
 flags=noopt
 deriv=4
-joblimit=8000
+joblimit=1024
 chunksize=64
 sleepint=1
 intder=/ddn/home6/r2533/programs/intder/Intder2005.x

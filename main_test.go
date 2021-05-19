@@ -335,7 +335,7 @@ func TestDrain(t *testing.T) {
 	defer func() {
 		Conf = conf
 	}()
-	Conf.Set(JobLimit, 10)
+	Conf.Set(JobLimit, 128)
 	Conf.Set(Deltas, []float64{
 		0.005, 0.005, 0.005,
 		0.005, 0.005, 0.005,
@@ -345,7 +345,6 @@ func TestDrain(t *testing.T) {
 	paraCount = make(map[string]int)
 	prog := new(Molpro)
 	ncoords := 6
-	ch := make(chan Calc, Conf.Int(JobLimit))
 	E0 := 0.0
 	cf := []CountFloat{
 		{1.0, 1, false},
@@ -353,16 +352,19 @@ func TestDrain(t *testing.T) {
 	calcs := []Calc{
 		{
 			// find energy in ReadOut
-			Name: "testfiles/opt",
+			Name:     "testfiles/opt",
+			ChunkNum: 0,
 		},
 		{
 			// name contains E0
-			Name: "some/job/E0",
+			Name:     "some/job/E0",
+			ChunkNum: 0,
 		},
 		{
 			// .Result set
-			Name:   "some/job",
-			Result: 3.14,
+			Name:     "some/job",
+			Result:   3.14,
+			ChunkNum: 0,
 		},
 		{
 			// .Src set
@@ -371,10 +373,14 @@ func TestDrain(t *testing.T) {
 				Index: 0,
 				Slice: &cf,
 			},
+			ChunkNum: 0,
 		},
 	}
-	go mockPush(calcs, ch)
-	min, time := Drain(prog, ncoords, E0, nil)
+	dir := t.TempDir()
+	gen := func() ([]Calc, bool) {
+		return Push(dir, 0, 0, calcs), false
+	}
+	min, time := Drain(prog, ncoords, E0, gen)
 	wmin, wtime := -56.499802779375, 867.46
 	if min != wmin {
 		t.Errorf("got %v, wanted %v\n", min, wmin)

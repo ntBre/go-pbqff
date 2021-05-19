@@ -381,9 +381,14 @@ func (m *Molpro) BuildPoints(filename string, atomNames []string, target *[]Coun
 		start int
 		pf    int
 		count int
+		end   int
 	)
 	cs := Conf.Int(ChunkSize)
-	end := start + cs
+	if start+cs > len(calcs) {
+		end = len(calcs)
+	} else {
+		end = start + cs
+	}
 	// returns a list of calcs and whether or not it should be
 	// called again
 	return func() ([]Calc, bool) {
@@ -665,7 +670,7 @@ func Push(dir string, pf, count int, calcs []Calc) []Calc {
 // BuildCartPoints constructs the calculations needed to run a
 // Cartesian quartic force field
 func (m *Molpro) BuildCartPoints(dir string, names []string,
-	coords []float64, fc2, fc3, fc4 *[]CountFloat) func() ([]Calc, bool) {
+	coords []float64) func() ([]Calc, bool) {
 	dir = filepath.Join(m.Dir, dir)
 	ncoords := len(coords)
 	var (
@@ -709,25 +714,32 @@ func (m *Molpro) BuildCartPoints(dir string, names []string,
 
 // GradDerivative is the Derivative analog for Gradients
 func (m *Molpro) GradDerivative(dir string, names []string, coords []float64,
-	target *[]CountFloat, dims ...int) (calcs []Calc) {
-	ndims := len(dims)
+	i, j, k int) (calcs []Calc) {
 	ncoords := len(coords)
 	var (
 		protos []ProtoCalc
 		dimmax int
+		ndims  int
+		target *[]CountFloat
 	)
-	switch ndims {
-	case 1:
+	switch {
+	case j == 0 && k == 0:
 		// gradient second derivatives are just first derivatives and so on
-		protos = Make1D(dims[0])
+		protos = Make1D(i)
 		dimmax = ncoords
-	case 2:
+		ndims = 1
+		target = &fc2
+	case k == 0:
 		// except E0 needs to be G(ref geom) == 0, handled this in Drain
-		protos = Make2D(dims[0], dims[1])
-		dimmax = dims[1]
-	case 3:
-		protos = Make3D(dims[0], dims[1], dims[2])
-		dimmax = dims[2]
+		protos = Make2D(i, j)
+		dimmax = j
+		ndims = 2
+		target = &fc3
+	default:
+		protos = Make3D(i, j, k)
+		dimmax = k
+		ndims = 3
+		target = &fc4
 	}
 	for _, p := range protos {
 		coords := Step(coords, p.Steps...)
@@ -735,13 +747,13 @@ func (m *Molpro) GradDerivative(dir string, names []string, coords []float64,
 		temp := Calc{Name: filepath.Join(dir, p.Name), Scale: p.Scale}
 		var index int
 		for g := 1; g <= dimmax; g++ {
-			switch len(dims) {
+			switch ndims {
 			case 1:
-				index = Index(ncoords, true, dims[0], g)[0]
+				index = Index(ncoords, true, i, g)[0]
 			case 2:
-				index = Index(ncoords, false, dims[0], dims[1], g)[0]
+				index = Index(ncoords, false, i, j, g)[0]
 			case 3:
-				index = Index(ncoords, false, dims[0], dims[1], dims[2], g)[0]
+				index = Index(ncoords, false, i, j, k, g)[0]
 			}
 			temp.Targets = append(temp.Targets, Target{
 				Coeff: p.Coeff,
@@ -784,29 +796,42 @@ func (m *Molpro) GradDerivative(dir string, names []string, coords []float64,
 
 // BuildGradPoints constructs the calculations needed to run a
 // Cartesian quartic force field using gradients
-func (m *Molpro) BuildGradPoints(dir string, names []string, coords []float64,
-	fc2, fc3, fc4 *[]CountFloat) func() ([]Calc, bool) {
+func (m *Molpro) BuildGradPoints(dir string, names []string,
+	coords []float64) func() ([]Calc, bool) {
 	dir = filepath.Join(m.Dir, dir)
 	ncoords := len(coords)
 	var (
-		pf, count int
+		start int
+		pf    int
+		count int
 	)
-	for i := 1; i <= ncoords; i++ {
-		calcs := m.GradDerivative(dir, names, coords, fc2, i)
-		Push(dir, pf, count, calcs)
-		if Conf.Int(Deriv) > 2 {
-			for j := 1; j <= i; j++ {
-				calcs := m.GradDerivative(dir, names, coords, fc3, i, j)
-				Push(dir, pf, count, calcs)
-				if Conf.Int(Deriv) > 3 {
-					for k := 1; k <= j; k++ {
-						calcs := m.GradDerivative(dir, names, coords,
-							fc4, i, j, k)
-						Push(dir, pf, count, calcs)
+	cs := Conf.Int(ChunkSize)
+	jnit, knit := 0, 0
+	i, j, k := 1, jnit, knit
+	// returns a list of calcs and whether or not it should be
+	// called again
+	return func() ([]Calc, bool) {
+		defer func() {
+			pf++
+			count++
+			start += cs
+		}()
+		calcs := make([]Calc, 0)
+		for ; i <= ncoords; i++ {
+			for j = jnit; j <= i; j++ {
+				for k = knit; k <= j; k++ {
+					calcs = append(calcs,
+						m.GradDerivative(dir, names, coords, i, j, k)...,
+					)
+					if len(calcs) >= Conf.Int(ChunkSize) {
+						jnit, knit = j, k+1
+						return Push(dir, pf, count, calcs), true
 					}
 				}
+				knit = 0
 			}
+			jnit = 0
 		}
+		return Push(dir, pf, count, calcs), false
 	}
-	return nil
 }

@@ -77,6 +77,9 @@ func TestCart(t *testing.T) {
 		*test = false
 		qsub = "qsub"
 		submitted = 0
+		fc2 = *new([]CountFloat)
+		fc3 = *new([]CountFloat)
+		fc4 = *new([]CountFloat)
 	}()
 	prog, _, _ := initialize("tests/cart/cart.in")
 	prog.FormatCart(Conf.Str(Geometry))
@@ -85,7 +88,7 @@ func TestCart(t *testing.T) {
 	names, coords := XYZGeom(cart)
 	natoms := len(names)
 	ncoords := len(coords)
-	gen := prog.BuildCartPoints("pts/inp", names, coords, &fc2, &fc3, &fc4)
+	gen := prog.BuildCartPoints("pts/inp", names, coords)
 	Drain(prog, ncoords, E0, gen)
 	N3N := natoms * 3 // from spectro manual pg 12
 	other3 := N3N * (N3N + 1) * (N3N + 2) / 6
@@ -119,11 +122,6 @@ func TestCart(t *testing.T) {
 }
 
 func TestGrad(t *testing.T) {
-	var (
-		fc2 []CountFloat
-		fc3 []CountFloat
-		fc4 []CountFloat
-	)
 	*test = true
 	qsub = "qsub/qsub"
 	temp := Conf
@@ -141,10 +139,8 @@ func TestGrad(t *testing.T) {
 	names, coords := XYZGeom(cart)
 	natoms := len(names)
 	ncoords := len(coords)
-	go func() {
-		prog.BuildGradPoints("pts/inp", names, coords, &fc2, &fc3, &fc4)
-	}()
-	Drain(prog, ncoords, E0, nil)
+	gen := prog.BuildGradPoints("pts/inp", names, coords)
+	Drain(prog, ncoords, E0, gen)
 	N3N := natoms * 3 // from spectro manual pg 12
 	other3 := N3N * (N3N + 1) * (N3N + 2) / 6
 	other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24
@@ -167,7 +163,7 @@ func TestGrad(t *testing.T) {
 	spec.WriteInput(specin)
 	err = spec.DoSpectro(prog.Dir)
 	if err != nil {
-		errExit(err, "running spectro")
+		errExit(err, "running spectro in test")
 	}
 	res := summarize.Spectro(filepath.Join(prog.Dir, "spectro2.out"))
 	want := []float64{3739.1, 3651.1, 1579.4}

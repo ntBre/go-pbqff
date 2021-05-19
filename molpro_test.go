@@ -7,11 +7,9 @@ import (
 	"math"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"sync"
 	"testing"
 )
 
@@ -412,15 +410,10 @@ func TestBuildPoints(t *testing.T) {
 	names, _ := XYZGeom(cart)
 	os.Mkdir("testfiles/read/inp", 0755)
 	defer os.RemoveAll("testfiles/read/inp")
-	fmt.Println("dir: ", path.Dir("testfiles/read/file07"))
-	ch := make(chan Calc, 3)
 	paraCount = make(map[string]int)
 	cf := new([]CountFloat)
-	prog.BuildPoints("testfiles/read/file07", names, cf, true)
-	var got []Calc
-	for calc := range ch {
-		got = append(got, calc)
-	}
+	gen := prog.BuildPoints("testfiles/read/file07", names, cf, true)
+	got, _ := gen()
 	want := []Calc{
 		{
 			Name:    "testfiles/read/inp/NHHH.00000",
@@ -529,7 +522,7 @@ func TestSelectNode(t *testing.T) {
 // This only tests a 2nd derivative
 func TestDerivative(t *testing.T) {
 	prog := new(Molpro)
-	target := new([]CountFloat)
+	target := &fc2
 	dir := t.TempDir()
 	tmp := Conf
 	Global.JobNum = 0
@@ -621,7 +614,6 @@ func TestPush(t *testing.T) {
 		{Name: "job2"},
 		{Name: "job3"},
 	}
-	ch := make(chan Calc, 3)
 	tmp := Submit
 	tmp2 := Conf
 	defer func() {
@@ -631,12 +623,10 @@ func TestPush(t *testing.T) {
 	Submit = func(str string) string {
 		return exec.Command(qsub, "-f", str).String()
 	}
+	paraCount = make(map[string]int)
 	Conf.Set(ChunkSize, 2)
-	Push(dir, pf, count, calcs)
-	got := make([]Calc, 0)
-	for c := 0; c < 3; c++ {
-		got = append(got, <-ch)
-	}
+	got := Push(dir, pf, count, calcs[0:2])
+	got = append(got, Push(dir, pf+1, count, calcs[2:])...)
 	want := []Calc{
 		{
 			Name:     "job1",
@@ -690,19 +680,25 @@ func TestBuildCartPoints(t *testing.T) {
 		0.4, 0.5, 0.6,
 		0.4, 0.5, 0.6,
 	}
-	fc2, fc3, fc4 :=
-		new([]CountFloat), new([]CountFloat), new([]CountFloat)
+	t2, t3, t4 := fc2, fc3, fc4
+	defer func() {
+		fc2, fc3, fc4 = t2, t3, t4
+	}()
+	fc2, fc3, fc4 = *new([]CountFloat), *new([]CountFloat), *new([]CountFloat)
 	n := len(coords)
 	want := 2*n*n + n +
 		(4*n*n*n+6*n*n+2*n)/3 +
 		(4*n*n*n*n+12*n*n*n+11*n*n+3*n)/6
-	ch := make(chan Calc, want) // buffered to size of expected calcs
 	mp := new(Molpro)
 	dir := t.TempDir()
-	go mp.BuildCartPoints(dir, names, coords, fc2, fc3, fc4)
+	gen := mp.BuildCartPoints(dir, names, coords)
+	paraCount = make(map[string]int)
 	got := make([]Calc, 0)
-	for calc := range ch {
-		got = append(got, calc)
+	hold, ok := gen()
+	got = append(got, hold...)
+	for ok {
+		hold, ok = gen()
+		got = append(got, hold...)
 	}
 	if lgot := len(got); lgot != want {
 		t.Errorf("got %d, wanted %d calcs\n", lgot, want)
@@ -712,13 +708,15 @@ func TestBuildCartPoints(t *testing.T) {
 // This only tests a 3rd derivative
 func TestGradDerivative(t *testing.T) {
 	prog := new(Molpro)
-	target := new([]CountFloat)
+	t3 := fc3
+	target := &fc3
 	dir := t.TempDir()
 	tmp := Conf
 	glob := Global
 	defer func() {
 		Conf = tmp
 		Global = glob
+		fc3 = t3
 	}()
 	Global.JobNum = 0 // HashName just increases, have to reset
 	tests := []struct {
@@ -733,7 +731,7 @@ func TestGradDerivative(t *testing.T) {
 				0.1, 0.2, 0.3,
 				0.4, 0.5, 0.6,
 			},
-			dims: []int{1, 1},
+			dims: []int{1, 1, 0},
 			calcs: []Calc{
 				{
 					Name: filepath.Join(dir, "job.0000000000"),
@@ -779,8 +777,8 @@ func TestGradDerivative(t *testing.T) {
 			deltas[i] = 1.0
 		}
 		Conf.Set(Deltas, deltas)
-		calcs := prog.GradDerivative(dir, test.names,
-			test.coords, target, test.dims...)
+		calcs := prog.GradDerivative(dir, test.names, test.coords,
+			test.dims[0], test.dims[1], test.dims[2])
 		if !reflect.DeepEqual(calcs, test.calcs) {
 			t.Errorf("got\n%v, wanted\n%v\n", calcs, test.calcs)
 		}
@@ -804,25 +802,23 @@ func TestBuildGradPoints(t *testing.T) {
 		0.4, 0.5, 0.6,
 		0.4, 0.5, 0.6,
 	}
-	fc2, fc3, fc4 :=
-		new([]CountFloat), new([]CountFloat), new([]CountFloat)
+	t2, t3, t4 := fc2, fc3, fc4
+	defer func() {
+		fc2, fc3, fc4 = t2, t3, t4
+	}()
+	fc2, fc3, fc4 = *new([]CountFloat), *new([]CountFloat), *new([]CountFloat)
 	n := len(coords)
 	want := (4*n*n*n + 12*n*n + 11*n) / 3
-	ch := make(chan Calc, want) // buffered to size of expected calcs
 	mp := new(Molpro)
-	var wg sync.WaitGroup
-	// I think the temp directory was deleted once before the
-	// goroutine finished, so add waitgroup
-	wg.Add(1)
-	go func() {
-		mp.BuildGradPoints(dir, names, coords, fc2, fc3, fc4)
-		wg.Done()
-	}()
+	gen := mp.BuildGradPoints(dir, names, coords)
+	paraCount = make(map[string]int)
 	got := make([]Calc, 0)
-	for calc := range ch {
-		got = append(got, calc)
+	hold, ok := gen()
+	got = append(got, hold...)
+	for ok {
+		hold, ok = gen()
+		got = append(got, hold...)
 	}
-	wg.Wait()
 	if lgot := len(got); lgot != want {
 		t.Errorf("got %d, wanted %d calcs\n", lgot, want)
 	}
