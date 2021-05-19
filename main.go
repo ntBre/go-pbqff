@@ -410,6 +410,11 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 		if shortenBy < 1 {
 			fmt.Fprintln(os.Stderr, "Didn't shorten, sleeping")
 			time.Sleep(time.Duration(Conf.Int(SleepInt)) * time.Second)
+			for _, p := range points {
+				if p.noRun {
+					maxjobs++
+				}
+			}
 		}
 		if check >= Conf.Int(CheckInt) {
 			if !nocheck {
