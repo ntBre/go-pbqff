@@ -274,7 +274,7 @@ func Resubmit(name string, err error) string {
 // Drain drains the queue of jobs and receives on ch when ready for
 // more. prog is only used for its ReadOut method, and ncoords is used
 // to construct the zero gradient array.
-func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime float64) {
+func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (min, realTime float64) {
 	start := time.Now()
 	if Conf.At(Deltas) != nil {
 		fmt.Println("step sizes: ", Conf.FlSlice(Deltas))
@@ -292,7 +292,14 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 		check     int = 1
 	)
 	heap := new(GarbageHeap)
+	ok := true
+	var calcs []Calc
 	for {
+		for Conf.Int(JobLimit)-nJobs >= Conf.Int(ChunkSize) && ok {
+			calcs, ok = gen()
+			points = append(points, calcs...)
+			nJobs = len(points)
+		}
 		shortenBy := 0
 		pollStart := time.Now()
 		for i := 0; i < nJobs; i++ {
@@ -419,33 +426,22 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 		fmt.Fprintf(os.Stderr, "finished %d/%d submitted, %v polling %d jobs\n",
 			finished, submitted,
 			time.Since(pollStart).Round(time.Millisecond), nJobs)
-		// only receive more jobs if there is room
-		for count := 0; count < Conf.Int(ChunkSize) &&
-			nJobs < Conf.Int(JobLimit); count++ {
-			calc, ok := <-ch
-			if !ok && finished == submitted {
-				fmt.Fprintf(os.Stderr,
-					"resubmitted %d/%d (%.1f%%),"+
-						" points execution time: %v\n",
-					resubs, submitted,
-					float64(resubs)/float64(submitted)*100,
-					time.Since(start))
-				minutes := int(realTime) / 60
-				secRem := realTime - 60*float64(minutes)
-				fmt.Fprintf(os.Stderr,
-					"total job time (wall): %.2f sec = %dm%.2fs\n",
-					realTime, minutes, secRem)
-				for k, v := range errMap {
-					fmt.Fprintf(os.Stderr, "%v: %d occurrences\n", k, v)
-				}
-				return
-			} else if ok {
-				points = append(points, calc)
-				nJobs = len(points)
-			} else if !ok {
-				nJobs = len(points)
-				break
+		if nJobs == 0 {
+			fmt.Fprintf(os.Stderr,
+				"resubmitted %d/%d (%.1f%%),"+
+					" points execution time: %v\n",
+				resubs, submitted,
+				float64(resubs)/float64(submitted)*100,
+				time.Since(start))
+			minutes := int(realTime) / 60
+			secRem := realTime - 60*float64(minutes)
+			fmt.Fprintf(os.Stderr,
+				"total job time (wall): %.2f sec = %dm%.2fs\n",
+				realTime, minutes, secRem)
+			for k, v := range errMap {
+				fmt.Fprintf(os.Stderr, "%v: %d occurrences\n", k, v)
 			}
+			return
 		}
 	}
 }
@@ -697,6 +693,7 @@ func main() {
 	}
 
 	ch := make(chan Calc, Conf.Int(JobLimit))
+	var gen func() ([]Calc, bool)
 
 	if DoSIC() {
 		if *irdy == "" {
@@ -707,15 +704,13 @@ func main() {
 		if DoPts() {
 			intder.WritePts("pts/intder.in")
 			RunIntder("pts/intder")
-			go func() {
-				prog.BuildPoints("pts/file07", names, &cenergies, true)
-			}()
+			gen = prog.BuildPoints("pts/file07", names, &cenergies, true)
 		} else {
 			// this works if no points were deleted and
 			// the files are named the same way between
 			// runs, else need a resume from checkpoint
 			// thing
-			prog.BuildPoints("pts/file07", names, &cenergies, false)
+			gen = prog.BuildPoints("pts/file07", names, &cenergies, false)
 		}
 	} else {
 		names, coords = XYZGeom(cart)
@@ -734,7 +729,7 @@ func main() {
 		}
 	}
 
-	min, _ = Drain(prog, ncoords, ch, E0)
+	min, _ = Drain(prog, ncoords, E0, gen)
 	queueClear(ptsJobs)
 
 	// TODO DRY this out some day

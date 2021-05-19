@@ -27,13 +27,10 @@ func TestSIC(t *testing.T) {
 	names := strings.Fields("H O H")
 	intder.WritePts("tests/sic/pts/intder.in")
 	RunIntder("tests/sic/pts/intder")
-	ch := make(chan Calc, Conf.Int(JobLimit))
 	var cenergies []CountFloat
-	go func() {
-		prog.BuildPoints("tests/sic/pts/file07", names, &cenergies, true)
-	}()
+	gen := prog.BuildPoints("tests/sic/pts/file07", names, &cenergies, true)
 	E0 := -76.369839620287
-	min, _ := Drain(prog, 0, ch, E0)
+	min, _ := Drain(prog, 0, E0, gen)
 	energies := FloatsFromCountFloats(cenergies)
 	for i := range energies {
 		energies[i] -= min
@@ -93,7 +90,7 @@ func TestCart(t *testing.T) {
 		prog.BuildCartPoints("pts/inp", names, coords,
 			&fc2, &fc3, &fc4, ch)
 	}()
-	Drain(prog, ncoords, ch, E0)
+	Drain(prog, ncoords, E0, nil)
 	N3N := natoms * 3 // from spectro manual pg 12
 	other3 := N3N * (N3N + 1) * (N3N + 2) / 6
 	other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24
@@ -153,7 +150,7 @@ func TestGrad(t *testing.T) {
 		prog.BuildGradPoints("pts/inp", names, coords,
 			&fc2, &fc3, &fc4, ch)
 	}()
-	Drain(prog, ncoords, ch, E0)
+	Drain(prog, ncoords, E0, nil)
 	N3N := natoms * 3 // from spectro manual pg 12
 	other3 := N3N * (N3N + 1) * (N3N + 2) / 6
 	other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24

@@ -374,7 +374,7 @@ func TestDrain(t *testing.T) {
 		},
 	}
 	go mockPush(calcs, ch)
-	min, time := Drain(prog, ncoords, ch, E0)
+	min, time := Drain(prog, ncoords, E0, nil)
 	wmin, wtime := -56.499802779375, 867.46
 	if min != wmin {
 		t.Errorf("got %v, wanted %v\n", min, wmin)

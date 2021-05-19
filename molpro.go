@@ -324,7 +324,7 @@ func (m *Molpro) AugmentHead() {
 // single-point energy calculations and return an array of jobs to
 // run. If write is set to true, write the necessary files. Otherwise
 // just return the list of jobs.
-func (m *Molpro) BuildPoints(filename string, atomNames []string, target *[]CountFloat, write bool) func() []Calc {
+func (m *Molpro) BuildPoints(filename string, atomNames []string, target *[]CountFloat, write bool) func() ([]Calc, bool) {
 	// TODO I'd like a scanner here but not straightforward
 	// because it's nice to know that we're on the last line
 	lines, err := ReadFile(filename)
@@ -384,23 +384,24 @@ func (m *Molpro) BuildPoints(filename string, atomNames []string, target *[]Coun
 	)
 	cs := Conf.Int(ChunkSize)
 	end := start + cs
-	return func() []Calc {
+	// returns a list of calcs and whether or not it should be
+	// called again
+	return func() ([]Calc, bool) {
 		defer func() {
 			pf++
 			count++
 			start += cs
-			end = min(end+cs, len(calcs))
+			if end+cs > len(calcs) {
+				end = len(calcs)
+			} else {
+				end += cs
+			}
 		}()
-		return Push(filepath.Join(dir, "inp"),
-			pf, count, calcs[start:end])
+		if end == len(calcs) {
+			return Push(filepath.Join(dir, "inp"), pf, count, calcs[start:end]), false
+		}
+		return Push(filepath.Join(dir, "inp"), pf, count, calcs[start:end]), true
 	}
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // HashName returns a hashed filename. Well it used to, but now it
@@ -616,7 +617,7 @@ func SelectNode() (node, queue string) {
 func Push(dir string, pf, count int, calcs []Calc) []Calc {
 	subfile := fmt.Sprintf("%s/main%d.pbs", dir, pf)
 	cmdfile := fmt.Sprintf("%s/commands%d", dir, pf)
-	f, err := os.Open(cmdfile)
+	f, err := os.Create(cmdfile)
 	defer f.Close()
 	if err != nil {
 		msg := fmt.Sprintf("Cannot open commands file: %s with %v\n", cmdfile, err)
