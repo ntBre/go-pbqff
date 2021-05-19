@@ -29,7 +29,7 @@ var (
 	format     = flag.Bool("fmt", false, "parse existing output files and print them in anpass format")
 	freqs      = flag.Bool("freqs", false, "start from running anpass on the pts output")
 	irdy       = flag.String("irdy", "", "intder file is ready to be used in pts; specify the atom order")
-	// memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+	memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 	nodel      = flag.Bool("nodel", false, "don't delete used output files")
 	overwrite  = flag.Bool("o", false, "overwrite existing inp directory")
 	pts        = flag.Bool("pts", false, "start by running pts on optimized geometry from opt")

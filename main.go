@@ -803,4 +803,12 @@ func main() {
 		PrettyPrint(e2d)
 	}
 	fmt.Printf("total CPU time used: %.3f s\n", float64(GetCPU()-StartCPU)/1e9)
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			panic(err)
+		}
+		pprof.WriteHeapProfile(f)
+		f.Close()
+	}
 }
