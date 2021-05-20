@@ -720,9 +720,9 @@ func main() {
 		natoms = len(names)
 		ncoords = len(coords)
 		if DoCart() {
-			prog.BuildCartPoints("pts/inp", names, coords)
+			gen = prog.BuildCartPoints("pts/inp", names, coords)
 		} else if DoGrad() {
-			prog.BuildGradPoints("pts/inp", names, coords)
+			gen = prog.BuildGradPoints("pts/inp", names, coords)
 		}
 	}
 
