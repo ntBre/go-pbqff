@@ -290,16 +290,22 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 		err       error
 		t         float64
 		check     int = 1
+		norun     int
 	)
 	heap := new(GarbageHeap)
 	ok := true
 	var calcs []Calc
 	maxjobs := Conf.Int(JobLimit)
 	for {
-		for maxjobs-nJobs >= Conf.Int(ChunkSize) && ok {
+		for maxjobs+norun-nJobs >= Conf.Int(ChunkSize) && ok {
 			calcs, ok = gen()
 			points = append(points, calcs...)
 			nJobs = len(points)
+			for _, c := range calcs {
+				if c.noRun {
+					norun++
+				}
+			}
 		}
 		shortenBy := 0
 		pollStart := time.Now()
@@ -386,11 +392,6 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 				if !job.noRun {
 					finished++
 					check++
-					// concurrency bug here if one
-					// of these hasn't been made
-					// long enough yet. must be
-					// parajobs because index out
-					// of range error => wait
 					paraCount[paraJobs[job.ChunkNum]]--
 					if paraCount[paraJobs[job.ChunkNum]] == 0 {
 						queueClear([]string{paraJobs[job.ChunkNum]})
@@ -401,6 +402,8 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 								paraJobs[job.ChunkNum])
 						}
 					}
+				} else {
+					norun--
 				}
 				success = false
 			}
@@ -408,11 +411,6 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 		if shortenBy < 1 {
 			fmt.Fprintln(os.Stderr, "Didn't shorten, sleeping")
 			time.Sleep(time.Duration(Conf.Int(SleepInt)) * time.Second)
-			for _, p := range points {
-				if p.noRun {
-					maxjobs++
-				}
-			}
 		}
 		if check >= Conf.Int(CheckInt) {
 			if !nocheck {
