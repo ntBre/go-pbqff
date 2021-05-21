@@ -1,0 +1,36 @@
+.PHONY: tests docs
+
+experiment:
+	go build . && scp -C pbqff 'woods:.'
+
+cover:
+	go test . -v -coverprofile=/tmp/pbqff.out; go tool cover -html /tmp/pbqff.out
+
+deploy: build
+	scp -C pbqff 'woods:Programs/pbqff/.'
+
+beta: build
+	scp -C pbqff 'woods:Programs/pbqff/beta/.'
+
+tests:
+	ls tests
+	scp -r tests 'woods:Programs/pbqff/'
+
+docs:
+	scp -r tutorial/main.pdf 'woods:Programs/pbqff/docs/tutorial.pdf'
+	scp -r manual/pbqff.1 'woods:Programs/pbqff/docs/man1/.'
+
+clean:
+	rm -f tests/cart/cart.err tests/cart/cart.out
+	rm -f tests/grad/grad.err tests/grad/grad.out
+	rm -f tests/sic/sic.err tests/sic/sic.out
+	rm -rf tests/cart/pts
+	rm -rf tests/grad/pts
+	rm -rf tests/sic/opt tests/sic/freq tests/sic/freqs tests/sic/pts
+	rm -rf tests/cart/fort.* tests/cart/spectro.out
+
+build: *.go
+	go build .
+
+local: build
+	tests/local.sh
