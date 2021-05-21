@@ -13,11 +13,15 @@ import (
 )
 
 func TestSIC(t *testing.T) {
+	if !testing.Short() {
+		t.Skip()
+	}
 	*test = true
 	qsub = "qsub/qsub"
 	temp := Conf
 	Conf = NewConfig()
 	defer func() {
+		flags = 0
 		Conf = temp
 		*test = false
 		qsub = "qsub"
@@ -68,11 +72,15 @@ func compfloat(a, b []float64, eps float64) bool {
 }
 
 func TestCart(t *testing.T) {
+	if !testing.Short() {
+		t.Skip()
+	}
 	*test = true
 	qsub = "qsub/qsub"
 	temp := Conf
 	Conf = NewConfig()
 	defer func() {
+		flags = 0
 		Conf = temp
 		*test = false
 		qsub = "qsub"
@@ -122,6 +130,9 @@ func TestCart(t *testing.T) {
 }
 
 func TestGrad(t *testing.T) {
+	if !testing.Short() {
+		t.Skip()
+	}
 	*test = true
 	qsub = "qsub/qsub"
 	temp := Conf
@@ -131,6 +142,7 @@ func TestGrad(t *testing.T) {
 		*test = false
 		qsub = "qsub"
 		submitted = 0
+		flags = 0
 	}()
 	prog, _, _ := initialize("tests/grad/grad.in")
 	prog.FormatCart(Conf.Str(Geometry))

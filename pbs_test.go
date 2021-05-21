@@ -16,14 +16,6 @@ func TestWritePBS(t *testing.T) {
 	}
 }
 
-func TestSubmit(t *testing.T) {
-	got := Submit("opt/mp.pbs")
-	want := "775241"
-	if got != want {
-		t.Errorf("got %v, wanted %v\n", got, want)
-	}
-}
-
 func TestReadPBSNodes(t *testing.T) {
 	// cn074 has 6 jobs
 	f, _ := os.Open("testfiles/read/pbsnodes")

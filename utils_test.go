@@ -28,7 +28,7 @@ func TestCleanSplit(t *testing.T) {
 
 func TestRunProgram(t *testing.T) {
 	tmp := t.TempDir()
-	intder := "/home/brent/Packages/intder/intder"
+	intder, _ := filepath.Abs("bin/intder")
 	infile := "testfiles/write/intder.in"
 	base := filepath.Base(infile)
 	use := filepath.Join(tmp, base)

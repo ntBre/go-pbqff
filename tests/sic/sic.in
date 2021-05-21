@@ -10,6 +10,6 @@ hoh=109.5 DEG
 }
 flags=noopt
 sleepint=1
-intder=/home/brent/Packages/intder/intder
-anpass=/home/brent/Packages/anpass/anpass
-spectro=/home/brent/Downloads/spec3jm/backup/spectro.x
+intder=../../../bin/intder
+anpass=../../../bin/anpass
+spectro=../../../bin/spectro

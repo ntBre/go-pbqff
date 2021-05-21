@@ -13,6 +13,4 @@ deriv=4
 joblimit=1024
 chunksize=64
 sleepint=1
-intder=/ddn/home6/r2533/programs/intder/Intder2005.x
-anpass=/ddn/home6/r2533/programs/anpass/anpass_cerebro.x
-spectro=/home/brent/Downloads/spec3jm/backup/spectro.x
+spectro=../../bin/spectro

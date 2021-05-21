@@ -165,7 +165,6 @@ func (c *Config) WhichProgram() {
 	case "cart", "gocart":
 		flags |= CART
 	case "grad":
-		// TODO count points for grad
 		flags |= GRAD
 	case "molpro", "", "sic": // default if not specified
 	default:

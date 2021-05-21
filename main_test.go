@@ -332,8 +332,11 @@ func mockPush(calcs []Calc, ch chan Calc) {
 func TestDrain(t *testing.T) {
 	submitted = 0
 	conf := Conf
+	fmt.Println(os.Getwd())
+	qsub = "qsub/qsub"
 	defer func() {
 		Conf = conf
+		qsub = "qsub"
 	}()
 	Conf.Set(JobLimit, 128)
 	Conf.Set(Deltas, []float64{
@@ -376,10 +379,18 @@ func TestDrain(t *testing.T) {
 			ChunkNum: 0,
 		},
 	}
+	ts := Submit
+	Submit = func(s string) string {
+		return "1"
+	}
+	defer func() {
+		Submit = ts
+	}()
 	dir := t.TempDir()
 	gen := func() ([]Calc, bool) {
 		return Push(dir, 0, 0, calcs), false
 	}
+	errMap = make(map[error]int)
 	min, time := Drain(prog, ncoords, E0, gen)
 	wmin, wtime := -56.499802779375, 867.46
 	if min != wmin {

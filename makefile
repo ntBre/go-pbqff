@@ -1,4 +1,10 @@
-.PHONY: tests docs
+.PHONY: tests docs qsub molpro
+
+qsub: qsub/*.go
+	go build -o qsub/qsub qsub/*.go
+
+molpro: molpro/*.go
+	go build -o molpro/molpro molpro/*.go
 
 experiment:
 	go build . && scp -C pbqff 'woods:.'
@@ -12,9 +18,8 @@ deploy: build
 beta: build
 	scp -C pbqff 'woods:Programs/pbqff/beta/.'
 
-tests:
-	ls tests
-	scp -r tests 'woods:Programs/pbqff/'
+test: qsub molpro
+	go test . -v -short
 
 docs:
 	scp -r tutorial/main.pdf 'woods:Programs/pbqff/docs/tutorial.pdf'

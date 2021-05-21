@@ -304,6 +304,10 @@ func TestReadOut(t *testing.T) {
 }
 
 func TestHandleOutput(t *testing.T) {
+	qsub = "qsub/qsub"
+	defer func(){
+		qsub = "qsub"
+	}()
 	mp := new(Molpro)
 	mp.FormatZmat(`X
 X 1 1.0
@@ -403,8 +407,19 @@ func TestReadFreqs(t *testing.T) {
 	}
 }
 
+func dummySubmit(s string) string {
+	return "1"
+}
+
 // TODO test write=false case
 func TestBuildPoints(t *testing.T) {
+	ts := Submit
+	Submit = dummySubmit
+	qsub = "qsub/qsub"
+	defer func(){
+		qsub = "qsub"
+		Submit = ts
+	}()
 	prog, _ := LoadMolpro("testfiles/load/molpro.in")
 	cart, _, _ := prog.HandleOutput("testfiles/opt")
 	names, _ := XYZGeom(cart)
@@ -663,9 +678,14 @@ func TestPush(t *testing.T) {
 }
 
 func TestBuildCartPoints(t *testing.T) {
+	ts := Submit
+	Submit = dummySubmit
+	qsub = "qsub/qsub"
 	// test to make sure we get the right number of points
 	tmp := Conf
 	defer func() {
+		qsub = "qsub"
+		Submit = ts
 		Conf = tmp
 	}()
 	Conf.Set(Deltas, []float64{
@@ -786,8 +806,14 @@ func TestGradDerivative(t *testing.T) {
 }
 
 func TestBuildGradPoints(t *testing.T) {
+	ts := Submit
+	Submit = dummySubmit
+	qsub = "qsub/qsub"
+	// test to make sure we get the right number of points
 	tmp := Conf
 	defer func() {
+		qsub = "qsub"
+		Submit = ts
 		Conf = tmp
 	}()
 	Conf.Set(Deltas, []float64{
