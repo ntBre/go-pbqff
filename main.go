@@ -590,7 +590,7 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 		}
 		// Progress
 		fmt.Fprintf(os.Stderr, "finished %d/%d submitted, %v polling %d jobs\n", finished, submitted,
-			time.Since(pollStart).Round(time.Millisecond), nJobs)
+			time.Since(pollStart).Round(time.Millisecond), nJobs-norun)
 		// only receive more jobs if there is room
 		for count := 0; count < chunkSize && nJobs < maxjobs+norun; count++ {
 			calc, ok := <-ch
