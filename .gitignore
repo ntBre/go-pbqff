@@ -1,0 +1,11 @@
+*~
+/molpro/molpro
+/profiling/
+/qsub/qsub
+/pbqff
+/tests/*/*.json
+/tests/*/fort.*
+/tests/*/pts
+/tests/*/spectro*.out
+/tests/*/spectro2.in
+/tests/sic/freqs/
