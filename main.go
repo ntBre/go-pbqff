@@ -15,6 +15,7 @@ import (
 	"math"
 	"os"
 	"os/signal"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -79,6 +80,7 @@ var (
 	submitted        int
 	StartCPU         int64
 	Conf             = NewConfig()
+	ErrorLine        = regexp.MustCompile(`(?i)[^_]error`)
 )
 
 var Global struct {

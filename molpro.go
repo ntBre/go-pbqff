@@ -11,7 +11,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -127,8 +126,6 @@ func (m *Molpro) UpdateZmat(new string) {
 // describing the status of the output
 // TODO signal error on problem reading gradient
 func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, err error) {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
 	f, err := os.Open(filename)
 	if err != nil {
 		return brokenFloat, 0, grad, ErrFileNotFound
@@ -147,14 +144,14 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 		coords[len(coords)-1] = strings.TrimRight(coords[len(coords)-1], "]")
 		return coords
 	}
-	error := regexp.MustCompile(`(?i)[^_]error`)
+	var line string
 	for i = 0; scanner.Scan(); i++ {
-		line := scanner.Text()
+		line = scanner.Text()
 		switch {
 		case i == 0 && strings.Contains(strings.ToUpper(line), "ERROR"):
 			return result, time, grad, ErrFileContainsError
 		case strings.Contains(strings.ToLower(line), "error") &&
-			error.MatchString(line):
+			ErrorLine.MatchString(line):
 			return result, time, grad, ErrFileContainsError
 		case Conf.RE(EnergyLine).MatchString(line) &&
 			!strings.Contains(line, "gthresh") &&
