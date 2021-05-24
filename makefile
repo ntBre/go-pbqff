@@ -36,6 +36,3 @@ clean:
 
 build: *.go
 	go build .
-
-local: build
-	tests/local.sh
