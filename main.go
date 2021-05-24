@@ -428,7 +428,7 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 		// Progress
 		fmt.Fprintf(os.Stderr, "finished %d/%d submitted, %v polling %d jobs\n",
 			finished, submitted,
-			time.Since(pollStart).Round(time.Millisecond), nJobs)
+			time.Since(pollStart).Round(time.Millisecond), nJobs-norun)
 		// Termination
 		if nJobs == 0 {
 			fmt.Fprintf(os.Stderr,
