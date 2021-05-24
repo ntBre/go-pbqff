@@ -127,6 +127,7 @@ func (m *Molpro) UpdateZmat(new string) {
 // TODO signal error on problem reading gradient
 func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, err error) {
 	f, err := os.Open(filename)
+	defer f.Close()
 	if err != nil {
 		return brokenFloat, 0, grad, ErrFileNotFound
 	}
