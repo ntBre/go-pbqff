@@ -147,7 +147,7 @@ func TestGrad(t *testing.T) {
 	prog, _, _ := initialize("tests/grad/grad.in")
 	prog.FormatCart(Conf.Str(Geometry))
 	cart := prog.Geometry
-	E0 := prog.RefEnergy()
+	E0 := 0.0
 	names, coords := XYZGeom(cart)
 	natoms := len(names)
 	ncoords := len(coords)

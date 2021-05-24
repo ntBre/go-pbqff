@@ -665,7 +665,8 @@ func main() {
 		coords    []float64
 	)
 
-	if DoOpt() {
+	switch {
+	case DoOpt():
 		if Conf.Str(GeomType) != "zmat" {
 			panic("optimization requires a zmat geometry")
 		}
@@ -683,7 +684,7 @@ func main() {
 			absPath, _ := filepath.Abs("freq")
 			mpHarm = prog.Frequency(absPath)
 		}()
-	} else {
+	case DoCart():
 		// assert geomtype is cart or xyz
 		if !strings.Contains("cart,xyz", Conf.Str(GeomType)) {
 			panic("expecting cartesian geometry")
@@ -694,6 +695,17 @@ func main() {
 		}
 		cart = prog.Geometry
 		E0 = prog.RefEnergy()
+	case DoGrad():
+		// assert geomtype is cart or xyz
+		if !strings.Contains("cart,xyz", Conf.Str(GeomType)) {
+			panic("expecting cartesian geometry")
+		}
+		err := prog.FormatCart(Conf.Str(Geometry))
+		if err != nil {
+			panic(err)
+		}
+		cart = prog.Geometry
+		E0 = 0 // not needed for gradient
 	}
 
 	var gen func() ([]Calc, bool)
