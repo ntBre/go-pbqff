@@ -8,15 +8,21 @@ import (
 
 const (
 	help = `Requirements (* denotes requirements for SICs only):
-- pbqff input file minimally specifying the geometry and the
+- pbqff input file minimally specifying the geometry as a
+  space-delimited Zmat or XYZ and the
 - paths to intder*, anpass*, and spectro executables
 - template intder.in*, anpass.in*, spectro.in, and molpro.in files
-  - intder.in should be a pts intder input and have the old geometry to serve as a template
-  - anpass.in should be a first run anpass file, not a stationary point
+  - intder.in should be a pts intder input and have the old geometry
+    to serve as a template
+  - anpass.in should be a first run anpass file, not a stationary
+    point
   - spectro.in should not have any resonance information
-  - molpro.in should have the geometry removed and have no closing brace to the geometry section
-    - on sequoia, the custom energy parameter pbqff=energy is required for parsing
-    - for gradients, use forces,varsav and show[f20.15],grad{x,y,z} to print the gradients
+  - molpro.in should have the geometry removed and have no closing
+    brace to the geometry section
+    - on sequoia, the custom energy parameter pbqff=energy is required
+      for parsing
+    - for gradients, use forces,varsav and show[f20.15],grad{x,y,z} to
+      print the gradients
 Flags:
 `
 )
