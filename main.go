@@ -1056,7 +1056,8 @@ func main() {
 		natoms = len(names)
 		ncoords = len(coords)
 		prog.Geometry = Input[Geometry] + "\n}\n"
-		if !DoOpt() {
+		// don't need reference energy in gradient
+		if !DoOpt() && !DoGrad() {
 			E0 = RefEnergy(prog)
 		}
 		if DoCart() {
