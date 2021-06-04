@@ -381,7 +381,7 @@ func Optimize(prog *Molpro) (E0 float64) {
 	outfile := "opt/opt.out"
 	_, _, _, err := prog.ReadOut(outfile)
 	for err != nil {
-		HandleSignal(35, time.Minute)
+		HandleSignal(35, 100*time.Minute)
 		E0, _, _, err = prog.ReadOut(outfile)
 		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 			err == ErrFileContainsError || err == ErrBlankOutput) ||
