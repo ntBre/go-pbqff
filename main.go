@@ -485,6 +485,7 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 		err       error
 		t         float64
 		check     int = 1
+		norun     int
 	)
 	heap := new(GarbageHeap)
 	maxjobs := jobLimit
@@ -567,6 +568,8 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 								job.chunkNum, paraJobs[job.chunkNum])
 						}
 					}
+				} else {
+					norun--
 				}
 				success = false
 			}
@@ -574,11 +577,6 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 		if shortenBy < 1 {
 			fmt.Fprintln(os.Stderr, "Didn't shorten, sleeping")
 			time.Sleep(time.Duration(sleep) * time.Second)
-			for _, p := range points {
-				if p.noRun {
-					maxjobs++
-				}
-			}
 		}
 		if check >= checkAfter {
 			if !nocheck {
@@ -592,9 +590,9 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 		}
 		// Progress
 		fmt.Fprintf(os.Stderr, "finished %d/%d submitted, %v polling %d jobs\n", finished, submitted,
-			time.Since(pollStart).Round(time.Millisecond), nJobs)
+			time.Since(pollStart).Round(time.Millisecond), nJobs-norun)
 		// only receive more jobs if there is room
-		for count := 0; count < chunkSize && nJobs < maxjobs; count++ {
+		for count := 0; count < chunkSize && nJobs < maxjobs+norun; count++ {
 			calc, ok := <-ch
 			if !ok && finished == submitted {
 				fmt.Fprintf(os.Stderr, "resubmitted %d/%d (%.1f%%), points execution time: %v\n",
@@ -614,6 +612,9 @@ func Drain(prog *Molpro, ncoords int, ch chan Calc, E0 float64) (min, realTime f
 			} else if ok {
 				points = append(points, calc)
 				nJobs = len(points)
+				if calc.noRun {
+					norun++
+				}
 			} else if !ok {
 				nJobs = len(points)
 				break
@@ -1055,7 +1056,8 @@ func main() {
 		natoms = len(names)
 		ncoords = len(coords)
 		prog.Geometry = Input[Geometry] + "\n}\n"
-		if !DoOpt() {
+		// don't need reference energy in gradient
+		if !DoOpt() && !DoGrad() {
 			E0 = RefEnergy(prog)
 		}
 		if DoCart() {
