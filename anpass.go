@@ -27,6 +27,14 @@ func (a *Anpass) BuildBody(buf *bytes.Buffer, energies []float64) {
 				f, _ := strconv.ParseFloat(field, 64)
 				fmt.Fprintf(buf, a.Fmt1, f)
 			}
+			// if it's going to panic, dump rel.dat
+			if i >= len(energies)-1 {
+				f, _ := os.Create("rel.dat")
+				defer f.Close()
+				for _, e := range energies {
+					fmt.Fprintf(f, "%20.12f\n", e)
+				}
+			}
 			fmt.Fprintf(buf, a.Fmt2+"\n", energies[i])
 		}
 	}
