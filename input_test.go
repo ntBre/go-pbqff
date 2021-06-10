@@ -1,11 +1,13 @@
 package main
 
 import (
+	"path/filepath"
 	"reflect"
 	"testing"
 )
 
 func TestParseInfile(t *testing.T) {
+	abs, _ := filepath.Abs("bin/intder")
 	ParseInfile("testfiles/test.in")
 	after := [NumKeys]string{
 		QueueType: "pbs",
@@ -20,8 +22,8 @@ AlX = 0.85 Ang
 OX = 1.1 Ang
 XXO = 80.0 Deg`,
 		GeomType:   "zmat",
-		IntderCmd:  "/home/brent/Packages/intder/intder",
-		ChunkSize: "8",
+		IntderCmd:  abs,
+		ChunkSize:  "8",
 		AnpassCmd:  "",
 		SpectroCmd: "",
 	}

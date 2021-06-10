@@ -1,0 +1,6 @@
+molpro -t 1  testfiles/read/inp/NHHH.00000.inp --no-xml-output
+molpro -t 1  testfiles/read/inp/NHHH.00001.inp --no-xml-output
+molpro -t 1  testfiles/read/inp/NHHH.00002.inp --no-xml-output
+molpro -t 1  testfiles/read/inp/NHHH.00000.inp --no-xml-output
+molpro -t 1  testfiles/read/inp/NHHH.00001.inp --no-xml-output
+molpro -t 1  testfiles/read/inp/NHHH.00002.inp --no-xml-output

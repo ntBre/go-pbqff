@@ -19,7 +19,7 @@ type Job struct {
 	Signal   int
 	Host     string
 	Queue    string
-	NumJobs   int
+	NumJobs  int
 }
 
 const mapleCmd = `molpro -t 1 `
@@ -79,7 +79,6 @@ molpro -t 1 {{.Filename}} --no-xml-output
 date
 
 rm -rf $TMPDIR
-ssh -t maple pkill -{{.Signal}} pbqff
 `
 
 const pbsSequoia = `#!/bin/sh
@@ -106,7 +105,6 @@ mpiexec molpro.exe {{.Filename}}
 date
 
 rm -rf $TMPDIR
-ssh -t sequoia pkill -{{.Signal}} pbqff
 `
 
 // AddCommand adds a molpro command to cmdfile
