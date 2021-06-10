@@ -204,8 +204,17 @@ func TestConvertCart(t *testing.T) {
 			intderFile: "testfiles/load/intder.signs",
 			want:       []string{"O", "C", "H", "H"},
 		},
-	}
+		{
+			msg: "problematic",
+			cart: `N     0.000000000    0.000000000   -0.153669476
+     H     0.000000000    1.508025592    1.067723399
+     H     0.000000000   -1.508025592    1.067723399
+`,
+			intderFile: "testfiles/load/intder.ally",
+			want: []string{"H", "N", "H"},
+		},
 
+	}
 	for _, test := range tests {
 		i, _ := LoadIntder(test.intderFile)
 		got := i.ConvertCart(test.cart)

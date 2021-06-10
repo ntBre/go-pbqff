@@ -1096,7 +1096,10 @@ func main() {
 			mpHarm = make([]float64, spec.Nfreqs)
 		}
 		res := summarize.Spectro(filepath.Join("freqs", "spectro2.out"))
-		Summarize(res.ZPT, mpHarm, intderHarms, res.Harm, res.Fund, res.Corr)
+		err = Summarize(res.ZPT, mpHarm, intderHarms, res.Harm, res.Fund, res.Corr)
+		if err != nil {
+			fmt.Println(err)
+		}
 	} else {
 		N3N := natoms * 3 // from spectro manual pg 12
 		other3 := N3N * (N3N + 1) * (N3N + 2) / 6

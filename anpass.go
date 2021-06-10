@@ -28,7 +28,7 @@ func (a *Anpass) BuildBody(buf *bytes.Buffer, energies []float64) {
 				fmt.Fprintf(buf, a.Fmt1, f)
 			}
 			// if it's going to panic, dump rel.dat
-			if i >= len(energies)-1 {
+			if i >= len(energies) {
 				f, _ := os.Create("rel.dat")
 				defer f.Close()
 				for _, e := range energies {
