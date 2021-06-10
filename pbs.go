@@ -81,7 +81,6 @@ molpro -t 1 --no-xml-output {{.Filename}}
 date
 
 rm -rf $TMPDIR
-ssh -t maple pkill -{{.Signal}} pbqff
 `
 
 const pbsSequoia = `#!/bin/sh
@@ -108,7 +107,6 @@ mpiexec molpro.exe {{.Filename}}
 date
 
 rm -rf $TMPDIR
-ssh -t sequoia pkill -{{.Signal}} pbqff
 `
 
 // WritePBS writes a pbs infile based on the queue type and
