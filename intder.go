@@ -230,13 +230,14 @@ func LoadIntder(filename string) (*Intder, error) {
 // slice atom names
 func (i *Intder) ConvertCart(cart string) (names []string) {
 	lines := strings.Split(cart, "\n")
-	// slice off last newline
-	lines = lines[:len(lines)-1]
-	var buf bytes.Buffer
+	var (
+		buf    bytes.Buffer
+		fields []string
+	)
 	strs := make([]string, 0)
 	for _, line := range lines {
-		if len(line) > 3 {
-			fields := strings.Fields(line)
+		fields = strings.Fields(line)
+		if len(fields) > 3 {
 			names = append(names, fields[0])
 			x, _ := strconv.ParseFloat(fields[1], 64)
 			y, _ := strconv.ParseFloat(fields[2], 64)
