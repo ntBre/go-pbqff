@@ -82,3 +82,11 @@ func TestGetLongLine(t *testing.T) {
 		t.Errorf("got %v, wanted %v\n", got, want)
 	}
 }
+
+func TestFromIntder(t *testing.T) {
+	got := FromIntder("testfiles/lin.intder")
+	want := "FIXME"
+	if got != want {
+		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+}

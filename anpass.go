@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -65,6 +66,60 @@ func LoadAnpass(filename string) (*Anpass, error) {
 		buf.WriteString(line + "\n")
 	}
 	return &a, nil
+}
+
+// FromIntder takes an intder file and constructs the corresponding
+// Body of an Anpass
+func FromIntder(filename string) string {
+	f, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	scanner := bufio.NewScanner(f)
+	dispfmt := "%12.8f"
+	var (
+		line   string
+		start  bool
+		fields []string
+		ncoord int
+		str    strings.Builder
+		nc     int = 1
+	)
+	zero := regexp.MustCompile(`^    0$`)
+	for i := 0; scanner.Scan(); i++ {
+		line = scanner.Text()
+		fields = strings.Fields(line)
+		switch {
+		case i == 1:
+			// number of symmetry internals is apparently
+			// optional
+			if fields[2] == "0" {
+				ncoord, _ = strconv.Atoi(fields[1])
+			} else {
+				ncoord, _ = strconv.Atoi(fields[2])
+			}
+		case strings.Contains(line, "DISP"):
+			start = true
+		case start && zero.MatchString(line):
+			for ; nc <= ncoord; nc++ {
+				fmt.Fprintf(&str, dispfmt, 0.0)
+			}
+			fmt.Fprint(&str, "\n")
+			fmt.Print(str.String())
+			nc = 1
+			str.Reset()
+		case start && len(fields) >= 1:
+			d, _ := strconv.Atoi(fields[0])
+			for nc < d {
+				fmt.Fprintf(&str, dispfmt, 0.0)
+				nc++
+			}
+			nc++
+			v, _ := strconv.ParseFloat(fields[1], 64)
+			fmt.Fprintf(&str, dispfmt, v)
+		}
+	}
+	return ""
 }
 
 // BuildBody is a helper for building anpass file body
