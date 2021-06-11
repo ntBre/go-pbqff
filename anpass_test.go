@@ -1,6 +1,13 @@
 package main
 
-import "testing"
+import (
+	"bufio"
+	"io"
+	"os"
+	"strconv"
+	"strings"
+	"testing"
+)
 
 func TestLoadAnpass(t *testing.T) {
 	tests := []struct {
@@ -83,9 +90,36 @@ func TestGetLongLine(t *testing.T) {
 	}
 }
 
+func loadvec(filename string) (ret []float64) {
+	f, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if len(line) > 0 {
+			v, err := strconv.ParseFloat(
+				strings.TrimSpace(line), 64,
+			)
+			if err != nil {
+				panic(err)
+			}
+			ret = append(ret, v)
+		}
+	}
+	return
+}
+
 func TestFromIntder(t *testing.T) {
-	got := FromIntder("testfiles/lin.intder")
-	want := "FIXME"
+	energies := loadvec("testfiles/read/ally.dat")
+	got := FromIntder("testfiles/read/ally.in", energies, true)
+	f, err := os.Open("testfiles/read/ally.anpass.mid")
+	if err != nil {
+		panic(err)
+	}
+	byts, _ := io.ReadAll(f)
+	want := string(byts)
 	if got != want {
 		t.Errorf("got %v, wanted %v\n", got, want)
 	}

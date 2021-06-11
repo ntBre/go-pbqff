@@ -69,8 +69,10 @@ func LoadAnpass(filename string) (*Anpass, error) {
 }
 
 // FromIntder takes an intder file and constructs the corresponding
-// Body of an Anpass
-func FromIntder(filename string) string {
+// Body of an Anpass, combining it with energies. If linear is true,
+// duplicate the lines where last displacement is nonzero and negate
+// the last displacement.
+func FromIntder(filename string, energies []float64, linear bool) string {
 	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
@@ -84,6 +86,8 @@ func FromIntder(filename string) string {
 		ncoord int
 		str    strings.Builder
 		nc     int = 1
+		disp   int
+		ret    strings.Builder
 	)
 	zero := regexp.MustCompile(`^    0$`)
 	for i := 0; scanner.Scan(); i++ {
@@ -91,8 +95,7 @@ func FromIntder(filename string) string {
 		fields = strings.Fields(line)
 		switch {
 		case i == 1:
-			// number of symmetry internals is apparently
-			// optional
+			// use number of simple internals if no SICs
 			if fields[2] == "0" {
 				ncoord, _ = strconv.Atoi(fields[1])
 			} else {
@@ -104,10 +107,23 @@ func FromIntder(filename string) string {
 			for ; nc <= ncoord; nc++ {
 				fmt.Fprintf(&str, dispfmt, 0.0)
 			}
-			fmt.Fprint(&str, "\n")
-			fmt.Print(str.String())
+			fmt.Fprintf(&str, "%20.12f\n", energies[disp])
+			if linear {
+				fields := strings.Fields(str.String())
+				d, _ := strconv.ParseFloat(fields[len(fields)-2], 64)
+				if d != 0.0 {
+					for i := 0; i < len(fields)-2; i++ {
+						d, _ := strconv.ParseFloat(fields[i], 64)
+						fmt.Fprintf(&str, dispfmt, d)
+					}
+					fmt.Fprintf(&str, dispfmt, -1*d)
+					fmt.Fprintf(&str, "%20.12f\n", energies[disp])
+				}
+			}
+			fmt.Fprint(&ret, str.String())
 			nc = 1
 			str.Reset()
+			disp++
 		case start && len(fields) >= 1:
 			d, _ := strconv.Atoi(fields[0])
 			for nc < d {
@@ -119,7 +135,7 @@ func FromIntder(filename string) string {
 			fmt.Fprintf(&str, dispfmt, v)
 		}
 	}
-	return ""
+	return ret.String()
 }
 
 // BuildBody is a helper for building anpass file body
