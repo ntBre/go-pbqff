@@ -692,8 +692,8 @@ func main() {
 			panic(err)
 		}
 		cart = prog.Geometry
-		// not required for gradients
-		if !DoGrad() {
+		// only required for cartesians
+		if DoCart() {
 			E0 = prog.RefEnergy()
 		}
 	}

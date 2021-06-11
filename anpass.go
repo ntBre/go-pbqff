@@ -70,6 +70,9 @@ func LoadAnpass(filename string) (*Anpass, error) {
 // BuildBody is a helper for building anpass file body
 func (a *Anpass) BuildBody(buf *bytes.Buffer, energies []float64) {
 	for i, line := range strings.Split(a.Body, "\n") {
+		if i >= len(energies) {
+			fmt.Fprintln(os.Stderr, "linear molecule detected")
+		}
 		if line != "" {
 			for _, field := range strings.Fields(line) {
 				f, _ := strconv.ParseFloat(field, 64)
