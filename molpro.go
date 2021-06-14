@@ -649,8 +649,14 @@ func Push(dir string, pf, count int, calcs []Calc) []Calc {
 	node, queue := SelectNode()
 	// This should be using the PBS from Config
 	WritePBS(subfile,
-		&Job{"pts", cmdfile, 35, node, queue,
-			Conf.Int(NumJobs)}, ptsMaple)
+		&Job{
+			Name:     MakeName(Conf.Str(Geometry)) + "pts",
+			Filename: cmdfile,
+			Signal:   35,
+			Host:     node,
+			Queue:    queue,
+			NumJobs:  Conf.Int(NumJobs),
+		}, ptsMaple)
 	jobid := Submit(subfile)
 	if *debug {
 		fmt.Println(subfile, jobid)
