@@ -160,7 +160,7 @@ func TestApplyPattern(t *testing.T) {
 
 func TestSecondLine(t *testing.T) {
 	i, _ := LoadIntder("testfiles/load/intder.full")
-	got := i.SecondLine()
+	got := i.SecondLine(false)
 	want := `    4    7    6    4    0    3    2    0    0    1    3    0    0    0    0    0`
 	if got != want {
 		t.Errorf("got %v, wanted %v\n", got, want)
@@ -414,7 +414,7 @@ func TestWriteIntderFreqs(t *testing.T) {
 	i.Read9903("testfiles/read/prob.9903", false)
 	write := "testfiles/write/intder.freqs.in"
 	right := "testfiles/right/intder.freqs.in"
-	i.WriteFreqs(write, order)
+	i.WriteFreqs(write, order, false)
 	if !compareFile(write, right) {
 		t.Errorf("mismatch between %s and %s\n", write, right)
 	}

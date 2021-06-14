@@ -396,10 +396,18 @@ func (i *Intder) WriteGeom(filename, longLine string) {
 
 // SecondLine updates the input directives of an intder
 // for the cartesian coordinate transform in freqs
-func (i *Intder) SecondLine() string {
+func (i *Intder) SecondLine(lintri bool) string {
 	lines := strings.Split(i.Head, "\n")
 	lines = lines[:len(lines)-1] // trim trailing newline
 	fields := strings.Fields(lines[1])
+	if lintri {
+		d, _ := strconv.Atoi(fields[1])
+		fields[1] = strconv.Itoa(d + 1)
+		d, _ = strconv.Atoi(fields[2])
+		fields[2] = strconv.Itoa(d + 1)
+		d, _ = strconv.Atoi(fields[7])
+		fields[7] = strconv.Itoa(d + 1)
+	}
 	fields[3] = "4"
 	fields[6] = "2"
 	fields[10] = "3"
@@ -415,10 +423,35 @@ func (i *Intder) SecondLine() string {
 }
 
 // WriteFreqs writes an intder.in file for freqs to filename
-// TODO might need updating for many atoms - multiline mass format?
-func (i *Intder) WriteFreqs(filename string, names []string) {
+func (i *Intder) WriteFreqs(filename string, names []string, lintri bool) {
 	var buf bytes.Buffer
-	i.SecondLine()
+	i.SecondLine(lintri)
+	// hacky and hard coded for linear triatomics
+	if lintri {
+		newhead := make([]string, 0)
+		heads := strings.Split(i.Head, "\n")
+		for _, line := range heads {
+			newhead = append(newhead, line)
+			if strings.Contains(line, "LIN1     1    2    3    4") {
+				newhead = append(newhead, "LIN1     1    2    3    5")
+			} else if strings.Contains(line, "    3   3   1.0") {
+				newhead = append(newhead, "    4   4   1.000000000")
+			}
+		}
+		i.Head = strings.Join(newhead, "\n")
+		newgeom := make([]string, 0)
+		geoms := strings.Split(i.Geometry, "\n")
+		for _, line := range geoms {
+			newgeom = append(newgeom, line)
+			if strings.Contains(line, "1.111111") {
+				fields := strings.Fields(line)
+				newgeom = append(newgeom,
+					fmt.Sprintf("%20s%20s%20s",
+						fields[1], fields[0], fields[2]))
+			}
+		}
+		i.Geometry = strings.Join(newgeom, "\n")
+	}
 	buf.WriteString(i.Head + "\n" + i.Geometry + "\n")
 	for i, name := range names {
 		name = strings.ToUpper(name)
@@ -434,6 +467,10 @@ func (i *Intder) WriteFreqs(filename string, names []string) {
 			fmt.Fprintf(&buf, "%13s", name+num)
 		default:
 			fmt.Fprintf(&buf, "%12s", name+num)
+		}
+		// after 6 atoms, need a newline
+		if i%6 == 0 && i > 0 {
+			fmt.Fprint(&buf, "\n")
 		}
 	}
 	fmt.Fprint(&buf, "\n")
@@ -526,7 +563,7 @@ func (i *Intder) Read9903(filename string, lintri bool) {
 		line       string
 		f33, f3333 float64
 	)
-	three := regexp.MustCompile(`    3 `)
+	three := regexp.MustCompile(` 3 `)
 	for scanner.Scan() {
 		line = scanner.Text()
 		fields := strings.Fields(line)
@@ -540,14 +577,14 @@ func (i *Intder) Read9903(filename string, lintri bool) {
 				fmt.Fprintln(&buf4, line)
 				if lintri && three.MatchString(line) {
 					fmt.Fprintln(&buf4,
-						three.ReplaceAllString(line, "    4 "),
+						three.ReplaceAllString(line, " 4 "),
 					)
 				}
 			case fields[2] != "0":
 				fmt.Fprintln(&buf3, line)
 				if lintri && three.MatchString(line) {
 					fmt.Fprintln(&buf3,
-						three.ReplaceAllString(line, "    4 "),
+						three.ReplaceAllString(line, " 4 "),
 					)
 				}
 			case fields[1] != "0":
@@ -557,7 +594,7 @@ func (i *Intder) Read9903(filename string, lintri bool) {
 				}
 				if lintri && three.MatchString(line) {
 					fmt.Fprintln(&buf2,
-						three.ReplaceAllString(line, "    4 "),
+						three.ReplaceAllString(line, " 4 "),
 					)
 				}
 			}
@@ -608,7 +645,7 @@ func DoIntder(intder *Intder, atomNames []string, longLine,
 	coords := intder.ReadGeom(filepath.Join(dir, "freqs/intder_geom.out"))
 	// if triatomic and linear
 	intder.Read9903(filepath.Join(dir, "freqs/fort.9903"), len(atomNames) == 3 && lin)
-	intder.WriteFreqs(filepath.Join(dir, "freqs/intder.in"), atomNames)
+	intder.WriteFreqs(filepath.Join(dir, "freqs/intder.in"), atomNames, len(atomNames) == 3 && lin)
 	RunIntder(filepath.Join(dir, "freqs/intder"))
 	intderHarms := intder.ReadOut(filepath.Join(dir, "freqs/intder.out"))
 	Tennis(dir)

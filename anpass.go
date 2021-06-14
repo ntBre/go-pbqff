@@ -142,10 +142,10 @@ func FromIntder(filename string, energies []float64, linear bool) string {
 func (a *Anpass) BuildBody(buf *bytes.Buffer, energies []float64, intder *Intder) (lin bool) {
 	body := strings.Split(strings.TrimSpace(a.Body), "\n")
 	if len(body) > len(energies) {
-		fmt.Fprintln(os.Stderr, "warning: linear molecule detected")
 		lin = true
 		bodyLines := FromIntder(intder.Name, energies, true)
-		body = strings.Split(bodyLines, "\n")
+		buf.WriteString(bodyLines)
+		return
 	}
 	for i, line := range body {
 		if line != "" {
@@ -225,6 +225,9 @@ func RunAnpass(filename string) {
 // DoAnpass runs anpass
 func DoAnpass(anp *Anpass, dir string, energies []float64, intder *Intder) (string, bool) {
 	lin := anp.WriteAnpass(filepath.Join(dir, "freqs/anpass1.in"), energies, intder)
+	if lin {
+		fmt.Fprintln(os.Stderr, "warning: linear molecule detected")
+	}
 	RunAnpass(filepath.Join(dir, "freqs/anpass1"))
 	longLine, ok := GetLongLine(filepath.Join(dir, "freqs/anpass1.out"))
 	if !ok {
