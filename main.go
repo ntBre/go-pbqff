@@ -734,10 +734,18 @@ func main() {
 	// TODO DRY this out some day
 	if DoSIC() {
 		energies = FloatsFromCountFloats(cenergies)
+		f, err := os.Create(filepath.Join(prog.Dir, "rel.dat"))
+		if err != nil {
+			// just dump the raw energies in a worst-case
+			// scenario
+			fmt.Println(energies)
+		}
 		// convert to relative energies
 		for i := range energies {
 			energies[i] -= min
+			fmt.Fprintf(f, "%20.12f\n", energies[i])
 		}
+		f.Close()
 		longLine := DoAnpass(anpass, prog.Dir, energies, intder)
 		coords, intderHarms := DoIntder(intder, names,
 			longLine, prog.Dir)
