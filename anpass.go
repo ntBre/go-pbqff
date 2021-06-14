@@ -139,11 +139,14 @@ func FromIntder(filename string, energies []float64, linear bool) string {
 }
 
 // BuildBody is a helper for building anpass file body
-func (a *Anpass) BuildBody(buf *bytes.Buffer, energies []float64) {
-	for i, line := range strings.Split(a.Body, "\n") {
-		if i >= len(energies) {
-			fmt.Fprintln(os.Stderr, "linear molecule detected")
-		}
+func (a *Anpass) BuildBody(buf *bytes.Buffer, energies []float64, intder *Intder) {
+	body := strings.Split(strings.TrimSpace(a.Body), "\n")
+	if len(body) > len(energies) {
+		fmt.Fprintln(os.Stderr, "warning: linear molecule detected")
+		bodyLines := FromIntder(intder.Name, energies, true)
+		body = strings.Split(bodyLines, "\n")
+	}
+	for i, line := range body {
 		if line != "" {
 			for _, field := range strings.Fields(line) {
 				f, _ := strconv.ParseFloat(field, 64)
@@ -155,19 +158,19 @@ func (a *Anpass) BuildBody(buf *bytes.Buffer, energies []float64) {
 }
 
 // WriteAnpass writes an anpass input file
-func (a *Anpass) WriteAnpass(filename string, energies []float64) {
+func (a *Anpass) WriteAnpass(filename string, energies []float64, intder *Intder) {
 	var buf bytes.Buffer
 	buf.WriteString(a.Head)
-	a.BuildBody(&buf, energies)
+	a.BuildBody(&buf, energies, intder)
 	buf.WriteString(a.Tail)
 	ioutil.WriteFile(filename, []byte(buf.String()), 0755)
 }
 
 // WriteAnpass2 writes an anpass input file for a stationary point
-func (a *Anpass) WriteAnpass2(filename, longLine string, energies []float64) {
+func (a *Anpass) WriteAnpass2(filename, longLine string, energies []float64, intder *Intder) {
 	var buf bytes.Buffer
 	buf.WriteString(a.Head)
-	a.BuildBody(&buf, energies)
+	a.BuildBody(&buf, energies, intder)
 	for _, line := range strings.Split(a.Tail, "\n") {
 		if strings.Contains(line, "END OF DATA") {
 			buf.WriteString("STATIONARY POINT\n" +
@@ -217,15 +220,15 @@ func RunAnpass(filename string) {
 }
 
 // DoAnpass runs anpass
-func DoAnpass(anp *Anpass, dir string, energies []float64) string {
-	anp.WriteAnpass(filepath.Join(dir, "freqs/anpass1.in"), energies)
+func DoAnpass(anp *Anpass, dir string, energies []float64, intder *Intder) string {
+	anp.WriteAnpass(filepath.Join(dir, "freqs/anpass1.in"), energies, intder)
 	RunAnpass(filepath.Join(dir, "freqs/anpass1"))
 	longLine, ok := GetLongLine(filepath.Join(dir, "freqs/anpass1.out"))
 	if !ok {
 		panic("Problem getting long line from anpass1.out")
 	}
 	anp.WriteAnpass2(filepath.Join(dir, "freqs/anpass2.in"),
-		longLine, energies)
+		longLine, energies, intder)
 	RunAnpass(filepath.Join(dir, "freqs/anpass2"))
 	return longLine
 }

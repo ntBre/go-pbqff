@@ -35,6 +35,7 @@ var (
 
 // Intder holds the information for an intder input file
 type Intder struct {
+	Name     string
 	Head     string
 	Geometry string
 	Tail     string
@@ -193,6 +194,7 @@ func LoadIntder(filename string) (*Intder, error) {
 		geom   string
 		ndummy int
 	)
+	i.Name = filename
 	// end of symmetry internal coordinates
 	eosic := regexp.MustCompile(`(?U)^\s+0\s*$`)
 	head := true

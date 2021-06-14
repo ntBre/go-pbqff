@@ -51,7 +51,7 @@ func TestWriteAnpass(t *testing.T) {
 	}
 	for _, test := range tests {
 		a, _ := LoadAnpass(test.load)
-		a.WriteAnpass(test.write, []float64{0, 0, 0, 0, 0, 0})
+		a.WriteAnpass(test.write, []float64{0, 0, 0, 0, 0, 0}, nil)
 		if !compareFile(test.write, test.right) {
 			t.Errorf("mismatch between %s and %s\n", test.write, test.right)
 		}
@@ -75,7 +75,7 @@ func TestWriteAnpass2(t *testing.T) {
 	for _, test := range tests {
 		a, _ := LoadAnpass(test.load)
 		ll, _ := GetLongLine(test.lline)
-		a.WriteAnpass2(test.write, ll, []float64{0, 0, 0, 0, 0, 0})
+		a.WriteAnpass2(test.write, ll, []float64{0, 0, 0, 0, 0, 0}, nil)
 		if !compareFile(test.write, test.right) {
 			t.Errorf("mismatch between %s and %s\n", test.write, test.right)
 		}

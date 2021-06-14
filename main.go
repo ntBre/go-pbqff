@@ -738,7 +738,7 @@ func main() {
 		for i := range energies {
 			energies[i] -= min
 		}
-		longLine := DoAnpass(anpass, prog.Dir, energies)
+		longLine := DoAnpass(anpass, prog.Dir, energies, intder)
 		coords, intderHarms := DoIntder(intder, names,
 			longLine, prog.Dir)
 		spec, err := spectro.Load("spectro.in")
