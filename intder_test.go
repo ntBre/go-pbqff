@@ -397,7 +397,7 @@ func TestRead9903(t *testing.T) {
 	i, _ := LoadIntder("testfiles/load/intder.full")
 	i.ConvertCart(cart)
 	i.ReadGeom("testfiles/read/intder_geom.out")
-	i.Read9903("testfiles/read/fort.9903")
+	i.Read9903("testfiles/read/fort.9903", false)
 	got := i.Tail
 	bytes, _ := ioutil.ReadFile("testfiles/right/fort.9903")
 	want := string(bytes)
@@ -411,7 +411,7 @@ func TestWriteIntderFreqs(t *testing.T) {
 	i, _ := LoadIntder("testfiles/load/intder.full")
 	order := i.ConvertCart(cart)
 	i.ReadGeom("testfiles/read/intder_geom.out")
-	i.Read9903("testfiles/read/prob.9903")
+	i.Read9903("testfiles/read/prob.9903", false)
 	write := "testfiles/write/intder.freqs.in"
 	right := "testfiles/right/intder.freqs.in"
 	i.WriteFreqs(write, order)

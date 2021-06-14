@@ -139,10 +139,11 @@ func FromIntder(filename string, energies []float64, linear bool) string {
 }
 
 // BuildBody is a helper for building anpass file body
-func (a *Anpass) BuildBody(buf *bytes.Buffer, energies []float64, intder *Intder) {
+func (a *Anpass) BuildBody(buf *bytes.Buffer, energies []float64, intder *Intder) (lin bool) {
 	body := strings.Split(strings.TrimSpace(a.Body), "\n")
 	if len(body) > len(energies) {
 		fmt.Fprintln(os.Stderr, "warning: linear molecule detected")
+		lin = true
 		bodyLines := FromIntder(intder.Name, energies, true)
 		body = strings.Split(bodyLines, "\n")
 	}
@@ -155,15 +156,17 @@ func (a *Anpass) BuildBody(buf *bytes.Buffer, energies []float64, intder *Intder
 			fmt.Fprintf(buf, a.Fmt2+"\n", energies[i])
 		}
 	}
+	return
 }
 
 // WriteAnpass writes an anpass input file
-func (a *Anpass) WriteAnpass(filename string, energies []float64, intder *Intder) {
+func (a *Anpass) WriteAnpass(filename string, energies []float64, intder *Intder) (lin bool) {
 	var buf bytes.Buffer
 	buf.WriteString(a.Head)
-	a.BuildBody(&buf, energies, intder)
+	lin = a.BuildBody(&buf, energies, intder)
 	buf.WriteString(a.Tail)
 	ioutil.WriteFile(filename, []byte(buf.String()), 0755)
+	return
 }
 
 // WriteAnpass2 writes an anpass input file for a stationary point
@@ -220,8 +223,8 @@ func RunAnpass(filename string) {
 }
 
 // DoAnpass runs anpass
-func DoAnpass(anp *Anpass, dir string, energies []float64, intder *Intder) string {
-	anp.WriteAnpass(filepath.Join(dir, "freqs/anpass1.in"), energies, intder)
+func DoAnpass(anp *Anpass, dir string, energies []float64, intder *Intder) (string, bool) {
+	lin := anp.WriteAnpass(filepath.Join(dir, "freqs/anpass1.in"), energies, intder)
 	RunAnpass(filepath.Join(dir, "freqs/anpass1"))
 	longLine, ok := GetLongLine(filepath.Join(dir, "freqs/anpass1.out"))
 	if !ok {
@@ -230,5 +233,5 @@ func DoAnpass(anp *Anpass, dir string, energies []float64, intder *Intder) strin
 	anp.WriteAnpass2(filepath.Join(dir, "freqs/anpass2.in"),
 		longLine, energies, intder)
 	RunAnpass(filepath.Join(dir, "freqs/anpass2"))
-	return longLine
+	return longLine, lin
 }

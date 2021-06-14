@@ -39,8 +39,8 @@ func TestSIC(t *testing.T) {
 	for i := range energies {
 		energies[i] -= min
 	}
-	longLine := DoAnpass(anpass, prog.Dir, energies, nil)
-	coords, _ := DoIntder(intder, names, longLine, prog.Dir)
+	longLine, _ := DoAnpass(anpass, prog.Dir, energies, nil)
+	coords, _ := DoIntder(intder, names, longLine, prog.Dir, false)
 	spec, err := spectro.Load("tests/sic/spectro.in")
 	if err != nil {
 		errExit(err, "loading spectro input")

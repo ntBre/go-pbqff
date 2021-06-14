@@ -507,9 +507,10 @@ func (i *Intder) ReadOut(filename string) (freqs []float64) {
 	return
 }
 
-// Read9903 reads fort.9903 output by anpass and
-// sets i.Tail to that for freqs/intder
-func (i *Intder) Read9903(filename string) {
+// Read9903 reads fort.9903 output by anpass and sets i.Tail to that
+// for freqs/intder. If the molecule is a linear triatomic (lintri),
+// duplicate the F_3+ force constants to F_4 and generate F_4433
+func (i *Intder) Read9903(filename string, lintri bool) {
 	var (
 		buf2 bytes.Buffer
 		buf3 bytes.Buffer
@@ -522,21 +523,49 @@ func (i *Intder) Read9903(filename string) {
 	}
 	scanner := bufio.NewScanner(f)
 	var (
-		line string
+		line       string
+		f33, f3333 float64
 	)
+	three := regexp.MustCompile(`    3 `)
 	for scanner.Scan() {
 		line = scanner.Text()
 		fields := strings.Fields(line)
 		if len(fields) == 5 {
 			switch {
 			case fields[3] != "0":
+				if fields[0] == "3" && fields[1] == "3" &&
+					fields[2] == "3" && fields[3] == "3" {
+					f3333, _ = strconv.ParseFloat(fields[4], 64)
+				}
 				fmt.Fprintln(&buf4, line)
+				if lintri && three.MatchString(line) {
+					fmt.Fprintln(&buf4,
+						three.ReplaceAllString(line, "    4 "),
+					)
+				}
 			case fields[2] != "0":
 				fmt.Fprintln(&buf3, line)
+				if lintri && three.MatchString(line) {
+					fmt.Fprintln(&buf3,
+						three.ReplaceAllString(line, "    4 "),
+					)
+				}
 			case fields[1] != "0":
 				fmt.Fprintln(&buf2, line)
+				if fields[0] == "3" && fields[1] == "3" {
+					f33, _ = strconv.ParseFloat(fields[4], 64)
+				}
+				if lintri && three.MatchString(line) {
+					fmt.Fprintln(&buf2,
+						three.ReplaceAllString(line, "    4 "),
+					)
+				}
 			}
 		}
+	}
+	if lintri {
+		fmt.Fprintf(&buf4, "%5d%5d%5d%5d%20.12f\n",
+			4, 4, 3, 3, (f3333+4*f33)/3)
 	}
 	fmt.Fprintf(&buf2, "%5d\n", 0)
 	fmt.Fprintf(&buf3, "%5d\n", 0)
@@ -572,11 +601,13 @@ func Tennis(dir string) {
 }
 
 // DoIntder runs freqs intder
-func DoIntder(intder *Intder, atomNames []string, longLine, dir string) (string, []float64) {
+func DoIntder(intder *Intder, atomNames []string, longLine,
+	dir string, lin bool) (string, []float64) {
 	intder.WriteGeom(filepath.Join(dir, "freqs/intder_geom.in"), longLine)
 	RunIntder(filepath.Join(dir, "freqs/intder_geom"))
 	coords := intder.ReadGeom(filepath.Join(dir, "freqs/intder_geom.out"))
-	intder.Read9903(filepath.Join(dir, "freqs/fort.9903"))
+	// if triatomic and linear
+	intder.Read9903(filepath.Join(dir, "freqs/fort.9903"), len(atomNames) == 3 && lin)
 	intder.WriteFreqs(filepath.Join(dir, "freqs/intder.in"), atomNames)
 	RunIntder(filepath.Join(dir, "freqs/intder"))
 	intderHarms := intder.ReadOut(filepath.Join(dir, "freqs/intder.out"))

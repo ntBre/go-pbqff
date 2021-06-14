@@ -746,9 +746,8 @@ func main() {
 			fmt.Fprintf(f, "%20.12f\n", energies[i])
 		}
 		f.Close()
-		longLine := DoAnpass(anpass, prog.Dir, energies, intder)
-		coords, intderHarms := DoIntder(intder, names,
-			longLine, prog.Dir)
+		longLine, lin := DoAnpass(anpass, prog.Dir, energies, intder)
+		coords, intderHarms := DoIntder(intder, names, longLine, prog.Dir, lin)
 		spec, err := spectro.Load("spectro.in")
 		if err != nil {
 			errExit(err, "loading spectro input")
