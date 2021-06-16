@@ -24,7 +24,10 @@ type Anpass struct {
 // LoadAnpass reads a template anpass input file and stores the
 // results in an Anpass
 func LoadAnpass(filename string) (*Anpass, error) {
-	file, _ := ioutil.ReadFile(filename)
+	file, err := ioutil.ReadFile(filename)
+	if err != nil {
+		panic(err)
+	}
 	lines := strings.Split(string(file), "\n")
 	var (
 		a          Anpass
