@@ -149,6 +149,9 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 	for i = 0; scanner.Scan(); i++ {
 		line = scanner.Text()
 		switch {
+		// kill switch
+		case i == 0 && strings.Contains(strings.ToUpper(line), "PANIC"):
+			panic("panic requested in output file")
 		case i == 0 && strings.Contains(strings.ToUpper(line), "ERROR"):
 			return result, time, grad, ErrFileContainsError
 		case strings.Contains(strings.ToLower(line), "error") &&
