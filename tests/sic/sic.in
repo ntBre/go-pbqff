@@ -10,6 +10,7 @@ hoh=109.5 DEG
 }
 flags=noopt
 sleepint=1
+chunksize=69
 intder=../../../bin/intder
 anpass=../../../bin/anpass
 spectro=../../../bin/spectro

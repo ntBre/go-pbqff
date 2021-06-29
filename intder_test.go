@@ -173,6 +173,7 @@ func TestConvertCart(t *testing.T) {
 		cart       string
 		intderFile string
 		want       []string
+		match      bool
 	}{
 		{
 			msg: "Columns in right order",
@@ -204,15 +205,27 @@ func TestConvertCart(t *testing.T) {
 			intderFile: "testfiles/load/intder.signs",
 			want:       []string{"O", "C", "H", "H"},
 		},
+		{
+			msg: "nomatch",
+			cart: `     H          0.000000000   -2.393101439   -2.390871871
+     S          0.000000000    0.086966784   -1.813648935
+     S          0.000000000   -0.011729646    1.888815977
+`,
+			intderFile: "testfiles/load/ally.in",
+			want:       []string{"H", "S", "S"},
+			match:      true,
+		},
 	}
-
 	for _, test := range tests {
+		tmp := *nomatch
+		*nomatch = test.match
 		i, _ := LoadIntder(test.intderFile)
 		got := i.ConvertCart(test.cart)
 		want := test.want
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("ConvertCart(%s): got %v, wanted %v\n", test.msg, got, want)
 		}
+		*nomatch = tmp
 	}
 
 	t.Run("dummy atom in intder", func(t *testing.T) {

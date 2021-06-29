@@ -317,6 +317,9 @@ func SwapStr(swaps [][]int, strs []string, format string) []string {
 // the order of the source lines that will match that
 // of the destination
 func MatchPattern(dst, src [][]int) (swaps [][]int, order []int, ok bool) {
+	if *nomatch {
+		return nil, nil, true
+	}
 	for s := 0; s < 6; s++ {
 		switch {
 		// first time dont swap
@@ -363,6 +366,9 @@ func CheckPattern(dst, src [][]int) (order []int) {
 
 // ApplyPattern applies an ordering to a slice of strings
 func ApplyPattern(ord []int, lines []string) (ordered []string) {
+	if ord == nil {
+		return lines
+	}
 	for i := range ord {
 		ordered = append(ordered, lines[ord[i]])
 	}
