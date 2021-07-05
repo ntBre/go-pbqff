@@ -649,7 +649,9 @@ func main() {
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
 	}
-	cur, max := GetCPULimit() // run after initialize so output goes to file
+	// run after initialize so output goes to file
+	fmt.Printf("pbqff version: %s\ncompiled at %s\n", VERSION, COMP_TIME)
+	cur, max := GetCPULimit()
 	fmt.Printf("Maximum CPU time (s):\n\tCur: %d\n\tMax: %d\n", cur, max)
 	var (
 		mpHarm    []float64

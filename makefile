@@ -35,4 +35,5 @@ clean:
 	rm -rf tests/cart/fort.* tests/cart/spectro.out
 
 build: *.go
+	./scripts/version.pl
 	go build .
