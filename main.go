@@ -650,7 +650,10 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 	// run after initialize so output goes to file
+	// TODO is this part of the initialization?
 	fmt.Printf("pbqff version: %s\ncompiled at %s\n", VERSION, COMP_TIME)
+	fmt.Printf("\nRun started at %s under PID %d\n",
+		time.Now().Format("Mon Jan 2, 2006 at 15:04:05"), os.Getpid())
 	cur, max := GetCPULimit()
 	fmt.Printf("Maximum CPU time (s):\n\tCur: %d\n\tMax: %d\n", cur, max)
 	var (
