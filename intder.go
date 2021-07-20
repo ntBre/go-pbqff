@@ -474,8 +474,8 @@ func (i *Intder) WriteFreqs(filename string, names []string, lintri bool) {
 		default:
 			fmt.Fprintf(&buf, "%12s", name+num)
 		}
-		// after 6 atoms, need a newline
-		if i%6 == 0 && i > 0 {
+		// newline after 6 atoms if there are more
+		if i%5 == 0 && i > 0 && i != len(names)-1 {
 			fmt.Fprint(&buf, "\n")
 		}
 	}
