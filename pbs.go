@@ -128,13 +128,17 @@ func WritePBS(infile string, job *Job, pbs string) {
 // Submit submits the pbs script defined by filename to the queue and
 // returns the jobid
 var Submit = func(filename string) string {
+	var (
+		maxRetries = 15
+		maxTime    = 1 << maxRetries
+	)
 	// -f option to run qsub in foreground
 	cmd := exec.Command(qsub, "-f", filename)
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
-	for err != nil {
+	for i := maxRetries; i >= 0 && err != nil; i-- {
 		fmt.Printf("Submit: having trouble submitting %s with %v\n", filename, err)
-		time.Sleep(time.Second)
+		time.Sleep(time.Second * time.Duration(maxTime>>i))
 		cmd := exec.Command(qsub, "-f", filename)
 		cmd.Stderr = os.Stderr
 		out, err = cmd.Output()
