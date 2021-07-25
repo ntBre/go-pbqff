@@ -224,15 +224,11 @@ func (m Molpro) HandleOutput(filename string) (string, string, error) {
 	}
 	warn := regexp.MustCompile(`(?i)warning`)
 	error := regexp.MustCompile(`(?i)[^_]error`)
-	warned := false
 	// notify about warnings or errors in output file
 	// apparently warnings are not printed in the log
 	for _, line := range lines {
-		if warn.MatchString(line) && !warned {
-			fmt.Fprintf(os.Stderr,
-				"HandleOutput: warning found in %s, continuing\n",
-				outfile)
-			warned = true
+		if warn.MatchString(line) {
+			Warn("HandleOutput: warning %q, found in %s", line, outfile)
 		}
 		if error.MatchString(line) {
 			fmt.Fprintf(os.Stderr,

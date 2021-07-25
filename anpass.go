@@ -206,7 +206,7 @@ func GetLongLine(filename string) (string, bool) {
 			fields := strings.Fields(line)
 			if res, _ := strconv.
 				ParseFloat(fields[len(fields)-1], 64); res > resBound {
-				fmt.Fprintf(os.Stderr, "GetLongLine: warning: sum of squared"+
+				Warn("GetLongLine: sum of squared"+
 					" residuals %e greater than %e\n", res, resBound)
 			}
 		}
@@ -229,7 +229,8 @@ func RunAnpass(filename string) {
 func DoAnpass(anp *Anpass, dir string, energies []float64, intder *Intder) (string, bool) {
 	lin := anp.WriteAnpass(filepath.Join(dir, "freqs/anpass1.in"), energies, intder)
 	if lin {
-		fmt.Fprintln(os.Stderr, "warning: linear molecule detected")
+		Warn("linear molecule detected")
+		Global.Warnings++
 	}
 	RunAnpass(filepath.Join(dir, "freqs/anpass1"))
 	longLine, ok := GetLongLine(filepath.Join(dir, "freqs/anpass1.out"))

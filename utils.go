@@ -153,3 +153,10 @@ func PrettyPrint(arr []CountFloat) {
 	}
 	fmt.Print("\n")
 }
+
+// Warn prints a warning message to stdout and increments the global
+// warning counter
+func Warn(format string, a ...interface{}) {
+	fmt.Printf("warning: "+format+"\n", a...)
+	Global.Warnings++
+}

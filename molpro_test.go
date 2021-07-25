@@ -305,7 +305,7 @@ func TestReadOut(t *testing.T) {
 
 func TestHandleOutput(t *testing.T) {
 	qsub = "qsub/qsub"
-	defer func(){
+	defer func() {
 		qsub = "qsub"
 	}()
 	mp := new(Molpro)
@@ -416,7 +416,7 @@ func TestBuildPoints(t *testing.T) {
 	ts := Submit
 	Submit = dummySubmit
 	qsub = "qsub/qsub"
-	defer func(){
+	defer func() {
 		qsub = "qsub"
 		Submit = ts
 	}()

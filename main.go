@@ -31,6 +31,10 @@ import (
 	"path"
 	"runtime/pprof"
 
+	rtdebug "runtime/debug"
+
+	"runtime"
+
 	"github.com/ntBre/chemutils/spectro"
 	"github.com/ntBre/chemutils/summarize"
 )
@@ -84,8 +88,9 @@ var (
 )
 
 var Global struct {
-	Nodes  []string
-	JobNum int
+	Nodes    []string
+	JobNum   int
+	Warnings int
 }
 
 const (
@@ -130,6 +135,7 @@ func HandleSignal(sig int, timeout time.Duration) error {
 
 // Summarize prints a summary table of the vibrational frequency data
 func Summarize(zpt float64, mpHarm, idHarm, spHarm, spFund, spCorr []float64) error {
+	fmt.Print("== Results == \n\n")
 	if len(mpHarm) != len(idHarm) ||
 		len(mpHarm) != len(spHarm) ||
 		len(mpHarm) != len(spFund) ||
@@ -147,7 +153,7 @@ func Summarize(zpt float64, mpHarm, idHarm, spHarm, spFund, spCorr []float64) er
 		fmt.Printf("|%8.1f |%8.1f |%8.1f |%8.1f |%8.1f |\n",
 			mpHarm[i], idHarm[i], spHarm[i], spFund[i], spCorr[i])
 	}
-	fmt.Printf("+%8s-+%8s-+%8s-+%8s-+%8s-+\n",
+	fmt.Printf("+%8s-+%8s-+%8s-+%8s-+%8s-+\n\n",
 		"--------", "--------", "--------", "--------", "--------")
 	return nil
 }
@@ -431,19 +437,17 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 			time.Since(pollStart).Round(time.Millisecond), nJobs-norun)
 		// Termination
 		if nJobs == 0 {
-			fmt.Fprintf(os.Stderr,
-				"resubmitted %d/%d (%.1f%%),"+
-					" points execution time: %v\n",
+			fmt.Printf("resubmitted %d/%d (%.1f%%),"+
+				" points execution time: %v\n",
 				resubs, submitted,
 				float64(resubs)/float64(submitted)*100,
 				time.Since(start))
 			minutes := int(realTime) / 60
 			secRem := realTime - 60*float64(minutes)
-			fmt.Fprintf(os.Stderr,
-				"total job time (wall): %.2f sec = %dm%.2fs\n",
+			fmt.Printf("total job time (wall): %.2f sec = %dm%.2fs\n",
 				realTime, minutes, secRem)
 			for k, v := range errMap {
-				fmt.Fprintf(os.Stderr, "%v: %d occurrences\n", k, v)
+				fmt.Printf("%v: %d occurrences\n", k, v)
 			}
 			return
 		}
@@ -545,7 +549,6 @@ func initialize(infile string) (prog *Molpro, intder *Intder, anpass *Anpass) {
 	errMap = make(map[error]int)
 	paraCount = make(map[string]int)
 	Global.Nodes = PBSnodes()
-	fmt.Printf("nodes: %q\n", Global.Nodes)
 	return prog, intder, anpass
 }
 
@@ -654,8 +657,14 @@ func main() {
 	fmt.Printf("pbqff version: %s\ncompiled at %s\n", VERSION, COMP_TIME)
 	fmt.Printf("\nRun started at %s under PID %d\n",
 		time.Now().Format("Mon Jan 2, 2006 at 15:04:05"), os.Getpid())
-	cur, max := GetCPULimit()
-	fmt.Printf("Maximum CPU time (s):\n\tCur: %d\n\tMax: %d\n", cur, max)
+	cur, _ := GetCPULimit()
+	fmt.Printf("Maximum CPU time (s): %d\n", cur)
+	if *maxthreads >= 1 {
+		fmt.Printf("Maximum number of threads: %d\n", *maxthreads)
+		rtdebug.SetMaxThreads(*maxthreads)
+	}
+	fmt.Printf("Maximum number of simultaneous CPUs: %d\n", runtime.GOMAXPROCS(*maxprocs))
+	fmt.Printf("Available nodes: %q\n\n", Global.Nodes)
 	var (
 		mpHarm    []float64
 		cart      string
@@ -816,5 +825,10 @@ func main() {
 		}
 		pprof.WriteHeapProfile(f)
 		f.Close()
+	}
+	if Global.Warnings > 0 {
+		fmt.Printf("pbqff terminated with %d warnings\n", Global.Warnings)
+	} else {
+		fmt.Println("\nNormal termination of pbqff")
 	}
 }
