@@ -230,7 +230,6 @@ func DoAnpass(anp *Anpass, dir string, energies []float64, intder *Intder) (stri
 	lin := anp.WriteAnpass(filepath.Join(dir, "freqs/anpass1.in"), energies, intder)
 	if lin {
 		Warn("linear molecule detected")
-		Global.Warnings++
 	}
 	RunAnpass(filepath.Join(dir, "freqs/anpass1"))
 	longLine, ok := GetLongLine(filepath.Join(dir, "freqs/anpass1.out"))
