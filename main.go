@@ -135,7 +135,7 @@ func HandleSignal(sig int, timeout time.Duration) error {
 
 // Summarize prints a summary table of the vibrational frequency data
 func Summarize(zpt float64, mpHarm, idHarm, spHarm, spFund, spCorr []float64) error {
-	fmt.Print("== Results == \n\n")
+	fmt.Print("\n== Results == \n\n")
 	if len(mpHarm) != len(idHarm) ||
 		len(mpHarm) != len(spHarm) ||
 		len(mpHarm) != len(spFund) ||
