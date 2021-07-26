@@ -663,7 +663,10 @@ func main() {
 		fmt.Printf("Maximum number of threads: %d\n", *maxthreads)
 		rtdebug.SetMaxThreads(*maxthreads)
 	}
-	fmt.Printf("Maximum number of simultaneous CPUs: %d\n", runtime.GOMAXPROCS(*maxprocs))
+	if *maxprocs >= 1 {
+		fmt.Printf("Maximum number of simultaneous CPUs: %d\n", *maxprocs)
+		runtime.GOMAXPROCS(*maxprocs)
+	}
 	fmt.Printf("Available nodes: %q\n\n", Global.Nodes)
 	var (
 		mpHarm    []float64
