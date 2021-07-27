@@ -32,6 +32,7 @@ var (
 	count      = flag.Bool("count", false, "read the input file and print the number of calculations needed then exit")
 	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	debug      = flag.Bool("debug", false, "for debugging, print 2nd derivative energies array")
+	debugStack = flag.Bool("debugstack", false, "dump stack traces on garbage heap clears")
 	format     = flag.Bool("fmt", false, "parse existing output files and print them in anpass format")
 	freqs      = flag.Bool("freqs", false, "start from running anpass on the pts output")
 	irdy       = flag.String("irdy", "", "intder file is ready to be used in pts; specify the atom order")

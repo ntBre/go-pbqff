@@ -177,7 +177,6 @@ func (prog *Molpro) Optimize() (E0 float64) {
 		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 			err == ErrFileContainsError || err == ErrBlankOutput) ||
 			err == ErrFileNotFound {
-
 			fmt.Fprintln(os.Stderr, "resubmitting for", err)
 			Submit("opt/mp.pbs")
 		}
@@ -430,6 +429,13 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 		}
 		if heap.Len() >= Conf.Int(ChunkSize) && !*nodel {
 			heap.Dump()
+			if *debugStack {
+				fmt.Fprintf(os.Stderr, "\n\n%d goroutines:\n",
+					runtime.NumGoroutine())
+				buf := make([]byte, 1<<32)
+				byts := runtime.Stack(buf, true)
+				fmt.Fprintf(os.Stderr, "%s\n\n", buf[:byts])
+			}
 		}
 		// Progress
 		fmt.Fprintf(os.Stderr, "finished %d/%d submitted, %v polling %d jobs\n",
