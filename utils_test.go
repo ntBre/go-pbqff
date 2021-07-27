@@ -71,3 +71,69 @@ func TestTrimExt(t *testing.T) {
 		}
 	}
 }
+
+func TestMakeName(t *testing.T) {
+	tmp := Conf
+	defer func() {
+		Conf = tmp
+	}()
+	tests := []struct {
+		gtype string
+		geom  string
+		want  string
+	}{
+		{
+			gtype: "zmat",
+			geom: ` X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 XXO  3 90.0
+O  1 OX  2 XXO  4 90.0
+
+AlX = 0.85 Ang
+OX = 1.1 Ang
+XXO = 80.0 Deg
+`,
+			want: "Al2O2",
+		},
+		{
+			gtype: "zmat",
+			geom: ` X
+C 1 1.0
+O 2 co 1 90.0
+H 2 ch 1 90.0 3 180.0
+
+co=                  1.10797263 ANG
+ch=                  1.09346324 ANG
+`,
+			want: "CHO",
+		},
+		{
+			gtype: "xyz",
+			geom: ` H          0.0000000000        0.7574590974        0.5217905143
+ O          0.0000000000        0.0000000000       -0.0657441568
+ H          0.0000000000       -0.7574590974        0.5217905143
+`,
+			want: "H2O",
+		},
+		{
+			gtype: "xyz",
+			geom: ` 3
+ Comment
+ H          0.0000000000        0.7574590974        0.5217905143
+ O          0.0000000000        0.0000000000       -0.0657441568
+ H          0.0000000000       -0.7574590974        0.5217905143
+`,
+			want: "H2O",
+		},
+	}
+	for _, test := range tests {
+		got := MakeName(test.geom)
+		Conf.Set(GeomType, test.gtype)
+		want := test.want
+		if got != want {
+			t.Errorf("got %v, wanted %v\n", got, want)
+		}
+	}
+}

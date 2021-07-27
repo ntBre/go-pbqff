@@ -61,11 +61,11 @@ func MakeName(geom string) (name string) {
 		fields := strings.Fields(line)
 		// not a dummy atom and not a coordinate
 		switch {
+		case skip > 0:
+			skip--
 		case Conf.Str(GeomType) == "xyz" && len(fields) == 1:
 			// natoms line in xyz
 			skip++
-		case skip > 0:
-			skip--
 		case len(fields) >= 1 &&
 			!strings.Contains(strings.ToUpper(fields[0]), "X") &&
 			!strings.Contains(line, "="):
