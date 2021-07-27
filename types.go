@@ -8,9 +8,10 @@ type Calc struct {
 	Name     string
 	Targets  []Target
 	Result   float64
-	ID       string
+	JobID    string
+	ResubID  string
 	noRun    bool
-	CmdFile  string
+	SubFile  string
 	ChunkNum int
 	Resub    *Calc
 	Src      *Source

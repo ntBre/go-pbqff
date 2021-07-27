@@ -627,20 +627,13 @@ func SelectNode() (node, queue string) {
 // Push sends calculations to the queue
 func Push(dir string, pf, count int, calcs []Calc) []Calc {
 	subfile := fmt.Sprintf("%s/main%d.pbs", dir, pf)
-	cmdfile := fmt.Sprintf("%s/commands%d", dir, pf)
-	f, err := os.Create(cmdfile)
-	defer f.Close()
-	if err != nil {
-		msg := fmt.Sprintf("Cannot open commands file: %s with %v\n", cmdfile, err)
-		panic(msg)
-	}
+	jobs := make([]string, 0)
 	for c := range calcs {
-		calcs[c].CmdFile = cmdfile
+		calcs[c].SubFile = subfile
 		calcs[c].ChunkNum = pf
 		if !calcs[c].noRun {
 			submitted++
-			fmt.Fprintf(f, "%s %s --no-xml-output\n",
-				mapleCmd, calcs[c].Name+".inp")
+			jobs = append(jobs, calcs[c].Name+".inp")
 		} else {
 			count++
 		}
@@ -650,7 +643,8 @@ func Push(dir string, pf, count int, calcs []Calc) []Calc {
 	WritePBS(subfile,
 		&Job{
 			Name:     MakeName(Conf.Str(Geometry)) + "pts",
-			Filename: cmdfile,
+			Filename: subfile,
+			Jobs:     jobs,
 			Signal:   35,
 			Host:     node,
 			Queue:    queue,
@@ -658,7 +652,7 @@ func Push(dir string, pf, count int, calcs []Calc) []Calc {
 		}, ptsMaple)
 	jobid := Submit(subfile)
 	if *debug {
-		fmt.Println(subfile, jobid)
+		fmt.Printf("submitted %s from %s\n", jobid, subfile)
 	}
 	ptsJobs = append(ptsJobs, jobid)
 	paraJobs = append(paraJobs, jobid)
@@ -667,6 +661,10 @@ func Push(dir string, pf, count int, calcs []Calc) []Calc {
 	pf++
 	// if end reached with no calcs, which can happen on continue
 	// from checkpoints
+	for c := range calcs {
+		calcs[c].JobID = jobid
+		calcs[c].SubFile = subfile
+	}
 	return calcs
 }
 

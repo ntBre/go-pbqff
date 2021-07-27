@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
 )
 
 const (
@@ -47,6 +48,10 @@ var (
 	test       = flag.Bool("test", false, "shorten wait for signal")
 )
 
+var stackDump = func() {
+	return
+}
+
 // ParseFlags parses command line flags and returns a slice of
 // the remaining arguments
 func ParseFlags() []string {
@@ -69,6 +74,15 @@ func ParseFlags() []string {
 	}
 	if *checkpoint {
 		LoadCheckpoint()
+	}
+	if *debugStack {
+		stackDump = func() {
+			fmt.Fprintf(os.Stderr, "\n\n%d goroutines:\n",
+				runtime.NumGoroutine())
+			buf := make([]byte, 1<<32)
+			byts := runtime.Stack(buf, true)
+			fmt.Fprintf(os.Stderr, "%s\n\n", buf[:byts])
+		}
 	}
 	return flag.Args()
 }

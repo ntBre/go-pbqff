@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -20,6 +19,7 @@ var (
 type Job struct {
 	Name     string
 	Filename string
+	Jobs     []string
 	Signal   int
 	Host     string
 	Queue    string
@@ -35,8 +35,8 @@ const ptsMaple = `#!/bin/sh
 #PBS -o {{.Filename}}.out
 #PBS -W umask=022
 #PBS -l walltime=5000:00:00
-#PBS -l ncpus={{.NumJobs}}
-#PBS -l mem=64gb
+#PBS -l ncpus=1
+#PBS -l mem=8gb
 {{- if .Queue}}
 #PBS -q {{.Queue}}
 {{- end}}
@@ -53,7 +53,9 @@ mkdir -p $TMPDIR
 
 date
 hostname
-parallel --retries 5 -j {{.NumJobs}} --joblog {{.Filename}}.log --progress < {{.Filename}} 2> {{.Filename}}.prog
+{{range $j := .Jobs}}
+molpro -t 1 {{ $j }} --no-xml-output
+{{- end }}
 date
 
 rm -rf $TMPDIR
@@ -143,9 +145,7 @@ var Submit = func(filename string) string {
 		cmd.Stderr = os.Stderr
 		out, err = cmd.Output()
 	}
-	jobid := string(out)
-	jobid = strings.TrimSuffix(jobid, filepath.Ext(jobid))
-	return jobid
+	return strings.TrimSpace(string(out))
 }
 
 // PBSnodes runs the pbsnodes -a command and returns a list of free
@@ -172,7 +172,9 @@ func readPBSnodes(r io.Reader) (nodes []string) {
 		line = scanner.Text()
 		switch {
 		case line == "" || init:
-			if node != nil && (node.queue == "workq" || node.queue == "r410") && !node.busy {
+			if node != nil &&
+				(node.queue == "workq" || node.queue == "r410") &&
+				!node.busy {
 				nodes = append(nodes, node.queue+":"+node.name)
 			}
 			node = new(cnode)

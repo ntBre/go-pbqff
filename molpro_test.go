@@ -2,11 +2,11 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -411,6 +411,11 @@ func dummySubmit(s string) string {
 	return "1"
 }
 
+func dumpCalc(calcs []Calc) string {
+	byt, _ := json.MarshalIndent(calcs, "", "\t")
+	return string(byt)
+}
+
 // TODO test write=false case
 func TestBuildPoints(t *testing.T) {
 	ts := Submit
@@ -433,21 +438,24 @@ func TestBuildPoints(t *testing.T) {
 		{
 			Name:    "testfiles/read/inp/NHHH.00000",
 			Targets: []Target{{1, cf, 0}},
-			CmdFile: "testfiles/read/inp/commands0",
+			SubFile: "testfiles/read/inp/main0.pbs",
+			JobID:   "1",
 			Scale:   1},
 		{
 			Name:    "testfiles/read/inp/NHHH.00001",
 			Targets: []Target{{1, cf, 1}},
-			CmdFile: "testfiles/read/inp/commands0",
+			SubFile: "testfiles/read/inp/main0.pbs",
+			JobID:   "1",
 			Scale:   1},
 		{
 			Name:    "testfiles/read/inp/NHHH.00002",
 			Targets: []Target{{1, cf, 2}},
-			CmdFile: "testfiles/read/inp/commands0",
+			SubFile: "testfiles/read/inp/main0.pbs",
+			JobID:   "1",
 			Scale:   1},
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got\n%v, wanted\n%v", got, want)
+		t.Errorf("got\n%s, wanted\n%s", dumpCalc(got), dumpCalc(want))
 	}
 }
 
@@ -636,7 +644,7 @@ func TestPush(t *testing.T) {
 		Conf = tmp2
 	}()
 	Submit = func(str string) string {
-		return exec.Command(qsub, "-f", str).String()
+		return ""
 	}
 	paraCount = make(map[string]int)
 	Conf.Set(ChunkSize, 2)
@@ -645,34 +653,60 @@ func TestPush(t *testing.T) {
 	want := []Calc{
 		{
 			Name:     "job1",
-			CmdFile:  filepath.Join(dir, "commands0"),
+			SubFile:  filepath.Join(dir, "main0.pbs"),
 			ChunkNum: 0,
 		},
 		{
 			Name:     "job2",
-			CmdFile:  filepath.Join(dir, "commands0"),
+			SubFile:  filepath.Join(dir, "main0.pbs"),
 			ChunkNum: 0,
 		},
 		{
 			Name:     "job3",
-			CmdFile:  filepath.Join(dir, "commands1"),
+			SubFile:  filepath.Join(dir, "main1.pbs"),
 			ChunkNum: 1,
 		},
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %v, wanted %v\n", got, want)
+		t.Errorf("got %s,\n\nwanted %s\n", dumpCalc(got), dumpCalc(want))
 	}
 	var buf bytes.Buffer
 	right := filepath.Join(dir, "right")
-	fmt.Fprint(&buf,
-		"molpro -t 1 job1.inp --no-xml-output\n",
-		"molpro -t 1 job2.inp --no-xml-output\n")
+	fmt.Fprintf(&buf,
+		`#!/bin/sh
+#PBS -N Al2O2pts
+#PBS -S /bin/bash
+#PBS -j oe
+#PBS -o %s
+#PBS -W umask=022
+#PBS -l walltime=5000:00:00
+#PBS -l ncpus=1
+#PBS -l mem=8gb
+
+module load pbspro molpro
+
+export WORKDIR=$PBS_O_WORKDIR
+export TMPDIR=/tmp/$USER/$PBS_JOBID
+cd $WORKDIR
+mkdir -p $TMPDIR
+
+date
+hostname
+
+molpro -t 1 job1.inp --no-xml-output
+molpro -t 1 job2.inp --no-xml-output
+date
+
+rm -rf $TMPDIR
+`, want[0].SubFile+".out")
 	ioutil.WriteFile(right, buf.Bytes(), 0755)
-	if !compareFile(want[0].CmdFile, right) {
+	if !compareFile(want[0].SubFile, right) {
 		byt, _ := ioutil.ReadFile(right)
-		fmt.Println(string(byt))
-		byt, _ = ioutil.ReadFile(want[0].CmdFile)
-		fmt.Println(string(byt))
+		fmt.Println("wanted: ")
+		fmt.Printf("%q\n", string(byt))
+		byt, _ = ioutil.ReadFile(want[0].SubFile)
+		fmt.Println("got: ")
+		fmt.Printf("%q\n", string(byt))
 		t.Errorf("commands file mismatch\n")
 	}
 }

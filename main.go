@@ -10,6 +10,7 @@ checkint from default 100 or disable entirely by setting it to "no"
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"math"
@@ -165,8 +166,15 @@ func (prog *Molpro) Optimize() (E0 float64) {
 	// write opt.inp and mp.pbs
 	prog.WriteInput("opt/opt.inp", opt)
 	WritePBS("opt/mp.pbs",
-		&Job{MakeName(Conf.Str(Geometry)) + "-opt", "opt/opt.inp",
-			35, "", "", Conf.Int(NumJobs)}, pbsMaple)
+		&Job{
+			Name:     MakeName(Conf.Str(Geometry)) + "-opt",
+			Filename: "opt/opt.inp",
+			Jobs:     []string{"opt/opt.inp"},
+			Signal:   35,
+			Host:     "",
+			Queue:    "",
+			NumJobs:  Conf.Int(NumJobs),
+		}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit("opt/mp.pbs")
 	outfile := "opt/opt.out"
@@ -273,9 +281,49 @@ func Resubmit(name string, err error) string {
 		src.Close()
 		dst.Close()
 	}()
-	WritePBS(name+"_redo.pbs", &Job{"redo", name + "_redo.inp", 35, "", "",
-		Conf.Int(NumJobs)}, pbsMaple)
+	WritePBS(name+"_redo.pbs",
+		&Job{
+			Name:     "redo",
+			Filename: name + "_redo.inp",
+			Jobs:     []string{name + "_redo.inp"},
+			Signal:   35,
+			Host:     "",
+			Queue:    "",
+			NumJobs:  Conf.Int(NumJobs),
+		}, pbsMaple)
 	return Submit(name + "_redo.pbs")
+}
+
+// Qstat returns a map of job names to their queue status. The map
+// value is true if the job is either queued (Q) or running (R) and
+// false otherwise
+func Qstat(qstat *map[string]bool) {
+	status, _ := exec.Command("qstat", "-u", os.Getenv("USER")).CombinedOutput()
+	scanner := bufio.NewScanner(strings.NewReader(string(status)))
+	var (
+		line   string
+		fields []string
+		header = true
+	)
+	// initialize them all to false and set true if run
+	for key := range *qstat {
+		(*qstat)[key] = false
+	}
+	for scanner.Scan() {
+		line = scanner.Text()
+		if strings.Contains(line, "------") {
+			header = false
+			continue
+		} else if header {
+			continue
+		}
+		fields = strings.Fields(line)
+		if _, ok := (*qstat)[fields[0]]; ok {
+			if strings.Contains("QR", fields[9]) {
+				(*qstat)[fields[0]] = true
+			}
+		}
+	}
 }
 
 // Drain drains the queue of jobs and receives on ch when ready for
@@ -299,6 +347,7 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 		check     int = 1
 		norun     int
 	)
+	qstat := make(map[string]bool)
 	heap := new(GarbageHeap)
 	ok := true
 	var calcs []Calc
@@ -311,6 +360,10 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 			for _, c := range calcs {
 				if c.noRun {
 					norun++
+				} else {
+					// default to true and only
+					// check when no jobs finish
+					qstat[c.JobID] = true
 				}
 			}
 		}
@@ -343,8 +396,7 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 			} else if job.Resub == nil &&
 				(err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
 					err == ErrFileContainsError || err == ErrBlankOutput ||
-					(err == ErrFileNotFound && CheckLog(job.CmdFile,
-						job.Name) && CheckProg(job.CmdFile))) {
+					(err == ErrFileNotFound && !qstat[job.JobID])) {
 				// THIS DOESNT CATCH FILE EXISTS BUT IS HUNG
 				if err == ErrFileContainsError {
 					fmt.Fprintf(os.Stderr,
@@ -353,11 +405,11 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 				errMap[err]++
 				// can't use job.whatever if you want to modify the thing
 				points[i].Resub = &Calc{
-					Name: job.Name + "_redo",
-					ID:   Resubmit(job.Name, err),
+					Name:    job.Name + "_redo",
+					ResubID: Resubmit(job.Name, err),
 				}
 				resubs++
-				ptsJobs = append(ptsJobs, points[i].Resub.ID)
+				ptsJobs = append(ptsJobs, points[i].Resub.ResubID)
 			} else if job.Resub != nil {
 				// should DRY this up, inside if is
 				// same as case 3 above
@@ -417,7 +469,12 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 		}
 		if shortenBy < 1 {
 			fmt.Fprintln(os.Stderr, "Didn't shorten, sleeping")
+			Qstat(&qstat)
 			time.Sleep(time.Duration(Conf.Int(SleepInt)) * time.Second)
+		} else {
+			fmt.Fprintf(os.Stderr, "finished %d/%d submitted, %v polling %d jobs\n",
+				finished, submitted,
+				time.Since(pollStart).Round(time.Millisecond), nJobs-norun)
 		}
 		if check >= Conf.Int(CheckInt) {
 			if !nocheck {
@@ -429,18 +486,8 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 		}
 		if heap.Len() >= Conf.Int(ChunkSize) && !*nodel {
 			heap.Dump()
-			if *debugStack {
-				fmt.Fprintf(os.Stderr, "\n\n%d goroutines:\n",
-					runtime.NumGoroutine())
-				buf := make([]byte, 1<<32)
-				byts := runtime.Stack(buf, true)
-				fmt.Fprintf(os.Stderr, "%s\n\n", buf[:byts])
-			}
+			stackDump()
 		}
-		// Progress
-		fmt.Fprintf(os.Stderr, "finished %d/%d submitted, %v polling %d jobs\n",
-			finished, submitted,
-			time.Since(pollStart).Round(time.Millisecond), nJobs-norun)
 		// Termination
 		if nJobs == 0 {
 			fmt.Printf("resubmitted %d/%d (%.1f%%),"+
