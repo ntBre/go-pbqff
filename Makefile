@@ -1,5 +1,11 @@
 .PHONY: tests docs qsub molpro
 
+ifeq ($(SHORT),1)
+TESTFLAGS := -v
+else
+TESTFLAGS := -v -short
+endif
+
 qsub: qsub/*.go
 	go build -o qsub/qsub qsub/*.go
 
@@ -19,7 +25,10 @@ beta: build
 	scp -C pbqff 'woods:Programs/pbqff/beta/.'
 
 test: qsub molpro
-	go test . -v -short
+	go test . $(TESTFLAGS)
+
+bench: qsub molpro
+	go test . $(TESTFLAGS) -bench 'CheckLog|CheckProg'
 
 docs:
 	scp -r tutorial/main.pdf 'woods:Programs/pbqff/docs/tutorial.pdf'

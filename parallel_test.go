@@ -31,6 +31,15 @@ func TestCheckLog(t *testing.T) {
 	}
 }
 
+func BenchmarkCheckLog(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		CheckLog(
+			"testfiles/read/commands37.txt",
+			"pts/inp/job.0000002694",
+		)
+	}
+}
+
 func TestCheckProg(t *testing.T) {
 	tests := []struct {
 		msg     string
@@ -47,5 +56,11 @@ func TestCheckProg(t *testing.T) {
 			t.Errorf("CheckProg(%q): got %v, wanted %v\n",
 				test.msg, got, test.want)
 		}
+	}
+}
+
+func BenchmarkCheckProg(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		CheckProg("testfiles/read/commands37.txt")
 	}
 }

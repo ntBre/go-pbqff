@@ -1,19 +1,28 @@
 package main
 
 import (
-	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 )
 
-// Resubmit if the returned bools are true
+// Resubmit if the returned bools are true:
+
+// file not in logfile => job is not finished => job is running or not
+// started
+
+// numjobs < maxjobs in progfile => all jobs have been started => job
+// is running
+
+// ErrFileNotFound => job is not actually running so we need to
+// resubmit
 
 // CheckLog checks a GNU parallel log file, assuming an extension of
 // .log, for a jobname
 func CheckLog(cmdfile, jobname string) bool {
 	ext := ".log"
 	logfile := cmdfile + ext
-	logbytes, _ := ioutil.ReadFile(logfile)
+	logbytes, _ := os.ReadFile(logfile)
 	return !strings.Contains(string(logbytes), jobname)
 }
 
@@ -23,7 +32,7 @@ func CheckLog(cmdfile, jobname string) bool {
 func CheckProg(cmdfile string) bool {
 	ext := ".prog"
 	progfile := cmdfile + ext
-	logbytes, _ := ioutil.ReadFile(progfile)
+	logbytes, _ := os.ReadFile(progfile)
 	lines := strings.Split(string(logbytes), "\x0D")
 	var curjobs, maxjobs int
 	for _, line := range lines {

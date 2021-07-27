@@ -352,6 +352,17 @@ ParseFlags -> ParseInfile -> WhichCluster
 * TODO replace intder, anpass, and spectro entirely                    :HARD:
 
 * ErrFileNotFound brainstorming and eventual fix
+  - Possible states:
+    1. Job has not run yet
+       - no output file
+       - not in log file
+    2. Job currently running
+       - output file present
+       - not in log file
+    3. Job finished
+       - output file present
+       - job in log file
+
   ErrFileNotFound just means the file doesn't exist
 
   valid reasons for no existence:
@@ -376,16 +387,19 @@ ParseFlags -> ParseInfile -> WhichCluster
 
   even if you wait for one job to finish, all the other jobs meet this condition
 
-  how to differentiate between jobs that have yet to run and those that are taking too long or won't run
+  how to differentiate between jobs that have yet to run and those
+  that are taking too long or won't run
 
-  with --progress can see the number of jobs submitted
-  so if job is not in the log and #running < #numjobs some jobs have not been submitted
+  with --progress can see the number of jobs submitted, so if job is
+  not in the log and #running < #numjobs some jobs have not been
+  submitted
 
   does this offer any additional insight?
 
   identity of unsubmitted jobs is unknown as is when they may be submitted
 
-  is the "average completion time" part of the log different in the lingering file? could be something to check
+  is the "average completion time" part of the log different in the
+  lingering file? could be something to check
 
   as jobs fail to finish the average completion time does continue to increase
 
@@ -393,8 +407,10 @@ ParseFlags -> ParseInfile -> WhichCluster
 
   how to tell if job is stuck or just running?
 
-  if ErrFileNotFound && file is not in logfile && numjobs in prog is less than maxjobs, ie 3 < 8
+  if ErrFileNotFound && file is not in logfile && numjobs in prog is
+  less than maxjobs, ie 3 < 8
 
-  file not in logfile => job is not finished == job is running or not started
-  numjobs < maxjobs in progfile => all jobs have been started => job is running
-  ErrFileNotFound => job is not actually running so we need to resubmit
+  file not in logfile => job is not finished => job is running or not
+  started && numjobs < maxjobs in progfile => all jobs have been
+  started => job is running && ErrFileNotFound => job is not actually
+  running so we need to resubmit
