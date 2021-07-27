@@ -38,7 +38,7 @@ var (
 	freqs      = flag.Bool("freqs", false, "start from running anpass on the pts output")
 	irdy       = flag.String("irdy", "", "intder file is ready to be used in pts; specify the atom order")
 	maxthreads = flag.Int("maxthreads", 40, "maximum number of OS threads usable by the program. If < 1 there is no limit")
-	maxprocs   = flag.Int("maxprocs", -1, "maximum number of simultaneous OS threads. If < 1 default to number of CPUs")
+	maxprocs   = flag.Int("maxprocs", 1, "maximum number of simultaneous OS threads. If < 1 default to number of CPUs")
 	memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 	nodel      = flag.Bool("nodel", false, "don't delete used output files")
 	nomatch    = flag.Bool("nomatch", false, "SICs: use the input geometry directly in intder")
