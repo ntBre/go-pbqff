@@ -13,7 +13,8 @@ func TestWritePBS(t *testing.T) {
 		Signal:   35,
 		Host:     "",
 		Queue:    "",
-		NumJobs:  8,
+		NumCPUs:  8,
+		PBSMem:   8,
 	}
 	write := "testfiles/write/mp.pbs"
 	right := "testfiles/right/mp.pbs"

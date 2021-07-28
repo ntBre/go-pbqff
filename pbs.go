@@ -23,7 +23,8 @@ type Job struct {
 	Signal   int
 	Host     string
 	Queue    string
-	NumJobs  int
+	NumCPUs  int
+	PBSMem   int
 }
 
 const mapleCmd = `molpro -t 1`
@@ -36,7 +37,7 @@ const ptsMaple = `#!/bin/sh
 #PBS -W umask=022
 #PBS -l walltime=5000:00:00
 #PBS -l ncpus=1
-#PBS -l mem=8gb
+#PBS -l mem={{.PBSMem}}gb
 {{- if .Queue}}
 #PBS -q {{.Queue}}
 {{- end}}

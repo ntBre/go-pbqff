@@ -31,7 +31,8 @@ const (
 	ChunkSize
 	CheckInt
 	SleepInt
-	NumJobs
+	NumCPUs
+	PBSMem
 	IntderCmd
 	AnpassCmd
 	SpectroCmd
@@ -59,7 +60,8 @@ func (k Key) String() string {
 		"ChunkSize",
 		"CheckInt",
 		"SleepInt",
-		"NumJobs",
+		"NumCPUs",
+		"PBSMem",
 		"IntderCmd",
 		"AnpassCmd",
 		"SpectroCmd",
@@ -362,8 +364,13 @@ func NewConfig() Config {
 			Extract: IntKeyword,
 			Value:   60,
 		},
-		NumJobs: {
-			Re:      regexp.MustCompile(`(?i)numjobs=`),
+		NumCPUs: {
+			Re:      regexp.MustCompile(`(?i)numcpus=`),
+			Extract: IntKeyword,
+			Value:   1,
+		},
+		PBSMem: {
+			Re:      regexp.MustCompile(`(?i)pbsmem=`),
 			Extract: IntKeyword,
 			Value:   8,
 		},

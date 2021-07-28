@@ -648,7 +648,8 @@ func Push(dir string, pf, count int, calcs []Calc) []Calc {
 			Signal:   35,
 			Host:     node,
 			Queue:    queue,
-			NumJobs:  Conf.Int(NumJobs),
+			NumCPUs:  Conf.Int(NumCPUs),
+			PBSMem:   Conf.Int(PBSMem),
 		}, ptsMaple)
 	jobid := Submit(subfile)
 	if *debug {

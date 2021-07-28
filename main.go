@@ -173,7 +173,8 @@ func (prog *Molpro) Optimize() (E0 float64) {
 			Signal:   35,
 			Host:     "",
 			Queue:    "",
-			NumJobs:  Conf.Int(NumJobs),
+			NumCPUs:  Conf.Int(NumCPUs),
+			PBSMem:   Conf.Int(PBSMem),
 		}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit("opt/mp.pbs")
@@ -218,7 +219,8 @@ func (prog *Molpro) RefEnergy() (E0 float64) {
 			Name:     MakeName(Conf.Str(Geometry)) + "-ref",
 			Filename: infile,
 			Signal:   35,
-			NumJobs:  Conf.Int(NumJobs),
+			NumCPUs:  Conf.Int(NumCPUs),
+			PBSMem:   Conf.Int(PBSMem),
 		}, pbsMaple)
 	// submit opt, wait for it to finish in main goroutine - block
 	Submit(pbsfile)
@@ -249,7 +251,8 @@ func (prog *Molpro) Frequency(absPath string) []float64 {
 			Name:     MakeName(Conf.Str(Geometry)) + "-freq",
 			Filename: inp,
 			Signal:   35,
-			NumJobs:  Conf.Int(NumJobs),
+			NumCPUs:  Conf.Int(NumCPUs),
+			PBSMem:   Conf.Int(PBSMem),
 		}, pbsMaple)
 	// submit freq, wait in separate goroutine
 	// doesn't matter if this finishes
@@ -289,7 +292,8 @@ func Resubmit(name string, err error) string {
 			Signal:   35,
 			Host:     "",
 			Queue:    "",
-			NumJobs:  Conf.Int(NumJobs),
+			NumCPUs:  Conf.Int(NumCPUs),
+			PBSMem:   Conf.Int(PBSMem),
 		}, pbsMaple)
 	return Submit(name + "_redo.pbs")
 }
