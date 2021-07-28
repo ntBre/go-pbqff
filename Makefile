@@ -28,7 +28,7 @@ test: qsub molpro
 	go test . $(TESTFLAGS)
 
 bench: qsub molpro
-	go test . $(TESTFLAGS) -bench 'CheckLog|CheckProg'
+	go test . $(TESTFLAGS) -bench 'CheckLog|CheckProg|ReadOut'
 
 docs:
 	scp -r tutorial/main.pdf 'woods:Programs/pbqff/docs/tutorial.pdf'

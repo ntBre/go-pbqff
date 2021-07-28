@@ -303,6 +303,15 @@ func TestReadOut(t *testing.T) {
 	}
 }
 
+func BenchmarkReadOut(b *testing.B) {
+	m := Molpro{}
+	// msg:      "Normal success",
+	filename := "testfiles/read/good.out"
+	for i := 0; i < b.N; i++ {
+		m.ReadOut(filename)
+	}
+}
+
 func TestHandleOutput(t *testing.T) {
 	qsub = "qsub/qsub"
 	defer func() {

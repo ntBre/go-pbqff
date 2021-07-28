@@ -9,3 +9,4 @@
 /tests/*/spectro*.out
 /tests/*/spectro2.in
 /tests/sic/freqs/
+/pbqff.test
