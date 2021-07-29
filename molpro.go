@@ -157,9 +157,12 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 		case strings.Contains(strings.ToLower(line), "error") &&
 			ErrorLine.MatchString(line):
 			return result, time, grad, ErrFileContainsError
-		case Conf.RE(EnergyLine).MatchString(line) &&
+			// since we assume the line contains an '='
+			// below, gate the regex match with that
+		case strings.Contains(line, "=") &&
 			!strings.Contains(line, "gthresh") &&
-			!strings.Contains(line, "hf"):
+			!strings.Contains(line, "hf") &&
+			Conf.RE(EnergyLine).MatchString(line):
 			split := strings.Fields(line)
 			for i := range split {
 				if strings.Contains(split[i], "=") {
