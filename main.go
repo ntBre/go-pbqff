@@ -159,8 +159,6 @@ func Summarize(zpt float64, mpHarm, idHarm, spHarm, spFund, spCorr []float64) er
 	return nil
 }
 
-// WhichCluster sets the PBS template and energyLine depending on the
-// which computer is to be used
 // Optimize runs a Molpro optimization in the opt directory
 func (prog *Molpro) Optimize() (E0 float64) {
 	// write opt.inp and mp.pbs
@@ -199,7 +197,6 @@ func (prog *Molpro) Optimize() (E0 float64) {
 // RefEnergy runs a Molpro single point energy calculation in the
 // pts/inp directory
 func (prog *Molpro) RefEnergy() (E0 float64) {
-	// TODO use filepath
 	dir := filepath.Join(prog.Dir, "pts/inp/")
 	infile := filepath.Join(dir, "ref.inp")
 	pbsfile := filepath.Join(dir, "ref.pbs")
