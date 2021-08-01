@@ -5,8 +5,9 @@ geometry={
 O
 H 1 oh
 H 1 oh 2 hoh
-oh=1.0 ANG
-hoh=109.5 DEG
+OH=                  0.95861424 ANG
+HOH=               104.40102058 DEG
+
 }
 flags=noopt
 sleepint=1

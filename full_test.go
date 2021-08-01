@@ -92,7 +92,7 @@ func TestCart(t *testing.T) {
 	prog, _, _ := initialize("tests/cart/cart.in")
 	prog.FormatCart(Conf.Str(Geometry))
 	cart := prog.Geometry
-	E0 := prog.RefEnergy()
+	E0 := prog.Run(none)
 	names, coords := XYZGeom(cart)
 	natoms := len(names)
 	ncoords := len(coords)

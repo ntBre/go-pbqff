@@ -159,114 +159,58 @@ func Summarize(zpt float64, mpHarm, idHarm, spHarm, spFund, spCorr []float64) er
 	return nil
 }
 
-// Optimize runs a Molpro optimization in the opt directory
-func (prog *Molpro) Optimize() (E0 float64) {
-	// write opt.inp and mp.pbs
-	prog.WriteInput("opt/opt.inp", opt)
-	WritePBS("opt/mp.pbs",
-		&Job{
-			Name:     MakeName(Conf.Str(Geometry)) + "-opt",
-			Filename: "opt/opt.inp",
-			Jobs:     []string{"opt/opt.inp"},
-			Signal:   35,
-			Host:     "",
-			Queue:    "",
-			NumCPUs:  Conf.Int(NumCPUs),
-			PBSMem:   Conf.Int(PBSMem),
-		}, pbsMaple)
-	// submit opt, wait for it to finish in main goroutine - block
-	Submit("opt/mp.pbs")
-	outfile := "opt/opt.out"
-	_, _, _, err := prog.ReadOut(outfile)
-	for err != nil {
-		HandleSignal(35, time.Minute)
-		E0, _, _, err = prog.ReadOut(outfile)
-		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
-			err == ErrFileContainsError || err == ErrBlankOutput) ||
-			err == ErrFileNotFound {
-			fmt.Fprintln(os.Stderr, "resubmitting for", err)
-			Submit("opt/mp.pbs")
-		}
+// Run runs a single Molpro calculation. The type of calculation is
+// determined by proc. opt calls for a geometry optimization, freq
+// calls for a harmonic frequency calculation, and none calls for a
+// single point
+func (prog *Molpro) Run(proc Procedure) (E0 float64) {
+	var (
+		dir  string
+		name string
+	)
+	switch proc {
+	case opt:
+		dir = "opt"
+		name = "opt"
+	case freq:
+		dir = "freq"
+		name = "freq"
+	case none:
+		dir = "pts/inp"
+		name = "ref"
 	}
-	return
-}
-
-// This should be combined with optimize; if DoOpt, optimize, but both
-// are used as references
-
-// RefEnergy runs a Molpro single point energy calculation in the
-// pts/inp directory
-func (prog *Molpro) RefEnergy() (E0 float64) {
-	dir := filepath.Join(prog.Dir, "pts/inp/")
-	infile := filepath.Join(dir, "ref.inp")
-	pbsfile := filepath.Join(dir, "ref.pbs")
-	outfile := filepath.Join(dir, "ref.out")
-	E0, _, _, err := prog.ReadOut(dir + outfile)
-	wait := time.Minute
+	dir = filepath.Join(prog.Dir, dir)
+	infile := filepath.Join(dir, name+".inp")
+	pbsfile := filepath.Join(dir, name+".pbs")
+	outfile := filepath.Join(dir, name+".out")
+	E0, _, _, err := prog.ReadOut(outfile)
 	if *read && err == nil {
 		return
 	}
-	if *test {
-		wait = time.Second
-	}
-
-	prog.WriteInput(infile, none)
+	prog.WriteInput(infile, proc)
 	WritePBS(pbsfile,
 		&Job{
-			Name:     MakeName(Conf.Str(Geometry)) + "-ref",
+			Name: fmt.Sprintf("%s-%s",
+				MakeName(Conf.Str(Geometry)), proc),
 			Filename: infile,
-			Signal:   35,
 			NumCPUs:  Conf.Int(NumCPUs),
 			PBSMem:   Conf.Int(PBSMem),
 		}, pbsMaple)
-	// submit opt, wait for it to finish in main goroutine - block
-	Submit(pbsfile)
-	for err != nil {
-		HandleSignal(35, wait)
+	jobid := Submit(pbsfile)
+	jobMap := make(map[string]bool)
+	jobMap[jobid] = false
+	// only wait for opt and ref to run
+	for proc != freq && err != nil {
 		E0, _, _, err = prog.ReadOut(outfile)
-		if (err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
-			err == ErrFileContainsError || err == ErrBlankOutput) ||
-			err == ErrFileNotFound {
-
-			fmt.Fprintf(os.Stderr, "resubmitting %s for %v\n",
-				pbsfile, err)
-			Submit(pbsfile)
+		Qstat(&jobMap)
+		if err == ErrFileNotFound && !jobMap[jobid] {
+			fmt.Fprintf(os.Stderr, "resubmitting %s for %v\n", pbsfile, err)
+			jobid = Submit(pbsfile)
+			jobMap[jobid] = false
 		}
+		time.Sleep(time.Duration(Conf.Int(SleepInt)) * time.Second)
 	}
 	return
-}
-
-// Frequency runs a Molpro harmonic frequency calculation in the freq
-// directory
-func (prog *Molpro) Frequency(absPath string) []float64 {
-	// write freq.inp and that mp.pbs
-	inp := filepath.Join(absPath, "freq.inp")
-	pbs := filepath.Join(absPath, "mp.pbs")
-	prog.WriteInput(inp, freq)
-	WritePBS(pbs,
-		&Job{
-			Name:     MakeName(Conf.Str(Geometry)) + "-freq",
-			Filename: inp,
-			Signal:   35,
-			NumCPUs:  Conf.Int(NumCPUs),
-			PBSMem:   Conf.Int(PBSMem),
-		}, pbsMaple)
-	// submit freq, wait in separate goroutine
-	// doesn't matter if this finishes
-	Submit(pbs)
-	outfile := filepath.Join(absPath, "freq.out")
-	_, _, _, err := prog.ReadOut(outfile)
-	for err != nil {
-		HandleSignal(35, time.Minute)
-		_, _, _, err = prog.ReadOut(outfile)
-		// dont resubmit freq
-		if err == ErrEnergyNotParsed || err == ErrFinishedButNoEnergy ||
-			err == ErrFileContainsError {
-			fmt.Fprintln(os.Stderr, "error in freq, aborting that calculation")
-			return nil
-		}
-	}
-	return prog.ReadFreqs(outfile)
 }
 
 // Resubmit copies the input file associated with name to
@@ -286,7 +230,6 @@ func Resubmit(name string, err error) string {
 			Name:     "redo",
 			Filename: name + "_redo.inp",
 			Jobs:     []string{name + "_redo.inp"},
-			Signal:   35,
 			Host:     "",
 			Queue:    "",
 			NumCPUs:  Conf.Int(NumCPUs),
@@ -744,16 +687,13 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		E0 = prog.Optimize()
+		E0 = prog.Run(opt)
 		cart, zmat, err = prog.HandleOutput("opt/opt")
 		if err != nil {
 			panic(err)
 		}
 		prog.UpdateZmat(zmat)
-		go func() {
-			absPath, _ := filepath.Abs("freq")
-			mpHarm = prog.Frequency(absPath)
-		}()
+		prog.Run(freq)
 	} else {
 		if !strings.Contains("cart,xyz", Conf.Str(GeomType)) {
 			panic("expecting cartesian geometry")
@@ -765,7 +705,7 @@ func main() {
 		cart = prog.Geometry
 		// only required for cartesians
 		if DoCart() {
-			E0 = prog.RefEnergy()
+			E0 = prog.Run(none)
 		}
 	}
 
@@ -829,10 +769,11 @@ func main() {
 		if err != nil {
 			errExit(err, "running spectro")
 		}
-		if mpHarm == nil {
+		mpHarm = prog.ReadFreqs("freqs/freq.out")
+		res := summarize.Spectro(filepath.Join("freqs", "spectro2.out"))
+		if mpHarm == nil || len(mpHarm) < len(res.Harm) {
 			mpHarm = make([]float64, spec.Nfreqs)
 		}
-		res := summarize.Spectro(filepath.Join("freqs", "spectro2.out"))
 		Summarize(res.ZPT, mpHarm, intderHarms, res.Harm, res.Fund, res.Corr)
 	} else {
 		N3N := natoms * 3 // from spectro manual pg 12

@@ -207,7 +207,7 @@ func GetLongLine(filename string) (string, bool) {
 			if res, _ := strconv.
 				ParseFloat(fields[len(fields)-1], 64); res > resBound {
 				Warn("GetLongLine: sum of squared"+
-					" residuals %e greater than %e\n", res, resBound)
+					" residuals %e greater than %e", res, resBound)
 			}
 		}
 		lastLine = line

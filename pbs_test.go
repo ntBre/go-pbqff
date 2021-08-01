@@ -10,7 +10,6 @@ func TestWritePBS(t *testing.T) {
 	p := Job{
 		Name:     "Al2O2",
 		Filename: "opt.inp",
-		Signal:   35,
 		Host:     "",
 		Queue:    "",
 		NumCPUs:  8,

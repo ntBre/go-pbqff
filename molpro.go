@@ -23,8 +23,13 @@ const (
 )
 
 // Procedure defines a type of molpro calculation. This includes
-// optimization (opt) and frequencies (freq).
+// optimization (opt), harmonic frequency (freq), and single point
+// (none)
 type Procedure int
+
+func (p Procedure) String() string {
+	return []string{"opt", "freq", "ref"}[p]
+}
 
 // Molpro holds the data for writing molpro input files
 type Molpro struct {
@@ -281,7 +286,7 @@ func (m Molpro) ReadFreqs(filename string) (freqs []float64) {
 	f, err := os.Open(filename)
 	defer f.Close()
 	if err != nil {
-		panic(err)
+		return
 	}
 	scanner := bufio.NewScanner(f)
 	var line string
@@ -648,7 +653,6 @@ func Push(dir string, pf, count int, calcs []Calc) []Calc {
 			Name:     MakeName(Conf.Str(Geometry)) + "pts",
 			Filename: subfile,
 			Jobs:     jobs,
-			Signal:   35,
 			Host:     node,
 			Queue:    queue,
 			NumCPUs:  Conf.Int(NumCPUs),

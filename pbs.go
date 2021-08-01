@@ -20,7 +20,6 @@ type Job struct {
 	Name     string
 	Filename string
 	Jobs     []string
-	Signal   int
 	Host     string
 	Queue    string
 	NumCPUs  int
@@ -130,7 +129,7 @@ func WritePBS(infile string, job *Job, pbs string) {
 
 // Submit submits the pbs script defined by filename to the queue and
 // returns the jobid
-var Submit = func(filename string) string {
+var Submit = func(filename string) (jobid string) {
 	var (
 		maxRetries = 15
 		maxTime    = 1 << maxRetries
