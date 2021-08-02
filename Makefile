@@ -18,6 +18,9 @@ experiment:
 cover:
 	go test . -v -coverprofile=/tmp/pbqff.out; go tool cover -html /tmp/pbqff.out
 
+profcart:
+	go test . -v -short -run '^TestCart$$' -cpuprofile=/tmp/cart.prof
+
 deploy: build
 	scp -C pbqff 'woods:Programs/pbqff/.'
 
