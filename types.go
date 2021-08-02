@@ -95,5 +95,7 @@ func (g *GarbageHeap) Dump() {
 	g.heap = []string{}
 }
 
+// Program will be an interface for using different quantum chemical
+// programs in the place of Molpro. TODO
 type Program interface {
 }

@@ -88,6 +88,7 @@ var (
 	ErrorLine        = regexp.MustCompile(`(?i)[^_]error`)
 )
 
+// Global is a structure for holding global variables
 var Global struct {
 	Nodes    []string
 	JobNum   int
@@ -476,14 +477,20 @@ func queueClear(jobs []string) error {
 	return err
 }
 
+// CartPoints returns the number of points required for a Cartesian
+// force field with n coordinates
 func CartPoints(n int) int {
 	return 2 * n * (n*n*n + 2*n*n + 8*n + 1) / 3
 }
 
+// GradPoints returns the number of points required for a Cartesian
+// gradient force field with n coordinates
 func GradPoints(n int) int {
 	return n * (4*n*n + 12*n + 8) / 3
 }
 
+// DupOutErr uses syscall.Dup2 to direct the stdout and stderr streams
+// to files
 func DupOutErr(infile string) {
 	// set up output and err files and dup their fds to stdout and stderr
 	// https://github.com/golang/go/issues/325

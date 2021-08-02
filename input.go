@@ -11,6 +11,7 @@ type Regexp struct {
 	Name Key
 }
 
+// ProcessInput extracts keywords from a line of input
 func ProcessInput(line string) {
 	for k, kword := range Conf {
 		if kword.Extract != nil &&

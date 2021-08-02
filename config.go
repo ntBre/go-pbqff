@@ -93,12 +93,14 @@ func (k Key) String() string {
 // doing anyway, and the main advantage was not having to do the type
 // casting myself.
 
+// Keyword is a type for config keywords
 type Keyword struct {
 	Re      *regexp.Regexp
 	Extract func(string) interface{}
 	Value   interface{}
 }
 
+// Config is an alias for an array of keywords
 type Config [NumKeys]Keyword
 
 // At returns the Value of c at k
@@ -111,22 +113,27 @@ func (c *Config) Set(k Key, val interface{}) {
 	(*c)[k].Value = val
 }
 
+// Str casts a keyword to a string
 func (c *Config) Str(k Key) string {
 	return (*c)[k].Value.(string)
 }
 
+// Float casts a keyword to a float64
 func (c *Config) Float(k Key) float64 {
 	return (*c)[k].Value.(float64)
 }
 
+// FlSlice casts a keyword to a slice of float64
 func (c *Config) FlSlice(k Key) []float64 {
 	return (*c)[k].Value.([]float64)
 }
 
+// Int casts a keyword to an int
 func (c *Config) Int(k Key) int {
 	return (*c)[k].Value.(int)
 }
 
+// RE casts a keyword to a *regexp.Regexp
 func (c *Config) RE(k Key) *regexp.Regexp {
 	return (*c)[k].Value.(*regexp.Regexp)
 }
@@ -254,10 +261,12 @@ func kwpanic(str string, err error) {
 	)
 }
 
+// StringKeyword just returns its argument
 func StringKeyword(str string) interface{} {
 	return str
 }
 
+// FloatKeyword returns its argument parsed to a float64
 func FloatKeyword(str string) interface{} {
 	f, err := strconv.ParseFloat(str, 64)
 	if err != nil {
@@ -266,6 +275,7 @@ func FloatKeyword(str string) interface{} {
 	return f
 }
 
+// IntKeyword returns its argument parsed to an int
 func IntKeyword(str string) interface{} {
 	v, err := strconv.Atoi(str)
 	if err != nil {
@@ -274,6 +284,7 @@ func IntKeyword(str string) interface{} {
 	return v
 }
 
+// NewConfig returns a Config with all of the default options set
 func NewConfig() Config {
 	return Config{
 		Cluster: {

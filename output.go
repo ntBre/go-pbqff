@@ -25,7 +25,7 @@ func Subtract(a, b []float64) []float64 {
 // ANPASS-style summary of their displacments and energies
 func FormatOutput(dir string) {
 	refCoords, refEnergy := ParseOutput(dir+"ref.out", true)
-	for _ = range refCoords {
+	for range refCoords {
 		fmt.Printf("%10.6f", 0.0)
 	}
 	fmt.Printf("%20.12f\n", 0.0)
@@ -43,7 +43,7 @@ func FormatOutput(dir string) {
 	}
 }
 
-// ParseReference reads pts/inp/ref.out and returns the reference
+// ParseOutput reads pts/inp/ref.out and returns the reference
 // geometry and reference energy
 func ParseOutput(file string, comment bool) (coords []float64, energy float64) {
 	infile, err := os.Open(file)
