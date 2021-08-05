@@ -31,31 +31,72 @@ var (
 )
 
 func TestPattern(t *testing.T) {
-	t.Run("first test", func(t *testing.T) {
-		got, _ := Pattern(text, 0, false)
-		want := [][]int{
-			[]int{2, 1, 1},
-			[]int{4, 2, 1},
-			[]int{1, 2, 1},
-			[]int{2, 4, 1},
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("got %v, wanted %v\n", got, want)
-		}
-	})
-
-	t.Run("second test", func(t *testing.T) {
-		got, _ := Pattern(text1, 0, false)
-		want := [][]int{
-			[]int{4, 2, 1},
-			[]int{1, 2, 1},
-			[]int{2, 1, 1},
-			[]int{2, 4, 1},
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("got %v, wanted %v\n", got, want)
-		}
-	})
+	tests := []struct {
+		msg    string
+		want   [][]int
+		inp    string
+		ndummy int
+		negate bool
+	}{
+		{
+			msg: "first test",
+			want: [][]int{
+				{2, 1, 1},
+				{4, 2, 1},
+				{1, 2, 1},
+				{2, 4, 1},
+			},
+			inp: `0.000000000        2.391678166        0.000000000
+     -2.274263181        0.000000000        0.000000000
+      2.274263181        0.000000000        0.000000000
+      0.000000000       -2.391678166        0.000000000
+`,
+			ndummy: 0,
+			negate: false,
+		},
+		{
+			msg: "second test",
+			want: [][]int{
+				{4, 2, 1},
+				{1, 2, 1},
+				{2, 1, 1},
+				{2, 4, 1},
+			},
+			inp: `-1.2426875991        0.0000000000        0.0000000000
+          1.2426875991        0.0000000000        0.0000000000
+          0.0000000000        1.3089084707        0.0000000000
+          0.0000000000       -1.3089084707        0.0000000000
+`,
+			ndummy: 0,
+			negate: false,
+		},
+		{
+			msg: "not working",
+			want: [][]int{
+				{1, 2, 5},
+				{1, 4, 4},
+				{1, 3, 3},
+				{1, 5, 1},
+				{1, 1, 2},
+			},
+			inp: `      0.000000000        1.338056698       -3.132279476
+      0.000000000       -0.112155251       -2.059535480
+      0.000000000        0.015124412        1.148256948
+      0.000000000       -2.612344930        2.549883346
+      0.000000000        2.649704220        2.536471967
+`,
+			ndummy: 0,
+			negate: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.msg, func(t *testing.T) {
+			got, _ := Pattern(test.inp, test.ndummy, test.negate)
+			if !reflect.DeepEqual(got, test.want) {
+				t.Errorf("got %v, wanted %v\n", got, test.want)
+			}
+		})
+	}
 }
 
 func TestSwap(t *testing.T) {
@@ -332,19 +373,59 @@ func TestRunIntder(t *testing.T) {
 	}, false)
 }
 
+func diffIntder(a, b *Intder) string {
+	switch {
+	case a.Name != b.Name:
+		fmt.Printf("got %v, wanted %v", a.Name, b.Name)
+		return "name mismatch"
+	case a.Head != b.Head:
+		fmt.Printf("got %v, wanted %v", a.Head, b.Head)
+		return "head mismatch"
+	case a.Geometry != b.Geometry:
+		return "geometry mismatch"
+	case a.Tail != b.Tail:
+		return "tail mismatch"
+	case !reflect.DeepEqual(a.Pattern, b.Pattern):
+		return "pattern mismatch"
+	case !reflect.DeepEqual(a.Dummies, b.Dummies):
+		return "dummies mismatch"
+	default:
+		panic("looks the same to me")
+	}
+}
+
 func TestLoadIntder(t *testing.T) {
-	got, _ := LoadIntder("testfiles/load/intder.full")
-	data, err := ioutil.ReadFile("testfiles/right/intder.full.json")
-	if err != nil {
-		panic(err)
+	tests := []struct {
+		infile  string
+		outfile string
+	}{
+		{
+			infile:  "testfiles/load/intder.full",
+			outfile: "testfiles/right/intder.full.json",
+		},
+		{
+			infile:  "testfiles/load/intder.nosic",
+			outfile: "testfiles/right/intder.nosic.json",
+		},
 	}
-	want := new(Intder)
-	err = json.Unmarshal(data, want)
-	if err != nil {
-		panic(err)
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %v, wanted %v\n", got, want)
+	for _, test := range tests {
+		got, _ := LoadIntder(test.infile)
+		data, err := ioutil.ReadFile(test.outfile)
+		if err != nil {
+			panic(err)
+		}
+		want := new(Intder)
+		err = json.Unmarshal(data, want)
+		if err != nil {
+			panic(err)
+		}
+		if !reflect.DeepEqual(got, want) {
+			want.WritePts("/tmp/want.intder")
+			got.WritePts("/tmp/got.intder")
+			t.Errorf("%s: (diff %q %q)\n",
+				diffIntder(got, want),
+				"/tmp/want.intder", "/tmp/got.intder")
+		}
 	}
 }
 

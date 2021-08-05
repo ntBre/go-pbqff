@@ -197,6 +197,7 @@ func LoadIntder(filename string) (*Intder, error) {
 	i.Name = filename
 	// end of symmetry internal coordinates
 	eosic := regexp.MustCompile(`(?U)^\s+0\s*$`)
+	carts := regexp.MustCompile(`^(\s+-?\d+\.\d+(\s+|$)){3}`)
 	head := true
 	c := 0
 	for scanner.Scan() {
@@ -207,12 +208,18 @@ func LoadIntder(filename string) (*Intder, error) {
 			// IOPT(8) NDUM - intder manual pg 5
 			ndummy, _ = strconv.Atoi(fields[7])
 		}
-		if head && eosic.MatchString(line) {
-			fmt.Fprintln(&buf, line)
-			i.Head = buf.String()
-			head = false
-			buf.Reset()
-			continue
+		if head {
+			if eosic.MatchString(line) {
+				fmt.Fprintln(&buf, line)
+				i.Head = buf.String()
+				head = false
+				buf.Reset()
+				continue
+			} else if carts.MatchString(line) {
+				i.Head = buf.String()
+				head = false
+				buf.Reset()
+			}
 		}
 		if strings.Contains(line, "DISP") {
 			geom = buf.String()
