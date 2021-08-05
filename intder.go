@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -629,7 +628,7 @@ func (i *Intder) Read9903(filename string, lintri bool) {
 func RunIntder(filename string) {
 	err := RunProgram(Conf.Str(IntderCmd), filename)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 }
 

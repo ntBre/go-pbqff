@@ -46,7 +46,8 @@ func RunProgram(progName, filename string) (err error) {
 	}
 	err = cmd.Run()
 	if err != nil {
-		fmt.Println("RunProgram: running cmd")
+		fmt.Fprintf(os.Stderr, "RunProgram: running %q on %q\n",
+			progName, filename)
 		return err
 	}
 	return nil
