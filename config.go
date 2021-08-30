@@ -398,7 +398,11 @@ func NewConfig() Config {
 			Extract: StringKeyword,
 		},
 		EnergyLine: {
+			Re:    regexp.MustCompile(`(?i)energyline=`),
 			Value: regexp.MustCompile(`energy=`),
+			Extract: func(s string) interface{} {
+				return regexp.MustCompile(s)
+			},
 		},
 		MolproTmpl: {
 			Re:      regexp.MustCompile(`(?i)molprotmpl=`),

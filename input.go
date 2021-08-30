@@ -15,6 +15,7 @@ type Regexp struct {
 func ProcessInput(line string) {
 	for k, kword := range Conf {
 		if kword.Extract != nil &&
+			kword.Re != nil &&
 			kword.Re.MatchString(line) {
 			split := strings.SplitN(line, "=", 2)
 			Conf[Key(k)].Value =
