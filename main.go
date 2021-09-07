@@ -356,12 +356,6 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 				resubs++
 				ptsJobs = append(ptsJobs, points[i].Resub.ResubID)
 			} else if job.Resub != nil {
-				// should DRY this up, inside if is
-				// same as case 3 above
-				// should also check if resubmitted
-				// job has finished with qsub and set
-				// pointer to nil if it has without
-				// success
 				if energy, t, gradients,
 					err = prog.ReadOut(job.Resub.Name +
 					".out"); err == nil {
