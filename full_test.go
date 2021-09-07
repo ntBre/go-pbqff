@@ -51,7 +51,7 @@ func TestSIC(t *testing.T) {
 	if err != nil {
 		errExit(err, "running spectro")
 	}
-	res := summarize.Spectro(
+	res := summarize.SpectroFile(
 		filepath.Join("tests/sic/", "freqs", "spectro2.out"))
 	want := []float64{3753.2, 3656.5, 1598.8}
 	if !compfloat(res.Corr, want, 1e-1) {
@@ -122,7 +122,7 @@ func TestCart(t *testing.T) {
 	if err != nil {
 		errExit(err, "running spectro")
 	}
-	res := summarize.Spectro(filepath.Join(prog.Dir, "spectro2.out"))
+	res := summarize.SpectroFile(filepath.Join(prog.Dir, "spectro2.out"))
 	want := []float64{3753.2, 3656.5, 1598.5}
 	if !compfloat(res.Corr, want, 1e-1) {
 		t.Errorf("got %v, wanted %v\n", res.Corr, want)
@@ -177,7 +177,7 @@ func TestGrad(t *testing.T) {
 	if err != nil {
 		errExit(err, "running spectro in test")
 	}
-	res := summarize.Spectro(filepath.Join(prog.Dir, "spectro2.out"))
+	res := summarize.SpectroFile(filepath.Join(prog.Dir, "spectro2.out"))
 	want := []float64{3739.1, 3651.1, 1579.4}
 	if !compfloat(res.Corr, want, 1e-1) {
 		t.Errorf("got %v, wanted %v\n", res.Corr, want)

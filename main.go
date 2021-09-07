@@ -726,7 +726,8 @@ func main() {
 			// this works if no points were deleted and
 			// the files are named the same way between
 			// runs, else need a resume from checkpoint
-			// thing
+			// thing - actually this should read rel.dat
+			// since I dump that now
 			gen = prog.BuildPoints("pts/file07", names, &cenergies, false)
 		}
 	} else {
@@ -743,7 +744,6 @@ func main() {
 	min, _ = Drain(prog, ncoords, E0, gen)
 	queueClear(ptsJobs)
 
-	// TODO DRY this out some day
 	if DoSIC() {
 		energies = FloatsFromCountFloats(cenergies)
 		f, err := os.Create(filepath.Join(prog.Dir, "rel.dat"))
@@ -771,7 +771,7 @@ func main() {
 			errExit(err, "running spectro")
 		}
 		mpHarm = prog.ReadFreqs("freqs/freq.out")
-		res := summarize.Spectro(filepath.Join("freqs", "spectro2.out"))
+		res := summarize.SpectroFile(filepath.Join("freqs", "spectro2.out"))
 		if mpHarm == nil || len(mpHarm) < len(res.Harm) {
 			mpHarm = make([]float64, spec.Nfreqs)
 		}
@@ -803,7 +803,7 @@ func main() {
 			if err != nil {
 				errExit(err, "running spectro")
 			}
-			res := summarize.Spectro("spectro2.out")
+			res := summarize.SpectroFile("spectro2.out")
 			// fill molpro and intder freqs slots with empty slices
 			nfreqs := len(res.Harm)
 			err = Summarize(res.ZPT, make([]float64, nfreqs),
