@@ -1,0 +1,21 @@
+program=cart
+energyline=^\s*CCCRE\s+=
+queueType=maple
+geomType=zmat
+geometry={
+X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 XXO  3 90.0
+O  1 OX  2 XXO  4 90.0
+
+AlX = 0.85 Ang
+OX = 1.1 Ang
+XXO = 80.0 Deg
+}
+# comment followed by blank line
+chunksize=8
+intder=/home/brent/Packages/intder/intder
+anpass=
+spectro=

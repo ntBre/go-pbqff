@@ -2,8 +2,6 @@ github.com/ajstarks/svgo v0.0.0-20180226025133-644b8db467af/go.mod h1:K08gAheRH3
 github.com/fogleman/gg v1.2.1-0.20190220221249-0403632d5b90/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
 github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0/go.mod h1:E/TSTwGwJL78qG/PmXZO1EjYhfJinVAhrmmHX6Z8B9k=
 github.com/jung-kurt/gofpdf v1.0.3-0.20190309125859-24315acbbda5/go.mod h1:7Id9E/uU8ce6rXgefFLlgrJj/GYY22cpxn+r32jIOes=
-github.com/ntBre/chemutils v0.0.0-20210907115807-5214a013c51a h1:8lFxBNHlk3n8pACYKND5zEl44zFQXfxWbDep/CTIBmE=
-github.com/ntBre/chemutils v0.0.0-20210907115807-5214a013c51a/go.mod h1:Hj3n1YUp0EzvT27FmnO7c1XdfB5Gi3f8cdawtBZJy40=
 github.com/ntBre/chemutils v0.0.0-20210907232321-7fffa2629629 h1:2lpYkMVOs0kyHSDXDL7ZvV1qT2UOM5wm4DfvQ0VzrKw=
 github.com/ntBre/chemutils v0.0.0-20210907232321-7fffa2629629/go.mod h1:Hj3n1YUp0EzvT27FmnO7c1XdfB5Gi3f8cdawtBZJy40=
 golang.org/x/exp v0.0.0-20180321215751-8460e604b9de/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
