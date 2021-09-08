@@ -41,9 +41,11 @@ func Taylor(names []string, intder *Intder) {
 	}
 	dir := os.TempDir()
 	infile := filepath.Join(dir, "intder")
-	tmpder.WritePts(infile+".in")
+	tmpder.WritePts(infile + ".in")
 	RunIntder(infile)
-	// TODO parse infile
+	// TODO parse file07 - extract the read file07 part from
+	// Molpro.BuildPoints and reuse it here. see python and CL
+	// implementations
 	flags := ""
 	cmd := exec.Command("python2", "-c", taylor, flags)
 	cmd.Run()
