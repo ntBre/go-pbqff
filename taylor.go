@@ -14,6 +14,7 @@ import (
 var taylor string
 
 func Taylor(names []string, intder *Intder) {
+	// Geometry has to match the coordinates in the template file
 	fields := strings.Fields(intder.Geometry)
 	coords := make([]float64, len(fields))
 	for i, f := range fields {
@@ -21,12 +22,17 @@ func Taylor(names []string, intder *Intder) {
 	}
 	// mol := symm.ReadXYZ(strings.NewReader(ZipXYZ(names, coords)))
 	params := strings.Fields(strings.Split(intder.Head, "\n")[1])
-	var nsic int
+	var (
+		nsic    int
+		nsicStr string
+	)
 	if params[2] == "0" {
 		// accept number of simple internals if no SICs
 		nsic, _ = strconv.Atoi(params[1])
+		nsicStr = params[1]
 	} else {
 		nsic, _ = strconv.Atoi(params[2])
+		nsicStr = params[2]
 	}
 	var str strings.Builder
 	fmt.Fprintf(&str, "DISP%4d\n", nsic)
@@ -47,7 +53,12 @@ func Taylor(names []string, intder *Intder) {
 	// Molpro.BuildPoints and reuse it here. see python and CL
 	// implementations
 	flags := ""
-	cmd := exec.Command("python2", "-c", taylor, flags)
+	// Example usage:
+	// groups are b2, b1, a2, although b2 vs b1 shouldn't matter
+	// python2 taylor.py 5 3 -m 2:[2-2,0-0,0-0] -q 1:[2-2,0-0,0-0]
+	cmd := exec.Command("python2", "-c", taylor,
+		// hard-code deriv=4 for now, giving 5
+		"5", nsicStr, flags)
 	cmd.Run()
 	// symm.ReadXYZ(cartesian geometry) -> Molecule
 
