@@ -392,7 +392,7 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 					check++
 					paraCount[paraJobs[job.ChunkNum]]--
 					if paraCount[paraJobs[job.ChunkNum]] == 0 {
-						queueClear([]string{paraJobs[job.ChunkNum]})
+						// queueClear([]string{paraJobs[job.ChunkNum]})
 						if *debug {
 							fmt.Printf("clearing paracount of"+
 								"chunk %d, jobid %s\n",
