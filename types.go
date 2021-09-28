@@ -1,6 +1,8 @@
 package main
 
-import "os"
+import (
+	"os"
+)
 
 // Calc holds the name of a job to be run and its result's index in
 // the output array
@@ -95,7 +97,23 @@ func (g *GarbageHeap) Dump() {
 	g.heap = []string{}
 }
 
-// Program will be an interface for using different quantum chemical
-// programs in the place of Molpro. TODO
+// Program is an interface for using different quantum chemical
+// programs in the place of Molpro. TODO this is a massive interface,
+// how many of these are really necessary?
 type Program interface {
+	WriteInput(string, Procedure)
+	FormatZmat(string) error
+	SetDir(string)
+	GetDir() string
+	Run(Procedure) float64
+	HandleOutput(string) (string, string, error)
+	UpdateZmat(string)
+	FormatCart(string) error
+	GetGeometry() string
+	BuildPoints(string, []string,
+		*[]CountFloat, bool) func() ([]Calc, bool)
+	BuildCartPoints(string, []string, []float64) func() ([]Calc, bool)
+	BuildGradPoints(string, []string, []float64) func() ([]Calc, bool)
+	ReadOut(string) (float64, float64, []float64, error)
+	ReadFreqs(string) []float64
 }

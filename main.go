@@ -160,60 +160,6 @@ func Summarize(zpt float64, mpHarm, idHarm, spHarm, spFund, spCorr []float64) er
 	return nil
 }
 
-// Run runs a single Molpro calculation. The type of calculation is
-// determined by proc. opt calls for a geometry optimization, freq
-// calls for a harmonic frequency calculation, and none calls for a
-// single point
-func (prog *Molpro) Run(proc Procedure) (E0 float64) {
-	var (
-		dir  string
-		name string
-	)
-	switch proc {
-	case opt:
-		dir = "opt"
-		name = "opt"
-	case freq:
-		dir = "freq"
-		name = "freq"
-	case none:
-		dir = "pts/inp"
-		name = "ref"
-	}
-	dir = filepath.Join(prog.Dir, dir)
-	infile := filepath.Join(dir, name+".inp")
-	pbsfile := filepath.Join(dir, name+".pbs")
-	outfile := filepath.Join(dir, name+".out")
-	E0, _, _, err := prog.ReadOut(outfile)
-	if *read && err == nil {
-		return
-	}
-	prog.WriteInput(infile, proc)
-	WritePBS(pbsfile,
-		&Job{
-			Name: fmt.Sprintf("%s-%s",
-				MakeName(Conf.Str(Geometry)), proc),
-			Filename: infile,
-			NumCPUs:  Conf.Int(NumCPUs),
-			PBSMem:   Conf.Int(PBSMem),
-		}, pbsMaple)
-	jobid := Submit(pbsfile)
-	jobMap := make(map[string]bool)
-	jobMap[jobid] = false
-	// only wait for opt and ref to run
-	for proc != freq && err != nil {
-		E0, _, _, err = prog.ReadOut(outfile)
-		Qstat(&jobMap)
-		if err == ErrFileNotFound && !jobMap[jobid] {
-			fmt.Fprintf(os.Stderr, "resubmitting %s for %v\n", pbsfile, err)
-			jobid = Submit(pbsfile)
-			jobMap[jobid] = false
-		}
-		time.Sleep(time.Duration(Conf.Int(SleepInt)) * time.Second)
-	}
-	return
-}
-
 // Resubmit copies the input file associated with name to
 // name_redo.inp, writes a new PBS file, submits the new PBS job, and
 // returns the associated jobid
@@ -274,7 +220,8 @@ func Qstat(qstat *map[string]bool) {
 // Drain drains the queue of jobs and receives on ch when ready for
 // more. prog is only used for its ReadOut method, and ncoords is used
 // to construct the zero gradient array.
-func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (min, realTime float64) {
+func Drain(prog Program, ncoords int, E0 float64,
+	gen func() ([]Calc, bool)) (min, realTime float64) {
 	start := time.Now()
 	if Conf.At(Deltas) != nil {
 		fmt.Println("step sizes: ", Conf.FlSlice(Deltas))
@@ -417,7 +364,7 @@ func Drain(prog *Molpro, ncoords int, E0 float64, gen func() ([]Calc, bool)) (mi
 		}
 		if check >= Conf.Int(CheckInt) {
 			if !nocheck {
-				MakeCheckpoint(prog.Dir)
+				MakeCheckpoint(prog.GetDir())
 			}
 			check = 1
 			fmt.Fprintf(os.Stderr, "CPU time: %.3f s\n",
@@ -495,7 +442,7 @@ func DupOutErr(infile string) {
 	syscall.Dup2(int(errfile.Fd()), 2)
 }
 
-func initialize(infile string) (prog *Molpro, intder *Intder, anpass *Anpass) {
+func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	if !*test {
 		DupOutErr(infile)
 	}
@@ -528,7 +475,7 @@ func initialize(infile string) (prog *Molpro, intder *Intder, anpass *Anpass) {
 	if err != nil {
 		errExit(err, fmt.Sprintf("loading molpro input %q", mpName))
 	}
-	prog.Dir = dir
+	prog.SetDir(dir)
 	if DoSIC() {
 		intder, err = LoadIntder(
 			filepath.Join(dir, "intder.in"))
@@ -703,7 +650,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		cart = prog.Geometry
+		cart = prog.GetGeometry()
 		// only required for cartesians
 		if DoCart() {
 			E0 = prog.Run(none)
@@ -721,7 +668,8 @@ func main() {
 		if DoPts() {
 			intder.WritePts("pts/intder.in")
 			RunIntder("pts/intder")
-			gen = prog.BuildPoints("pts/file07", names, &cenergies, true)
+			gen = prog.BuildPoints("pts/file07", names,
+				&cenergies, true)
 		} else {
 			// this works if no points were deleted and
 			// the files are named the same way between
@@ -746,7 +694,7 @@ func main() {
 
 	if DoSIC() {
 		energies = FloatsFromCountFloats(cenergies)
-		f, err := os.Create(filepath.Join(prog.Dir, "rel.dat"))
+		f, err := os.Create(filepath.Join(prog.GetDir(), "rel.dat"))
 		if err != nil {
 			// just dump the raw energies in a worst-case
 			// scenario
@@ -758,8 +706,9 @@ func main() {
 			fmt.Fprintf(f, "%20.12f\n", energies[i])
 		}
 		f.Close()
-		longLine, lin := DoAnpass(anpass, prog.Dir, energies, intder)
-		coords, intderHarms := DoIntder(intder, names, longLine, prog.Dir, lin)
+		longLine, lin := DoAnpass(anpass, prog.GetDir(), energies, intder)
+		coords, intderHarms := DoIntder(intder, names, longLine,
+			prog.GetDir(), lin)
 		spec, err := spectro.Load("spectro.in")
 		if err != nil {
 			errExit(err, "loading spectro input")

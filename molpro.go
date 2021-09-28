@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -39,6 +40,17 @@ type Molpro struct {
 	Tail     string
 	Opt      string
 	Extra    string
+}
+
+func (m *Molpro) SetDir(dir string) {
+	m.Dir = dir
+}
+func (m *Molpro) GetDir() string {
+	return m.Dir
+}
+
+func (m *Molpro) GetGeometry() string {
+	return m.Geometry
 }
 
 // LoadMolpro loads a template molpro input file
@@ -223,7 +235,7 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 // HandleOutput is a wrapper around ReadLog that reads the .out and
 // .log files for filename, first checking the .out file for warnings
 // and errors before calling ReadLog on the .log file
-func (m Molpro) HandleOutput(filename string) (string, string, error) {
+func (m *Molpro) HandleOutput(filename string) (string, string, error) {
 	outfile := filename + ".out"
 	logfile := filename + ".log"
 	lines, err := ReadFile(outfile)
@@ -236,7 +248,8 @@ func (m Molpro) HandleOutput(filename string) (string, string, error) {
 	// apparently warnings are not printed in the log
 	for _, line := range lines {
 		if warn.MatchString(line) {
-			Warn("HandleOutput: warning %q, found in %s", line, outfile)
+			Warn("HandleOutput: warning %q, found in %s",
+				line, outfile)
 		}
 		if error.MatchString(line) {
 			fmt.Fprintf(os.Stderr,
@@ -843,4 +856,59 @@ func (m *Molpro) BuildGradPoints(dir string, names []string,
 		}
 		return Push(dir, pf, count, calcs), false
 	}
+}
+
+// Run runs a single Molpro calculation. The type of calculation is
+// determined by proc. opt calls for a geometry optimization, freq
+// calls for a harmonic frequency calculation, and none calls for a
+// single point
+func (m *Molpro) Run(proc Procedure) (E0 float64) {
+	var (
+		dir  string
+		name string
+	)
+	switch proc {
+	case opt:
+		dir = "opt"
+		name = "opt"
+	case freq:
+		dir = "freq"
+		name = "freq"
+	case none:
+		dir = "pts/inp"
+		name = "ref"
+	}
+	dir = filepath.Join(m.Dir, dir)
+	infile := filepath.Join(dir, name+".inp")
+	pbsfile := filepath.Join(dir, name+".pbs")
+	outfile := filepath.Join(dir, name+".out")
+	E0, _, _, err := m.ReadOut(outfile)
+	if *read && err == nil {
+		return
+	}
+	m.WriteInput(infile, proc)
+	WritePBS(pbsfile,
+		&Job{
+			Name: fmt.Sprintf("%s-%s",
+				MakeName(Conf.Str(Geometry)), proc),
+			Filename: infile,
+			NumCPUs:  Conf.Int(NumCPUs),
+			PBSMem:   Conf.Int(PBSMem),
+		}, pbsMaple)
+	jobid := Submit(pbsfile)
+	jobMap := make(map[string]bool)
+	jobMap[jobid] = false
+	// only wait for opt and ref to run
+	for proc != freq && err != nil {
+		E0, _, _, err = m.ReadOut(outfile)
+		Qstat(&jobMap)
+		if err == ErrFileNotFound && !jobMap[jobid] {
+			fmt.Fprintf(os.Stderr, "resubmitting %s for %v\n",
+				pbsfile, err)
+			jobid = Submit(pbsfile)
+			jobMap[jobid] = false
+		}
+		time.Sleep(time.Duration(Conf.Int(SleepInt)) * time.Second)
+	}
+	return
 }

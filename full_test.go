@@ -39,8 +39,8 @@ func TestSIC(t *testing.T) {
 	for i := range energies {
 		energies[i] -= min
 	}
-	longLine, _ := DoAnpass(anpass, prog.Dir, energies, nil)
-	coords, _ := DoIntder(intder, names, longLine, prog.Dir, false)
+	longLine, _ := DoAnpass(anpass, prog.GetDir(), energies, nil)
+	coords, _ := DoIntder(intder, names, longLine, prog.GetDir(), false)
 	spec, err := spectro.Load("tests/sic/spectro.in")
 	if err != nil {
 		errExit(err, "loading spectro input")
@@ -91,7 +91,7 @@ func TestCart(t *testing.T) {
 	}()
 	prog, _, _ := initialize("tests/cart/cart.in")
 	prog.FormatCart(Conf.Str(Geometry))
-	cart := prog.Geometry
+	cart := prog.GetGeometry()
 	E0 := prog.Run(none)
 	names, coords := XYZGeom(cart)
 	natoms := len(names)
@@ -101,9 +101,9 @@ func TestCart(t *testing.T) {
 	N3N := natoms * 3 // from spectro manual pg 12
 	other3 := N3N * (N3N + 1) * (N3N + 2) / 6
 	other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24
-	PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(prog.Dir, "fort.15"))
-	PrintFortFile(fc3, natoms, other3, filepath.Join(prog.Dir, "fort.30"))
-	PrintFortFile(fc4, natoms, other4, filepath.Join(prog.Dir, "fort.40"))
+	PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(prog.GetDir(), "fort.15"))
+	PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(), "fort.30"))
+	PrintFortFile(fc4, natoms, other4, filepath.Join(prog.GetDir(), "fort.40"))
 	var buf bytes.Buffer
 	for i := range coords {
 		if i%3 == 0 && i > 0 {
@@ -111,18 +111,18 @@ func TestCart(t *testing.T) {
 		}
 		fmt.Fprintf(&buf, " %.10f", coords[i]/angbohr)
 	}
-	specin := filepath.Join(prog.Dir, "spectro.in")
+	specin := filepath.Join(prog.GetDir(), "spectro.in")
 	spec, err := spectro.Load(specin)
 	if err != nil {
 		errExit(err, "loading spectro input")
 	}
 	spec.FormatGeom(names, buf.String())
 	spec.WriteInput(specin)
-	err = spec.DoSpectro(prog.Dir)
+	err = spec.DoSpectro(prog.GetDir())
 	if err != nil {
 		errExit(err, "running spectro")
 	}
-	res := summarize.SpectroFile(filepath.Join(prog.Dir, "spectro2.out"))
+	res := summarize.SpectroFile(filepath.Join(prog.GetDir(), "spectro2.out"))
 	want := []float64{3753.2, 3656.5, 1598.5}
 	if !compfloat(res.Corr, want, 1e-1) {
 		t.Errorf("got %v, wanted %v\n", res.Corr, want)
@@ -146,7 +146,7 @@ func TestGrad(t *testing.T) {
 	}()
 	prog, _, _ := initialize("tests/grad/grad.in")
 	prog.FormatCart(Conf.Str(Geometry))
-	cart := prog.Geometry
+	cart := prog.GetGeometry()
 	E0 := 0.0
 	names, coords := XYZGeom(cart)
 	natoms := len(names)
@@ -156,9 +156,9 @@ func TestGrad(t *testing.T) {
 	N3N := natoms * 3 // from spectro manual pg 12
 	other3 := N3N * (N3N + 1) * (N3N + 2) / 6
 	other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24
-	PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(prog.Dir, "fort.15"))
-	PrintFortFile(fc3, natoms, other3, filepath.Join(prog.Dir, "fort.30"))
-	PrintFortFile(fc4, natoms, other4, filepath.Join(prog.Dir, "fort.40"))
+	PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(prog.GetDir(), "fort.15"))
+	PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(), "fort.30"))
+	PrintFortFile(fc4, natoms, other4, filepath.Join(prog.GetDir(), "fort.40"))
 	var buf bytes.Buffer
 	for i := range coords {
 		if i%3 == 0 && i > 0 {
@@ -166,18 +166,18 @@ func TestGrad(t *testing.T) {
 		}
 		fmt.Fprintf(&buf, " %.10f", coords[i]/angbohr)
 	}
-	specin := filepath.Join(prog.Dir, "spectro.in")
+	specin := filepath.Join(prog.GetDir(), "spectro.in")
 	spec, err := spectro.Load(specin)
 	if err != nil {
 		errExit(err, "loading spectro input")
 	}
 	spec.FormatGeom(names, buf.String())
 	spec.WriteInput(specin)
-	err = spec.DoSpectro(prog.Dir)
+	err = spec.DoSpectro(prog.GetDir())
 	if err != nil {
 		errExit(err, "running spectro in test")
 	}
-	res := summarize.SpectroFile(filepath.Join(prog.Dir, "spectro2.out"))
+	res := summarize.SpectroFile(filepath.Join(prog.GetDir(), "spectro2.out"))
 	want := []float64{3739.1, 3651.1, 1579.4}
 	if !compfloat(res.Corr, want, 1e-1) {
 		t.Errorf("got %v, wanted %v\n", res.Corr, want)

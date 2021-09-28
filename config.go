@@ -18,8 +18,9 @@ type Key int
 // below. If it requires other Keywords to fully process, add a method
 // on Config and call it at the end of ParseInfile in input.go.
 const (
-	Cluster Key = iota
-	ChemProg
+	Cluster  Key = iota
+	Package      // the quantum chemistry package to use
+	ChemProg     // the type of calculation sic|cart|grad
 	Queue
 	Delta
 	Deltas
@@ -48,6 +49,7 @@ const (
 func (k Key) String() string {
 	return []string{
 		"Cluster",
+		"Package",
 		"ChemProg",
 		"Queue",
 		"Delta",
@@ -291,6 +293,11 @@ func NewConfig() Config {
 			Re:      regexp.MustCompile(`(?i)queuetype=`),
 			Extract: StringKeyword,
 			Value:   "maple",
+		},
+		Package: {
+			Re: regexp.MustCompile(`(?i)package=`),
+			Extract: StringKeyword,
+			Value: "molpro",
 		},
 		ChemProg: {
 			Re:      regexp.MustCompile(`(?i)program=`),
