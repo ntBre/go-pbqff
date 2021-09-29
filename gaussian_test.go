@@ -128,3 +128,35 @@ func TestGaussReadOut(t *testing.T) {
 		t.Errorf("got %v, wanted %v\n", err, want.err)
 	}
 }
+
+func TestGaussHandleOutput(t *testing.T) {
+	g := new(Gaussian)
+	cart, zmat, err := g.HandleOutput("testfiles/gaussian/zmat_opt.out")
+	want := struct {
+		cart string
+		zmat string
+		err  error
+	}{
+		cart: `C  0.000000  0.000000  1.764568
+C  0.000000  1.252433 -0.610816
+C  0.000000 -1.252433 -0.610816
+H  0.000000  3.014627 -1.628802
+H  0.000000 -3.014627 -1.628802
+`,
+		zmat: `GCC=1.42101898
+CCC=55.60133141
+CH=1.07692776
+HCC=147.8148823
+`,
+		err: nil,
+	}
+	if cart != want.cart {
+		t.Errorf("got\n%#+v, wanted\n%#+v\n", cart, want.cart)
+	}
+	if zmat != want.zmat {
+		t.Errorf("got\n%#+v, wanted\n%#+v\n", zmat, want.zmat)
+	}
+	if err != want.err {
+		t.Errorf("got %v, wanted %v\n", err, want.err)
+	}
+}

@@ -86,7 +86,7 @@ var (
 	StartCPU         int64
 	Conf             = NewConfig()
 	ErrorLine        = regexp.MustCompile(`(?i)[^_]error`)
-	GaussErrorLine        = regexp.MustCompile(`(?i)error[^=]`)
+	GaussErrorLine   = regexp.MustCompile(`(?i)error[^=]`)
 )
 
 // Global is a structure for holding global variables
@@ -104,7 +104,6 @@ func HashName() string {
 	}()
 	return fmt.Sprintf("job.%010d", Global.JobNum)
 }
-
 
 const (
 	angbohr  = 0.529177249 // angstrom per bohr

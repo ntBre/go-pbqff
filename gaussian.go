@@ -258,36 +258,69 @@ func (g *Gaussian) ReadOut(filename string) (result, time float64,
 	return result, time, grad, err
 }
 
-// HandleOutput is a wrapper around ReadLog that reads the .out and
-// .log files for filename, first checking the .out file for warnings
-// and errors before calling ReadLog on the .log file
+// HandleOutput extracts the optimized geometry in Cartesian (bohr)
+// and Z-matrix (angstrom) form from a Gaussian output file. It also
+// checks the output file for warnings and errors.
 func (g *Gaussian) HandleOutput(filename string) (string, string, error) {
-	outfile := filename + ".out"
-	logfile := filename + ".log"
-	lines, err := ReadFile(outfile)
+	f, err := os.Open(filename)
+	defer f.Close()
 	if err != nil {
 		panic(err)
 	}
 	warn := regexp.MustCompile(`(?i)warning`)
-	error := regexp.MustCompile(`(?i)[^_]error`)
-	// notify about warnings or errors in output file
-	// apparently warnings are not printed in the log
-	for _, line := range lines {
-		if warn.MatchString(line) {
-			Warn("HandleOutput: warning %q, found in %s",
-				line, outfile)
+	var (
+		vars       bool
+		cart, zmat strings.Builder
+		skip       int
+		geom       bool
+	)
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		if skip > 0 {
+			skip--
+			continue
 		}
-		if error.MatchString(line) {
+		line := scanner.Text()
+		if warn.MatchString(line) &&
+			!strings.Contains(line, "This program") {
+			Warn("HandleOutput: warning %q, found in %s",
+				line, filename)
+		}
+		if GaussErrorLine.MatchString(line) {
 			fmt.Fprintf(os.Stderr,
 				"HandleOutput: error %q, found in %s, aborting\n",
-				line, outfile)
+				line, filename)
 			return "", "", ErrFileContainsError
 		}
+		switch {
+		case strings.Contains(line, "Variables:"):
+			vars = true
+		case vars && !strings.Contains(line, "=") ||
+			strings.Contains(line, "GINC"):
+			vars = false
+		case vars:
+			fmt.Fprintln(&zmat, strings.TrimSpace(line))
+		case strings.Contains(line, "Standard orientation"):
+			skip += 4
+			geom = true
+			cart.Reset()
+		case geom && strings.Contains(line, "------"):
+			geom = false
+		case geom:
+			fields := strings.Fields(line)[1:]
+			coords := make([]float64, 3)
+			for i, v := range fields[2:5] {
+				coords[i], _ = strconv.ParseFloat(v, 64)
+				coords[i] /= angbohr
+			}
+			// TODO can you get more precision? 6 is
+			// pretty low
+			fmt.Fprintf(&cart, "%s%10.6f%10.6f%10.6f\n",
+				ATOMIC_NUMBERS[fields[0]],
+				coords[0], coords[1], coords[2])
+		}
 	}
-	// ReadLog(logfile)
-	// looking for optimized geometry in bohr
-	cart, zmat := ReadLog(logfile)
-	return cart, zmat, nil
+	return cart.String(), zmat.String(), nil
 }
 
 // ReadFreqs reads a Gaussian frequency calculation output file

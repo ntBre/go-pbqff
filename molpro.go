@@ -264,8 +264,8 @@ func (m *Molpro) HandleOutput(filename string) (string, string, error) {
 	return cart, zmat, nil
 }
 
-// ReadLog reads a molpro log file and returns the optimized Cartesian geometry
-// (in Bohr) and the zmat variables
+// ReadLog reads a molpro log file and returns the optimized Cartesian
+// geometry (in Bohr) and the zmat variables
 func ReadLog(filename string) (string, string) {
 	lines, err := ReadFile(filename)
 	if err != nil {
