@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -160,4 +161,43 @@ func PrettyPrint(arr []CountFloat) {
 func Warn(format string, a ...interface{}) {
 	fmt.Printf("warning: "+format+"\n", a...)
 	Global.Warnings++
+}
+
+// IntAbs returns the absolute value of n
+func IntAbs(n int) int {
+	if n < 0 {
+		return -1 * n
+	}
+	return n
+}
+
+// ZipXYZ puts slices of atom names and Cartesian coordinates together
+// into a single string
+func ZipXYZ(names []string, coords []float64) string {
+	var buf bytes.Buffer
+	if len(names) != len(coords)/3 {
+		panic("ZipXYZ: dimension mismatch on names and coords")
+	} else if len(coords)%3 != 0 {
+		panic("ZipXYZ: coords not divisible by 3")
+	}
+	for i := range names {
+		fmt.Fprintf(&buf, "%s %.10f %.10f %.10f\n",
+			names[i], coords[3*i], coords[3*i+1], coords[3*i+2])
+	}
+	return buf.String()
+}
+
+// Step adjusts coords by delta in the steps indices
+func Step(coords []float64, steps ...int) []float64 {
+	var c = make([]float64, len(coords))
+	copy(c, coords)
+	for _, v := range steps {
+		if v < 0 {
+			v = -1 * v
+			c[v-1] = c[v-1] - Conf.FlSlice(Deltas)[v-1]
+		} else {
+			c[v-1] += Conf.FlSlice(Deltas)[v-1]
+		}
+	}
+	return c
 }

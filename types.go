@@ -20,6 +20,16 @@ type Calc struct {
 	Scale    float64
 }
 
+// ProtoCalc is a precursor to a Calc with information for setting up
+// the Calc itself
+type ProtoCalc struct {
+	Coeff float64
+	Name  string
+	Steps []int
+	Index []int
+	Scale float64
+}
+
 // CountFloat combines a value with a counter that keeps track of how
 // many times it has been modified, and a boolean Loaded to see if it
 // was loaded from a checkpoint file
@@ -101,10 +111,10 @@ func (g *GarbageHeap) Dump() {
 // programs in the place of Molpro. TODO this is a massive interface,
 // how many of these are really necessary?
 type Program interface {
+	GetDir() string
+	SetDir(string)
 	WriteInput(string, Procedure)
 	FormatZmat(string) error
-	SetDir(string)
-	GetDir() string
 	Run(Procedure) float64
 	HandleOutput(string) (string, string, error)
 	UpdateZmat(string)

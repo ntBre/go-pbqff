@@ -17,23 +17,8 @@ import (
 	"time"
 )
 
-const (
-	opt Procedure = iota
-	freq
-	none
-)
-
-// Procedure defines a type of molpro calculation. This includes
-// optimization (opt), harmonic frequency (freq), and single point
-// (none)
-type Procedure int
-
-func (p Procedure) String() string {
-	return []string{"opt", "freq", "ref"}[p]
-}
-
-// Molpro holds the data for writing molpro input files
-type Molpro struct {
+// copying molpro for now, not sure how many are actually applicable
+type Gaussian struct {
 	Dir      string
 	Head     string
 	Geometry string
@@ -42,19 +27,19 @@ type Molpro struct {
 	Extra    string
 }
 
-func (m *Molpro) SetDir(dir string) {
+func (m *Gaussian) SetDir(dir string) {
 	m.Dir = dir
 }
-func (m *Molpro) GetDir() string {
+func (m *Gaussian) GetDir() string {
 	return m.Dir
 }
 
-func (m *Molpro) GetGeometry() string {
+func (m *Gaussian) GetGeometry() string {
 	return m.Geometry
 }
 
-// LoadMolpro loads a template molpro input file
-func LoadMolpro(filename string) (*Molpro, error) {
+// LoadGaussian loads a template molpro input file
+func LoadGaussian(filename string) (*Gaussian, error) {
 	f, err := os.Open(filename)
 	defer f.Close()
 	if err != nil {
@@ -64,7 +49,7 @@ func LoadMolpro(filename string) (*Molpro, error) {
 	var (
 		buf  bytes.Buffer
 		line string
-		mp   Molpro
+		mp   Gaussian
 	)
 	for scanner.Scan() {
 		line = scanner.Text()
@@ -84,8 +69,8 @@ func LoadMolpro(filename string) (*Molpro, error) {
 	return &mp, nil
 }
 
-// WriteInput writes a Molpro input file
-func (m *Molpro) WriteInput(filename string, p Procedure) {
+// WriteInput writes a Gaussian input file
+func (m *Gaussian) WriteInput(filename string, p Procedure) {
 	var buf bytes.Buffer
 	buf.WriteString(m.Head)
 	buf.WriteString(m.Geometry + "\n")
@@ -100,9 +85,9 @@ func (m *Molpro) WriteInput(filename string, p Procedure) {
 	ioutil.WriteFile(filename, buf.Bytes(), 0755)
 }
 
-// FormatZmat formats a z-matrix for use in Molpro input and places it
+// FormatZmat formats a z-matrix for use in Gaussian input and places it
 // in the Geometry field of m
-func (m *Molpro) FormatZmat(geom string) (err error) {
+func (m *Gaussian) FormatZmat(geom string) (err error) {
 	var out []string
 	err = errors.New("improper z-matrix")
 	split := strings.Split(geom, "\n")
@@ -117,15 +102,15 @@ func (m *Molpro) FormatZmat(geom string) (err error) {
 	return
 }
 
-// FormatCart formats a Cartesian geometry for use in Molpro input and
+// FormatCart formats a Cartesian geometry for use in Gaussian input and
 // places it in the Geometry field of m
-func (m *Molpro) FormatCart(geom string) (err error) {
+func (m *Gaussian) FormatCart(geom string) (err error) {
 	m.Geometry = geom + "\n}\n"
 	return
 }
 
 // UpdateZmat updates an old zmat with new parameters
-func (m *Molpro) UpdateZmat(new string) {
+func (m *Gaussian) UpdateZmat(new string) {
 	old := m.Geometry
 	lines := strings.Split(old, "\n")
 	for i, line := range lines {
@@ -142,7 +127,7 @@ func (m *Molpro) UpdateZmat(new string) {
 // energy, the real time taken, the gradient vector, and an error
 // describing the status of the output
 // TODO signal error on problem reading gradient
-func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, err error) {
+func (m Gaussian) ReadOut(filename string) (result, time float64, grad []float64, err error) {
 	f, err := os.Open(filename)
 	defer f.Close()
 	if err != nil {
@@ -235,7 +220,7 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 // HandleOutput is a wrapper around ReadLog that reads the .out and
 // .log files for filename, first checking the .out file for warnings
 // and errors before calling ReadLog on the .log file
-func (m *Molpro) HandleOutput(filename string) (string, string, error) {
+func (m *Gaussian) HandleOutput(filename string) (string, string, error) {
 	outfile := filename + ".out"
 	logfile := filename + ".log"
 	lines, err := ReadFile(outfile)
@@ -264,38 +249,9 @@ func (m *Molpro) HandleOutput(filename string) (string, string, error) {
 	return cart, zmat, nil
 }
 
-// ReadLog reads a molpro log file and returns the optimized Cartesian geometry
-// (in Bohr) and the zmat variables
-func ReadLog(filename string) (string, string) {
-	lines, err := ReadFile(filename)
-	if err != nil {
-		panic(err)
-	}
-	var cart, zmat bytes.Buffer
-	for i := 0; i < len(lines); i++ {
-		if strings.Contains(lines[i], "ATOMIC COORDINATES") {
-			cart.Reset() // only want the last of these
-			for ; !strings.Contains(lines[i], "Bond lengths in Bohr"); i++ {
-				if !strings.Contains(lines[i], "ATOM") {
-					fields := strings.Fields(strings.TrimSpace(lines[i]))
-					fmt.Fprintf(&cart, "%s %s %s %s\n",
-						fields[1], fields[3], fields[4], fields[5])
-				}
-			}
-		} else if strings.Contains(lines[i], "Current variables") {
-			zmat.Reset()
-			i++
-			for ; !strings.Contains(lines[i], "***"); i++ {
-				fmt.Fprintf(&zmat, "%s\n", lines[i])
-			}
-		}
-	}
-	return cart.String(), zmat.String()
-}
-
-// ReadFreqs reads a Molpro frequency calculation output file
+// ReadFreqs reads a Gaussian frequency calculation output file
 // and return a slice of the harmonic frequencies
-func (m Molpro) ReadFreqs(filename string) (freqs []float64) {
+func (m Gaussian) ReadFreqs(filename string) (freqs []float64) {
 	f, err := os.Open(filename)
 	defer f.Close()
 	if err != nil {
@@ -322,7 +278,7 @@ func (m Molpro) ReadFreqs(filename string) (freqs []float64) {
 
 // AugmentHead augments the header of a molpro input file
 // with a specification of the geometry type and units
-func (m *Molpro) AugmentHead() {
+func (m *Gaussian) AugmentHead() {
 	lines := strings.Split(m.Head, "\n")
 	add := "geomtyp=xyz\nbohr"
 	newlines := make([]string, 0)
@@ -342,7 +298,7 @@ func (m *Molpro) AugmentHead() {
 // single-point energy calculations and return an array of jobs to
 // run. If write is set to true, write the necessary files. Otherwise
 // just return the list of jobs.
-func (m *Molpro) BuildPoints(filename string, atomNames []string, target *[]CountFloat, write bool) func() ([]Calc, bool) {
+func (m *Gaussian) BuildPoints(filename string, atomNames []string, target *[]CountFloat, write bool) func() ([]Calc, bool) {
 	// TODO I'd like a scanner here but not straightforward
 	// because it's nice to know that we're on the last line
 	lines, err := ReadFile(filename)
@@ -428,7 +384,7 @@ func (m *Molpro) BuildPoints(filename string, atomNames []string, target *[]Coun
 }
 
 // Derivative is a helper for calling Make(2|3|4)D in the same way
-func (m *Molpro) Derivative(dir string, names []string,
+func (m *Gaussian) Derivative(dir string, names []string,
 	coords []float64, i, j, k, l int) (calcs []Calc) {
 	var (
 		protos []ProtoCalc
@@ -518,9 +474,9 @@ func (m *Molpro) Derivative(dir string, names []string,
 
 // BuildCartPoints constructs the calculations needed to run a
 // Cartesian quartic force field
-func (m *Molpro) BuildCartPoints(dir string, names []string,
+func (g *Gaussian) BuildCartPoints(dir string, names []string,
 	coords []float64) func() ([]Calc, bool) {
-	dir = filepath.Join(m.Dir, dir)
+	dir = filepath.Join(g.Dir, dir)
 	ncoords := len(coords)
 	var (
 		start int
@@ -544,7 +500,7 @@ func (m *Molpro) BuildCartPoints(dir string, names []string,
 				for k = knit; k <= j; k++ {
 					for l = lnit; l <= k; l++ {
 						calcs = append(calcs,
-							m.Derivative(dir, names, coords, i, j, k, l)...,
+							g.Derivative(dir, names, coords, i, j, k, l)...,
 						)
 						if len(calcs) >= Conf.Int(ChunkSize) {
 							jnit, knit, lnit = j, k, l+1
@@ -562,7 +518,7 @@ func (m *Molpro) BuildCartPoints(dir string, names []string,
 }
 
 // GradDerivative is the Derivative analog for Gradients
-func (m *Molpro) GradDerivative(dir string, names []string, coords []float64,
+func (g *Gaussian) GradDerivative(dir string, names []string, coords []float64,
 	i, j, k int) (calcs []Calc) {
 	ncoords := len(coords)
 	var (
@@ -592,7 +548,7 @@ func (m *Molpro) GradDerivative(dir string, names []string, coords []float64,
 	}
 	for _, p := range protos {
 		coords := Step(coords, p.Steps...)
-		m.Geometry = ZipXYZ(names, coords) + "}\n"
+		g.Geometry = ZipXYZ(names, coords) + "}\n"
 		temp := Calc{Name: filepath.Join(dir, p.Name), Scale: p.Scale}
 		var index int
 		for g := 1; g <= dimmax; g++ {
@@ -635,7 +591,7 @@ func (m *Molpro) GradDerivative(dir string, names []string, coords []float64,
 				temp.noRun = true
 			}
 			if !temp.noRun {
-				m.WriteInput(fname, none)
+				g.WriteInput(fname, none)
 			}
 			calcs = append(calcs, temp)
 		}
@@ -645,9 +601,9 @@ func (m *Molpro) GradDerivative(dir string, names []string, coords []float64,
 
 // BuildGradPoints constructs the calculations needed to run a
 // Cartesian quartic force field using gradients
-func (m *Molpro) BuildGradPoints(dir string, names []string,
+func (g *Gaussian) BuildGradPoints(dir string, names []string,
 	coords []float64) func() ([]Calc, bool) {
-	dir = filepath.Join(m.Dir, dir)
+	dir = filepath.Join(g.Dir, dir)
 	ncoords := len(coords)
 	var (
 		start int
@@ -670,7 +626,7 @@ func (m *Molpro) BuildGradPoints(dir string, names []string,
 			for j = jnit; j <= i; j++ {
 				for k = knit; k <= j; k++ {
 					calcs = append(calcs,
-						m.GradDerivative(dir, names, coords, i, j, k)...,
+						g.GradDerivative(dir, names, coords, i, j, k)...,
 					)
 					if len(calcs) >= Conf.Int(ChunkSize) {
 						jnit, knit = j, k+1
@@ -685,11 +641,11 @@ func (m *Molpro) BuildGradPoints(dir string, names []string,
 	}
 }
 
-// Run runs a single Molpro calculation. The type of calculation is
+// Run runs a single Gaussian calculation. The type of calculation is
 // determined by proc. opt calls for a geometry optimization, freq
 // calls for a harmonic frequency calculation, and none calls for a
 // single point
-func (m *Molpro) Run(proc Procedure) (E0 float64) {
+func (g *Gaussian) Run(proc Procedure) (E0 float64) {
 	var (
 		dir  string
 		name string
@@ -705,15 +661,15 @@ func (m *Molpro) Run(proc Procedure) (E0 float64) {
 		dir = "pts/inp"
 		name = "ref"
 	}
-	dir = filepath.Join(m.Dir, dir)
+	dir = filepath.Join(g.Dir, dir)
 	infile := filepath.Join(dir, name+".inp")
 	pbsfile := filepath.Join(dir, name+".pbs")
 	outfile := filepath.Join(dir, name+".out")
-	E0, _, _, err := m.ReadOut(outfile)
+	E0, _, _, err := g.ReadOut(outfile)
 	if *read && err == nil {
 		return
 	}
-	m.WriteInput(infile, proc)
+	g.WriteInput(infile, proc)
 	WritePBS(pbsfile,
 		&Job{
 			Name: fmt.Sprintf("%s-%s",
@@ -727,7 +683,7 @@ func (m *Molpro) Run(proc Procedure) (E0 float64) {
 	jobMap[jobid] = false
 	// only wait for opt and ref to run
 	for proc != freq && err != nil {
-		E0, _, _, err = m.ReadOut(outfile)
+		E0, _, _, err = g.ReadOut(outfile)
 		Qstat(&jobMap)
 		if err == ErrFileNotFound && !jobMap[jobid] {
 			fmt.Fprintf(os.Stderr, "resubmitting %s for %v\n",

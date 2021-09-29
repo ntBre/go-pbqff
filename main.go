@@ -95,6 +95,16 @@ var Global struct {
 	Warnings int
 }
 
+// HashName returns a hashed filename. Well it used to, but now it
+// returns JobNum and increments it
+func HashName() string {
+	defer func() {
+		Global.JobNum++
+	}()
+	return fmt.Sprintf("job.%010d", Global.JobNum)
+}
+
+
 const (
 	angbohr  = 0.529177249 // angstrom per bohr
 	resBound = 1e-16       // warn if anpass residuals above this
