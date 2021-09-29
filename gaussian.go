@@ -2,10 +2,9 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"os"
 	"path"
@@ -64,13 +63,17 @@ func LoadGaussian(filename string) (*Gaussian, error) {
 		geom bool
 	)
 	chargeSpin := regexp.MustCompile(`^\s*\d\s+\d\s*$`)
+	proc := regexp.MustCompile(`(?i)(opt|freq(=[^ ])*)`)
 	for scanner.Scan() {
 		line = scanner.Text()
 		switch {
 		case strings.Contains(line, "#"):
 			g.Head = str.String()
 			str.Reset()
-			g.Opt = line + "\n"
+			// TODO might actually want to keep this in
+			// some cases:
+			// remove opt/freq from input line
+			g.Opt = proc.ReplaceAllString(line, "") + "\n"
 		case chargeSpin.MatchString(line):
 			str.WriteString(line + "\n")
 			g.Body = str.String()
@@ -88,19 +91,26 @@ func LoadGaussian(filename string) (*Gaussian, error) {
 	return &g, nil
 }
 
-// WriteInput writes a Gaussian input file
-func (g *Gaussian) WriteInput(filename string, p Procedure) {
-	var buf bytes.Buffer
-	buf.WriteString(g.Head)
-	buf.WriteString(g.Geom + "\n")
-	buf.WriteString(g.Tail)
+func (g *Gaussian) makeInput(w io.Writer, p Procedure) {
+	fmt.Fprintf(w, "%s%s ", g.Head, strings.TrimSpace(g.Opt))
 	switch p {
 	case opt:
-		buf.WriteString(g.Opt)
+		fmt.Fprint(w, "opt \n")
 	case freq:
-		buf.WriteString("{frequencies}\n")
+		fmt.Fprint(w, "freq")
 	}
-	ioutil.WriteFile(filename, buf.Bytes(), 0755)
+	fmt.Fprintf(w, "%s%s\n\n", g.Body, strings.TrimSpace(g.Geom))
+	fmt.Fprintf(w, "%s", g.Tail)
+}
+
+// WriteInput writes a Gaussian input file
+func (g *Gaussian) WriteInput(filename string, p Procedure) {
+	f, err := os.Create(filename)
+	defer f.Close()
+	if err != nil {
+		panic(err)
+	}
+	g.makeInput(f, p)
 }
 
 // FormatZmat formats a z-matrix for use in Gaussian input and places it
