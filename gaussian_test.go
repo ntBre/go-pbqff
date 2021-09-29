@@ -35,7 +35,7 @@ H -0.5110183966  0.8851098265 -0.3613445025
 `
 	g.makeInput(&got, opt)
 	want := `%nprocs=4
-#P PM6=(print,zero,input) opt 
+#P PM6=(print,zero,input) opt
 
 the title
 
@@ -51,5 +51,35 @@ H -0.5110183966  0.8851098265 -0.3613445025
 `
 	if !reflect.DeepEqual(got.String(), want) {
 		t.Errorf("got\n%#+v, wanted\n%#+v\n", got.String(), want)
+	}
+}
+
+func TestGaussFormatZmat(t *testing.T) {
+	g := new(Gaussian)
+	g.FormatZmat(
+		`X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 XXO  3 90.0
+O  1 OX  2 XXO  4 90.0
+AlX = 0.85 Ang
+OX = 1.1 Ang
+XXO = 80.0 Deg`,
+	)
+	got := g.Geom
+	want := `X
+X 1 1.0
+Al 1 AlX 2 90.0
+Al 1 AlX 2 90.0 3 180.0
+O  1 OX  2 XXO  3 90.0
+O  1 OX  2 XXO  4 90.0
+
+AlX = 0.85
+OX = 1.1
+XXO = 80.0
+`
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, wanted %v\n", got, want)
 	}
 }

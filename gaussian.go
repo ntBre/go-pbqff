@@ -95,7 +95,7 @@ func (g *Gaussian) makeInput(w io.Writer, p Procedure) {
 	fmt.Fprintf(w, "%s%s ", g.Head, strings.TrimSpace(g.Opt))
 	switch p {
 	case opt:
-		fmt.Fprint(w, "opt \n")
+		fmt.Fprint(w, "opt\n")
 	case freq:
 		fmt.Fprint(w, "freq")
 	}
@@ -113,19 +113,29 @@ func (g *Gaussian) WriteInput(filename string, p Procedure) {
 	g.makeInput(f, p)
 }
 
-// FormatZmat formats a z-matrix for use in Gaussian input and places it
-// in the Geometry field of m
+// FormatZmat formats a z-matrix for use in Gaussian input and places
+// it in the Geom field of g
 func (g *Gaussian) FormatZmat(geom string) (err error) {
 	var out []string
 	err = errors.New("improper z-matrix")
 	split := strings.Split(geom, "\n")
-	for i, line := range split {
+	unit := regexp.MustCompile(`(?i)\s+(ang|deg)`)
+	var (
+		i    int
+		line string
+	)
+	for i, line = range split {
 		if strings.Contains(line, "=") {
-			out = append(append(append(out, split[:i]...), "}"), split[i:]...)
+			out = append(append(out, split[:i]...), "")
 			err = nil
 			break
 		}
 	}
+	// in case there are units in the zmat params, remove them
+	for _, line := range split[i:] {
+		out = append(out, unit.ReplaceAllString(line, ""))
+	}
+	out = append(out, "")
 	g.Geom = strings.Join(out, "\n")
 	return
 }
