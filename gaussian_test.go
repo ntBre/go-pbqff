@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"reflect"
+	"regexp"
 	"testing"
 )
 
@@ -81,5 +82,49 @@ XXO = 80.0
 `
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+}
+
+func TestGaussFormatCart(t *testing.T) {
+	g := new(Gaussian)
+	g.FormatCart(`H 0.0000000000  0.7574590974  0.5217905143
+O 0.0000000000  0.0000000000 -0.0657441568
+H 0.0000000000 -0.7574590974  0.5217905143
+`)
+	got := g.Geom
+	want := `H 0.0000000000  0.7574590974  0.5217905143
+O 0.0000000000  0.0000000000 -0.0657441568
+H 0.0000000000 -0.7574590974  0.5217905143
+`
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+}
+
+func TestGaussReadOut(t *testing.T) {
+	tmp := Conf.At(EnergyLine)
+	defer func() {
+		Conf.Set(EnergyLine, tmp)
+	}()
+	Conf.Set(EnergyLine, regexp.MustCompile(`SCF Done:`))
+	g := new(Gaussian)
+	energy, time, grad, err := g.ReadOut("testfiles/gaussian/opt.out")
+	want := struct {
+		energy float64
+		time   float64
+		grad   []float64
+		err    error
+	}{-0.195847985171e-01, 0.7, nil, nil}
+	if energy != want.energy {
+		t.Errorf("got %v, wanted %v\n", energy, want.energy)
+	}
+	if time != want.time {
+		t.Errorf("got %v, wanted %v\n", time, want.time)
+	}
+	if !reflect.DeepEqual(grad, want.grad) {
+		t.Errorf("got %v, wanted %v\n", grad, want.grad)
+	}
+	if err != want.err {
+		t.Errorf("got %v, wanted %v\n", err, want.err)
 	}
 }

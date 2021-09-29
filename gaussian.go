@@ -140,10 +140,10 @@ func (g *Gaussian) FormatZmat(geom string) (err error) {
 	return
 }
 
-// FormatCart formats a Cartesian geometry for use in Gaussian input and
-// places it in the Geometry field of m
+// FormatCart formats a Cartesian geometry for use in Gaussian input
+// and places it in the Geometry field of m
 func (g *Gaussian) FormatCart(geom string) (err error) {
-	g.Geom = geom + "\n}\n"
+	g.Geom = geom
 	return
 }
 
@@ -162,10 +162,11 @@ func (g *Gaussian) UpdateZmat(new string) {
 }
 
 // ReadOut reads a molpro output file and returns the resulting
-// energy, the real time taken, the gradient vector, and an error
-// describing the status of the output
+// energy, the wall time taken in seconds, the gradient vector, and an
+// error describing the status of the output
 // TODO signal error on problem reading gradient
-func (g *Gaussian) ReadOut(filename string) (result, time float64, grad []float64, err error) {
+func (g *Gaussian) ReadOut(filename string) (result, time float64,
+	grad []float64, err error) {
 	f, err := os.Open(filename)
 	defer f.Close()
 	if err != nil {
@@ -195,7 +196,7 @@ func (g *Gaussian) ReadOut(filename string) (result, time float64, grad []float6
 		case i == 0 && strings.Contains(strings.ToUpper(line), "ERROR"):
 			return result, time, grad, ErrFileContainsError
 		case strings.Contains(strings.ToLower(line), "error") &&
-			ErrorLine.MatchString(line):
+			GaussErrorLine.MatchString(line):
 			return result, time, grad, ErrFileContainsError
 			// since we assume the line contains an '='
 			// below, gate the regex match with that
@@ -219,9 +220,11 @@ func (g *Gaussian) ReadOut(filename string) (result, time float64, grad []float6
 					}
 				}
 			}
-		case strings.Contains(line, "REAL TIME"):
+		case strings.Contains(line, "Elapsed time:"):
+			// TODO this only pulls the seconds portion of
+			// the time
 			fields := strings.Fields(line)
-			timeStr := fields[len(fields)-2]
+			timeStr := fields[8]
 			time, _ = strconv.ParseFloat(timeStr, 64)
 		case strings.Contains(line, "GRADX"):
 			gradx = processGrad(line)

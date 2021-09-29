@@ -86,6 +86,7 @@ var (
 	StartCPU         int64
 	Conf             = NewConfig()
 	ErrorLine        = regexp.MustCompile(`(?i)[^_]error`)
+	GaussErrorLine        = regexp.MustCompile(`(?i)error[^=]`)
 )
 
 // Global is a structure for holding global variables
