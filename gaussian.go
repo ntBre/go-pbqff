@@ -19,12 +19,22 @@ import (
 
 // copying molpro for now, not sure how many are actually applicable
 type Gaussian struct {
-	Dir      string
-	Head     string
-	Geometry string
-	Tail     string
-	Opt      string
-	Extra    string
+	Dir  string
+	Head string
+	Opt  string
+	Body string
+	Geom string
+	Tail string
+}
+
+func (g *Gaussian) String() string {
+	var str strings.Builder
+	fmt.Fprintf(&str, "Head:\n%s", g.Head)
+	fmt.Fprintf(&str, "Opt:\n%s", g.Opt)
+	fmt.Fprintf(&str, "Body:\n%s", g.Body)
+	fmt.Fprintf(&str, "Geom:\n%s", g.Geom)
+	fmt.Fprintf(&str, "Tail:\n%s", g.Tail)
+	return str.String()
 }
 
 func (g *Gaussian) SetDir(dir string) {
@@ -36,10 +46,10 @@ func (g *Gaussian) GetDir() string {
 }
 
 func (g *Gaussian) GetGeometry() string {
-	return g.Geometry
+	return g.Geom
 }
 
-// LoadGaussian loads a template molpro input file
+// LoadGaussian loads a template Gaussian input file
 func LoadGaussian(filename string) (*Gaussian, error) {
 	f, err := os.Open(filename)
 	defer f.Close()
@@ -48,33 +58,41 @@ func LoadGaussian(filename string) (*Gaussian, error) {
 	}
 	scanner := bufio.NewScanner(f)
 	var (
-		buf  bytes.Buffer
+		str  strings.Builder
 		line string
-		mp   Gaussian
+		g    Gaussian
+		geom bool
 	)
+	chargeSpin := regexp.MustCompile(`^\s*\d\s+\d\s*$`)
 	for scanner.Scan() {
 		line = scanner.Text()
-		if strings.Contains(line, "optg") && !strings.Contains(line, "gthresh") {
-			mp.Tail = buf.String()
-			buf.Reset()
-			mp.Opt = line + "\n"
-			continue
-		}
-		buf.WriteString(line + "\n")
-		if strings.Contains(line, "geometry=") {
-			mp.Head = buf.String()
-			buf.Reset()
+		switch {
+		case strings.Contains(line, "#"):
+			g.Head = str.String()
+			str.Reset()
+			g.Opt = line + "\n"
+		case chargeSpin.MatchString(line):
+			str.WriteString(line + "\n")
+			g.Body = str.String()
+			str.Reset()
+			geom = true
+		case geom && line == "":
+			geom = false
+		case geom:
+			// skip the geometry
+		default:
+			str.WriteString(line + "\n")
 		}
 	}
-	mp.Extra = buf.String()
-	return &mp, nil
+	g.Tail = str.String()
+	return &g, nil
 }
 
 // WriteInput writes a Gaussian input file
 func (g *Gaussian) WriteInput(filename string, p Procedure) {
 	var buf bytes.Buffer
 	buf.WriteString(g.Head)
-	buf.WriteString(g.Geometry + "\n")
+	buf.WriteString(g.Geom + "\n")
 	buf.WriteString(g.Tail)
 	switch p {
 	case opt:
@@ -82,7 +100,6 @@ func (g *Gaussian) WriteInput(filename string, p Procedure) {
 	case freq:
 		buf.WriteString("{frequencies}\n")
 	}
-	buf.WriteString(g.Extra)
 	ioutil.WriteFile(filename, buf.Bytes(), 0755)
 }
 
@@ -99,20 +116,20 @@ func (g *Gaussian) FormatZmat(geom string) (err error) {
 			break
 		}
 	}
-	g.Geometry = strings.Join(out, "\n")
+	g.Geom = strings.Join(out, "\n")
 	return
 }
 
 // FormatCart formats a Cartesian geometry for use in Gaussian input and
 // places it in the Geometry field of m
 func (g *Gaussian) FormatCart(geom string) (err error) {
-	g.Geometry = geom + "\n}\n"
+	g.Geom = geom + "\n}\n"
 	return
 }
 
 // UpdateZmat updates an old zmat with new parameters
 func (g *Gaussian) UpdateZmat(new string) {
-	old := g.Geometry
+	old := g.Geom
 	lines := strings.Split(old, "\n")
 	for i, line := range lines {
 		if strings.Contains(line, "}") {
@@ -121,7 +138,7 @@ func (g *Gaussian) UpdateZmat(new string) {
 		}
 	}
 	updated := strings.Join(lines, "\n")
-	g.Geometry = updated + "\n" + new
+	g.Geom = updated + "\n" + new
 }
 
 // ReadOut reads a molpro output file and returns the resulting
@@ -325,7 +342,7 @@ func (g *Gaussian) BuildPoints(filename string, atomNames []string, target *[]Co
 				if li == len(lines)-1 {
 					fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
 				}
-				g.Geometry = fmt.Sprint(buf.String(), "}\n")
+				g.Geom = fmt.Sprint(buf.String(), "}\n")
 				basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
 				fname := basename + ".inp"
 				if write {
@@ -409,7 +426,7 @@ func (g *Gaussian) Derivative(dir string, names []string,
 	}
 	for _, p := range protos {
 		coords := Step(coords, p.Steps...)
-		g.Geometry = ZipXYZ(names, coords) + "}\n"
+		g.Geom = ZipXYZ(names, coords) + "}\n"
 		temp := Calc{
 			Name:  filepath.Join(dir, p.Name),
 			Scale: p.Scale,
@@ -549,7 +566,7 @@ func (g *Gaussian) GradDerivative(dir string, names []string, coords []float64,
 	}
 	for _, p := range protos {
 		coords := Step(coords, p.Steps...)
-		g.Geometry = ZipXYZ(names, coords) + "}\n"
+		g.Geom = ZipXYZ(names, coords) + "}\n"
 		temp := Calc{Name: filepath.Join(dir, p.Name), Scale: p.Scale}
 		var index int
 		for g := 1; g <= dimmax; g++ {
