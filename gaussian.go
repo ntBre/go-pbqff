@@ -27,15 +27,16 @@ type Gaussian struct {
 	Extra    string
 }
 
-func (m *Gaussian) SetDir(dir string) {
-	m.Dir = dir
-}
-func (m *Gaussian) GetDir() string {
-	return m.Dir
+func (g *Gaussian) SetDir(dir string) {
+	g.Dir = dir
 }
 
-func (m *Gaussian) GetGeometry() string {
-	return m.Geometry
+func (g *Gaussian) GetDir() string {
+	return g.Dir
+}
+
+func (g *Gaussian) GetGeometry() string {
+	return g.Geometry
 }
 
 // LoadGaussian loads a template molpro input file
@@ -70,24 +71,24 @@ func LoadGaussian(filename string) (*Gaussian, error) {
 }
 
 // WriteInput writes a Gaussian input file
-func (m *Gaussian) WriteInput(filename string, p Procedure) {
+func (g *Gaussian) WriteInput(filename string, p Procedure) {
 	var buf bytes.Buffer
-	buf.WriteString(m.Head)
-	buf.WriteString(m.Geometry + "\n")
-	buf.WriteString(m.Tail)
+	buf.WriteString(g.Head)
+	buf.WriteString(g.Geometry + "\n")
+	buf.WriteString(g.Tail)
 	switch p {
 	case opt:
-		buf.WriteString(m.Opt)
+		buf.WriteString(g.Opt)
 	case freq:
 		buf.WriteString("{frequencies}\n")
 	}
-	buf.WriteString(m.Extra)
+	buf.WriteString(g.Extra)
 	ioutil.WriteFile(filename, buf.Bytes(), 0755)
 }
 
 // FormatZmat formats a z-matrix for use in Gaussian input and places it
 // in the Geometry field of m
-func (m *Gaussian) FormatZmat(geom string) (err error) {
+func (g *Gaussian) FormatZmat(geom string) (err error) {
 	var out []string
 	err = errors.New("improper z-matrix")
 	split := strings.Split(geom, "\n")
@@ -98,20 +99,20 @@ func (m *Gaussian) FormatZmat(geom string) (err error) {
 			break
 		}
 	}
-	m.Geometry = strings.Join(out, "\n")
+	g.Geometry = strings.Join(out, "\n")
 	return
 }
 
 // FormatCart formats a Cartesian geometry for use in Gaussian input and
 // places it in the Geometry field of m
-func (m *Gaussian) FormatCart(geom string) (err error) {
-	m.Geometry = geom + "\n}\n"
+func (g *Gaussian) FormatCart(geom string) (err error) {
+	g.Geometry = geom + "\n}\n"
 	return
 }
 
 // UpdateZmat updates an old zmat with new parameters
-func (m *Gaussian) UpdateZmat(new string) {
-	old := m.Geometry
+func (g *Gaussian) UpdateZmat(new string) {
+	old := g.Geometry
 	lines := strings.Split(old, "\n")
 	for i, line := range lines {
 		if strings.Contains(line, "}") {
@@ -120,14 +121,14 @@ func (m *Gaussian) UpdateZmat(new string) {
 		}
 	}
 	updated := strings.Join(lines, "\n")
-	m.Geometry = updated + "\n" + new
+	g.Geometry = updated + "\n" + new
 }
 
 // ReadOut reads a molpro output file and returns the resulting
 // energy, the real time taken, the gradient vector, and an error
 // describing the status of the output
 // TODO signal error on problem reading gradient
-func (m Gaussian) ReadOut(filename string) (result, time float64, grad []float64, err error) {
+func (g *Gaussian) ReadOut(filename string) (result, time float64, grad []float64, err error) {
 	f, err := os.Open(filename)
 	defer f.Close()
 	if err != nil {
@@ -220,7 +221,7 @@ func (m Gaussian) ReadOut(filename string) (result, time float64, grad []float64
 // HandleOutput is a wrapper around ReadLog that reads the .out and
 // .log files for filename, first checking the .out file for warnings
 // and errors before calling ReadLog on the .log file
-func (m *Gaussian) HandleOutput(filename string) (string, string, error) {
+func (g *Gaussian) HandleOutput(filename string) (string, string, error) {
 	outfile := filename + ".out"
 	logfile := filename + ".log"
 	lines, err := ReadFile(outfile)
@@ -251,7 +252,7 @@ func (m *Gaussian) HandleOutput(filename string) (string, string, error) {
 
 // ReadFreqs reads a Gaussian frequency calculation output file
 // and return a slice of the harmonic frequencies
-func (m Gaussian) ReadFreqs(filename string) (freqs []float64) {
+func (g Gaussian) ReadFreqs(filename string) (freqs []float64) {
 	f, err := os.Open(filename)
 	defer f.Close()
 	if err != nil {
@@ -278,8 +279,8 @@ func (m Gaussian) ReadFreqs(filename string) (freqs []float64) {
 
 // AugmentHead augments the header of a molpro input file
 // with a specification of the geometry type and units
-func (m *Gaussian) AugmentHead() {
-	lines := strings.Split(m.Head, "\n")
+func (g *Gaussian) AugmentHead() {
+	lines := strings.Split(g.Head, "\n")
 	add := "geomtyp=xyz\nbohr"
 	newlines := make([]string, 0)
 	for i, line := range lines {
@@ -288,7 +289,7 @@ func (m *Gaussian) AugmentHead() {
 			newlines = append(newlines, lines[:i]...)
 			newlines = append(newlines, add)
 			newlines = append(newlines, lines[i:]...)
-			m.Head = strings.Join(newlines, "\n")
+			g.Head = strings.Join(newlines, "\n")
 			return
 		}
 	}
@@ -298,7 +299,7 @@ func (m *Gaussian) AugmentHead() {
 // single-point energy calculations and return an array of jobs to
 // run. If write is set to true, write the necessary files. Otherwise
 // just return the list of jobs.
-func (m *Gaussian) BuildPoints(filename string, atomNames []string, target *[]CountFloat, write bool) func() ([]Calc, bool) {
+func (g *Gaussian) BuildPoints(filename string, atomNames []string, target *[]CountFloat, write bool) func() ([]Calc, bool) {
 	// TODO I'd like a scanner here but not straightforward
 	// because it's nice to know that we're on the last line
 	lines, err := ReadFile(filename)
@@ -313,7 +314,7 @@ func (m *Gaussian) BuildPoints(filename string, atomNames []string, target *[]Co
 	)
 	dir := path.Dir(filename)
 	name := strings.Join(atomNames, "")
-	m.AugmentHead()
+	g.AugmentHead()
 	calcs := make([]Calc, 0)
 	// read file07, assemble list of calcs, and write molpro files
 	for li, line := range lines {
@@ -324,11 +325,11 @@ func (m *Gaussian) BuildPoints(filename string, atomNames []string, target *[]Co
 				if li == len(lines)-1 {
 					fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
 				}
-				m.Geometry = fmt.Sprint(buf.String(), "}\n")
+				g.Geometry = fmt.Sprint(buf.String(), "}\n")
 				basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
 				fname := basename + ".inp"
 				if write {
-					m.WriteInput(fname, none)
+					g.WriteInput(fname, none)
 				}
 				for len(*target) <= geom {
 					*target = append(*target, CountFloat{Count: 1})
@@ -384,7 +385,7 @@ func (m *Gaussian) BuildPoints(filename string, atomNames []string, target *[]Co
 }
 
 // Derivative is a helper for calling Make(2|3|4)D in the same way
-func (m *Gaussian) Derivative(dir string, names []string,
+func (g *Gaussian) Derivative(dir string, names []string,
 	coords []float64, i, j, k, l int) (calcs []Calc) {
 	var (
 		protos []ProtoCalc
@@ -408,7 +409,7 @@ func (m *Gaussian) Derivative(dir string, names []string,
 	}
 	for _, p := range protos {
 		coords := Step(coords, p.Steps...)
-		m.Geometry = ZipXYZ(names, coords) + "}\n"
+		g.Geometry = ZipXYZ(names, coords) + "}\n"
 		temp := Calc{
 			Name:  filepath.Join(dir, p.Name),
 			Scale: p.Scale,
@@ -464,7 +465,7 @@ func (m *Gaussian) Derivative(dir string, names []string,
 				temp.noRun = true
 			}
 			if !temp.noRun {
-				m.WriteInput(fname, none)
+				g.WriteInput(fname, none)
 			}
 			calcs = append(calcs, temp)
 		}
