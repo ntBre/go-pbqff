@@ -85,9 +85,9 @@ export OMP_NUM_THREADS=1
 
 echo "exec_host = $HOSTNAME"
 
-if [[ $HOSTNAME =~ cn([0-9]{{3}}) ]];
+if [[ $HOSTNAME =~ cn([0-9]{3}) ]];
 then
-  nodenum=${{BASH_REMATCH[1]}};
+  nodenum=${BASH_REMATCH[1]};
   nodenum=$((10#$nodenum));
   echo $nodenum
 
@@ -125,7 +125,7 @@ var pbsMaple = `#!/bin/sh
 #PBS -N {{.Name}}
 #PBS -S /bin/bash
 #PBS -j oe
-#PBS -o /dev/null
+#PBS -o pbs.{{.Filename}}.out
 #PBS -W umask=022
 #PBS -l walltime=5000:00:00
 #PBS -l ncpus=1
@@ -149,7 +149,7 @@ var pbsMapleGauss = `#!/bin/sh
 #PBS -N {{.Name}}
 #PBS -S /bin/bash
 #PBS -j oe
-#PBS -o /dev/null
+#PBS -o pbs.{{.Filename}}.out
 #PBS -W umask=022
 #PBS -l walltime=5000:00:00
 #PBS -l ncpus=1
@@ -162,10 +162,9 @@ export GAUSS_SCRDIR=$scrdir
 export OMP_NUM_THREADS=1
 
 echo "exec_host = $HOSTNAME"
-
-if [[ $HOSTNAME =~ cn([0-9]{{3}}) ]];
+if [[ $HOSTNAME =~ cn([0-9]{3}) ]];
 then
-  nodenum=${{BASH_REMATCH[1]}};
+  nodenum=${BASH_REMATCH[1]};
   nodenum=$((10#$nodenum));
   echo $nodenum
 

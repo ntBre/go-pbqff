@@ -4,6 +4,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"text/template"
 )
 
 func TestWritePBS(t *testing.T) {
@@ -31,5 +32,12 @@ func TestReadPBSNodes(t *testing.T) {
 	want := []string{"workq:cn064", "workq:cn065", "workq:cn066", "workq:cn067"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %q, wanted %q\n", got, want)
+	}
+}
+
+func TestTemplate(t *testing.T) {
+	_, err := template.New("pbs").Parse(pbsMapleGauss)
+	if err != nil {
+		t.Errorf("template failed:  %v\n", err)
 	}
 }

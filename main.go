@@ -86,7 +86,8 @@ var (
 	StartCPU         int64
 	Conf             = NewConfig()
 	ErrorLine        = regexp.MustCompile(`(?i)[^_]error`)
-	GaussErrorLine   = regexp.MustCompile(`(?i)error[^=]`)
+	GaussErrorLine   = regexp.MustCompile(`(?i)error termination`)
+	OutExt           = ".out"
 )
 
 // Global is a structure for holding global variables
@@ -287,7 +288,7 @@ func Drain(prog Program, ncoords int, E0 float64,
 					success = true
 				}
 			} else if energy, t, gradients,
-				err = prog.ReadOut(job.Name + ".out"); err == nil {
+				err = prog.ReadOut(job.Name + OutExt); err == nil {
 				success = true
 				if energy < min {
 					min = energy
@@ -315,7 +316,7 @@ func Drain(prog Program, ncoords int, E0 float64,
 			} else if job.Resub != nil {
 				if energy, t, gradients,
 					err = prog.ReadOut(job.Resub.Name +
-					".out"); err == nil {
+					OutExt); err == nil {
 					success = true
 					if energy < min {
 						min = energy
@@ -488,6 +489,7 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 		prog, err = LoadGaussian(mpName)
 		ptsMaple = ptsMapleGauss
 		pbsMaple = pbsMapleGauss
+		OutExt = ".log"
 	}
 	if err != nil {
 		errExit(err, fmt.Sprintf("loading molpro input %q", mpName))

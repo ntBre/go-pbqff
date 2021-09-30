@@ -97,7 +97,9 @@ func (g *Gaussian) makeInput(w io.Writer, p Procedure) {
 	case opt:
 		fmt.Fprint(w, "opt\n")
 	case freq:
-		fmt.Fprint(w, "freq")
+		fmt.Fprint(w, "freq\n")
+	default:
+		fmt.Fprint(w, "\n")
 	}
 	fmt.Fprintf(w, "%s%s\n\n", g.Body, strings.TrimSpace(g.Geom))
 	fmt.Fprintf(w, "%s", g.Tail)
@@ -262,7 +264,7 @@ func (g *Gaussian) ReadOut(filename string) (result, time float64,
 // and Z-matrix (angstrom) form from a Gaussian output file. It also
 // checks the output file for warnings and errors.
 func (g *Gaussian) HandleOutput(filename string) (string, string, error) {
-	f, err := os.Open(filename)
+	f, err := os.Open(filename + OutExt)
 	defer f.Close()
 	if err != nil {
 		panic(err)
@@ -367,9 +369,13 @@ func toAngstrom(geom string) string {
 	new := make([]string, len(lines))
 	for i, line := range lines {
 		fields := strings.Fields(line)
-		v := strBohrToAng(fields[1:])
-		new[i] = fmt.Sprintf("%s %f %f %f\n",
-			fields[0], v[1], v[2], v[3])
+		if len(fields) > 1 {
+			v := strBohrToAng(fields[1:])
+			new[i] = fmt.Sprintf("%s %f %f %f",
+				fields[0], v[0], v[1], v[2])
+		} else {
+			new[i] = ""
+		}
 	}
 	return strings.Join(new, "\n")
 }
@@ -741,7 +747,7 @@ func (g *Gaussian) Run(proc Procedure) (E0 float64) {
 	dir = filepath.Join(g.Dir, dir)
 	infile := filepath.Join(dir, name+".inp")
 	pbsfile := filepath.Join(dir, name+".pbs")
-	outfile := filepath.Join(dir, name+".out")
+	outfile := filepath.Join(dir, name+OutExt)
 	E0, _, _, err := g.ReadOut(outfile)
 	if *read && err == nil {
 		return
