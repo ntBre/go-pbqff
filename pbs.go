@@ -28,7 +28,7 @@ type Job struct {
 
 const mapleCmd = `molpro -t 1`
 
-const ptsMaple = `#!/bin/sh
+var ptsMaple = `#!/bin/sh
 #PBS -N {{.Name}}
 #PBS -S /bin/bash
 #PBS -j oe
@@ -61,7 +61,67 @@ date
 rm -rf $TMPDIR
 `
 
-const pbsMaple = `#!/bin/sh
+var ptsMapleGauss = `#!/bin/sh
+#PBS -N {{.Name}}
+#PBS -S /bin/bash
+#PBS -j oe
+#PBS -o {{.Filename}}.out
+#PBS -W umask=022
+#PBS -l walltime=5000:00:00
+#PBS -l ncpus=1
+#PBS -l mem={{.PBSMem}}gb
+{{- if .Queue}}
+#PBS -q {{.Queue}}
+{{- end}}
+{{- if .Host}}
+#PBS -l host={{.Host}}
+{{- end}}
+
+scrdir=/tmp/$USER.$PBS_JOBID
+
+mkdir -p $scrdir
+export GAUSS_SCRDIR=$scrdir
+export OMP_NUM_THREADS=1
+
+echo "exec_host = $HOSTNAME"
+
+if [[ $HOSTNAME =~ cn([0-9]{{3}}) ]];
+then
+  nodenum=${{BASH_REMATCH[1]}};
+  nodenum=$((10#$nodenum));
+  echo $nodenum
+
+  if (( $nodenum <= 29 ))
+  then
+    echo "Using AVX version";
+    export g16root=/usr/local/apps/gaussian/g16-c01-avx/
+  elif (( $nodenum > 29 ))
+  then
+    echo "Using AVX2 version";
+    export g16root=/usr/local/apps/gaussian/g16-c01-avx2/
+  else
+    echo "Unexpected condition!"
+    exit 1;
+  fi
+else
+  echo "Not on a compute node!"
+  exit 1;
+fi
+
+cd $PBS_O_WORKDIR
+. $g16root/g16/bsd/g16.profile
+
+date
+hostname
+{{range $j := .Jobs}}
+g16 {{ $j }}
+{{- end }}
+date
+
+rm -rf $TMPDIR
+`
+
+var pbsMaple = `#!/bin/sh
 #PBS -N {{.Name}}
 #PBS -S /bin/bash
 #PBS -j oe
@@ -80,6 +140,57 @@ mkdir -p $TMPDIR
 
 date
 molpro -t 1 --no-xml-output {{.Filename}}
+date
+
+rm -rf $TMPDIR
+`
+
+var pbsMapleGauss = `#!/bin/sh
+#PBS -N {{.Name}}
+#PBS -S /bin/bash
+#PBS -j oe
+#PBS -o /dev/null
+#PBS -W umask=022
+#PBS -l walltime=5000:00:00
+#PBS -l ncpus=1
+#PBS -l mem=9gb
+
+scrdir=/tmp/$USER.$PBS_JOBID
+
+mkdir -p $scrdir
+export GAUSS_SCRDIR=$scrdir
+export OMP_NUM_THREADS=1
+
+echo "exec_host = $HOSTNAME"
+
+if [[ $HOSTNAME =~ cn([0-9]{{3}}) ]];
+then
+  nodenum=${{BASH_REMATCH[1]}};
+  nodenum=$((10#$nodenum));
+  echo $nodenum
+
+  if (( $nodenum <= 29 ))
+  then
+    echo "Using AVX version";
+    export g16root=/usr/local/apps/gaussian/g16-c01-avx/
+  elif (( $nodenum > 29 ))
+  then
+    echo "Using AVX2 version";
+    export g16root=/usr/local/apps/gaussian/g16-c01-avx2/
+  else
+    echo "Unexpected condition!"
+    exit 1;
+  fi
+else
+  echo "Not on a compute node!"
+  exit 1;
+fi
+
+cd $PBS_O_WORKDIR
+. $g16root/g16/bsd/g16.profile
+
+date
+g16 {{.Filename}}
 date
 
 rm -rf $TMPDIR

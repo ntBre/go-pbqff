@@ -481,7 +481,14 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	idName := filepath.Join(dir, Conf.Str(IntderTmpl))
 	apName := filepath.Join(dir, Conf.Str(AnpassTmpl))
 	var err error
-	prog, err = LoadMolpro(mpName)
+	switch Conf.Str(Package) {
+	case "molpro", "":
+		prog, err = LoadMolpro(mpName)
+	case "g16", "gaussian", "gauss":
+		prog, err = LoadGaussian(mpName)
+		ptsMaple = ptsMapleGauss
+		pbsMaple = pbsMapleGauss
+	}
 	if err != nil {
 		errExit(err, fmt.Sprintf("loading molpro input %q", mpName))
 	}

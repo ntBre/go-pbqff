@@ -160,3 +160,20 @@ HCC=147.8148823
 		t.Errorf("got %v, wanted %v\n", err, want.err)
 	}
 }
+
+func TestGaussReadFreqs(t *testing.T) {
+	got := new(Gaussian).ReadFreqs("testfiles/gaussian/freq.out")
+	want := []float64{
+		3226.9641, 3212.4866, 3212.4866,
+		3210.8590, 3210.8590, 1268.5148,
+		1268.5148, 1141.1836, 1075.6897,
+		1032.6991, 1032.6991, 904.5829,
+		904.5828, 893.4540, 893.4540,
+		743.1793, 743.1793, 665.5238,
+		662.7349, 662.7349, 112.7008,
+		112.7008, -564.2774, -564.2774,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+}

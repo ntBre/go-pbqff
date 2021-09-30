@@ -323,8 +323,8 @@ func (g *Gaussian) HandleOutput(filename string) (string, string, error) {
 	return cart.String(), zmat.String(), nil
 }
 
-// ReadFreqs reads a Gaussian frequency calculation output file
-// and return a slice of the harmonic frequencies
+// ReadFreqs reads a Gaussian harmonic frequency calculation output
+// file and return a slice of the harmonic frequencies
 func (g Gaussian) ReadFreqs(filename string) (freqs []float64) {
 	f, err := os.Open(filename)
 	defer f.Close()
@@ -335,14 +335,15 @@ func (g Gaussian) ReadFreqs(filename string) (freqs []float64) {
 	var line string
 	for scanner.Scan() {
 		line = scanner.Text()
-		if strings.Contains(line, "Wavenumbers") {
+		if strings.Contains(line, "Frequencies --") {
 			fields := strings.Fields(line)[2:]
+			fmt.Printf("%q\n", fields)
 			for _, val := range fields {
 				val, _ := strconv.ParseFloat(val, 64)
 				freqs = append(freqs, val)
 			}
 		}
-		if strings.Contains(line, "low/zero") {
+		if strings.Contains(line, "Thermochemistry") {
 			break
 		}
 	}
@@ -350,31 +351,35 @@ func (g Gaussian) ReadFreqs(filename string) (freqs []float64) {
 	return
 }
 
-// AugmentHead augments the header of a molpro input file
-// with a specification of the geometry type and units
-func (g *Gaussian) AugmentHead() {
-	lines := strings.Split(g.Head, "\n")
-	add := "geomtyp=xyz\nbohr"
-	newlines := make([]string, 0)
-	for i, line := range lines {
-		if strings.Contains(line, "geometry") &&
-			!strings.Contains(lines[i-1], "bohr") {
-			newlines = append(newlines, lines[:i]...)
-			newlines = append(newlines, add)
-			newlines = append(newlines, lines[i:]...)
-			g.Head = strings.Join(newlines, "\n")
-			return
-		}
+func strBohrToAng(bohrs []string) []float64 {
+	ret := make([]float64, len(bohrs))
+	for i := range bohrs {
+		ret[i], _ = strconv.ParseFloat(bohrs[i], 64)
+		ret[i] *= angbohr
 	}
+	return ret
+}
+
+// toAngstrom takes a geometry in bohr like "C 1.0 1.0 1.0\nH 2.0 2.0
+// 2.0\n" and returns it converted to angstroms
+func toAngstrom(geom string) string {
+	lines := strings.Split(geom, "\n")
+	new := make([]string, len(lines))
+	for i, line := range lines {
+		fields := strings.Fields(line)
+		v := strBohrToAng(fields[1:])
+		new[i] = fmt.Sprintf("%s %f %f %f\n",
+			fields[0], v[1], v[2], v[3])
+	}
+	return strings.Join(new, "\n")
 }
 
 // BuildPoints uses a file07 file from Intder to construct the
 // single-point energy calculations and return an array of jobs to
 // run. If write is set to true, write the necessary files. Otherwise
 // just return the list of jobs.
-func (g *Gaussian) BuildPoints(filename string, atomNames []string, target *[]CountFloat, write bool) func() ([]Calc, bool) {
-	// TODO I'd like a scanner here but not straightforward
-	// because it's nice to know that we're on the last line
+func (g *Gaussian) BuildPoints(filename string, atomNames []string,
+	target *[]CountFloat, write bool) func() ([]Calc, bool) {
 	lines, err := ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -387,9 +392,7 @@ func (g *Gaussian) BuildPoints(filename string, atomNames []string, target *[]Co
 	)
 	dir := path.Dir(filename)
 	name := strings.Join(atomNames, "")
-	g.AugmentHead()
 	calcs := make([]Calc, 0)
-	// read file07, assemble list of calcs, and write molpro files
 	for li, line := range lines {
 		if !strings.Contains(line, "#") {
 			ind := i % l
@@ -398,7 +401,7 @@ func (g *Gaussian) BuildPoints(filename string, atomNames []string, target *[]Co
 				if li == len(lines)-1 {
 					fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
 				}
-				g.Geom = fmt.Sprint(buf.String(), "}\n")
+				g.Geom = toAngstrom(buf.String())
 				basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
 				fname := basename + ".inp"
 				if write {
