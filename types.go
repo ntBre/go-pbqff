@@ -106,24 +106,3 @@ func (g *GarbageHeap) Dump() {
 	}
 	g.heap = []string{}
 }
-
-// Program is an interface for using different quantum chemical
-// programs in the place of Molpro. TODO this is a massive interface,
-// how many of these are really necessary?
-type Program interface {
-	GetDir() string
-	SetDir(string)
-	WriteInput(string, Procedure)
-	FormatZmat(string) error
-	Run(Procedure) float64
-	HandleOutput(string) (string, string, error)
-	UpdateZmat(string)
-	FormatCart(string) error
-	GetGeometry() string
-	BuildPoints(string, []string,
-		*[]CountFloat, bool) func() ([]Calc, bool)
-	BuildCartPoints(string, []string, []float64) func() ([]Calc, bool)
-	BuildGradPoints(string, []string, []float64) func() ([]Calc, bool)
-	ReadOut(string) (float64, float64, []float64, error)
-	ReadFreqs(string) []float64
-}

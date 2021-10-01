@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -43,7 +42,11 @@ func (g *Gaussian) GetDir() string {
 	return g.Dir
 }
 
-func (g *Gaussian) GetGeometry() string {
+func (g *Gaussian) SetGeom(geom string) {
+	g.Geom = geom
+}
+
+func (g *Gaussian) GetGeom() string {
 	return g.Geom
 }
 
@@ -94,7 +97,7 @@ func (g *Gaussian) makeInput(w io.Writer, p Procedure) {
 	fmt.Fprintf(w, "%s%s ", g.Head, strings.TrimSpace(g.Opt))
 	switch p {
 	case opt:
-		fmt.Fprint(w, "opt\n")
+		fmt.Fprint(w, "opt=VeryTight\n")
 	case freq:
 		fmt.Fprint(w, "freq\n")
 	default:
@@ -155,8 +158,8 @@ func (g *Gaussian) UpdateZmat(new string) {
 	old := g.Geom
 	lines := strings.Split(old, "\n")
 	for i, line := range lines {
-		if strings.Contains(line, "}") {
-			lines = lines[:i+1]
+		if strings.Contains(line, "=") {
+			lines = lines[:i]
 			break
 		}
 	}
@@ -174,14 +177,19 @@ func readChk(filename string) float64 {
 		f, err = os.Open(filename)
 	}
 	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		if line := scanner.Text(); strings.Contains(line, "SCF Energy") {
-			fields := strings.Fields(line)
-			v, _ := strconv.ParseFloat(fields[3], 64)
-			return v
+	for {
+		for scanner.Scan() {
+			if line := scanner.Text(); strings.Contains(line, "SCF Energy") {
+				fields := strings.Fields(line)
+				v, _ := strconv.ParseFloat(fields[3], 64)
+				return v
+			}
 		}
+		fmt.Printf("can't find energy in %s, retrying\n", filename)
+		f.Seek(0, io.SeekStart)
+		scanner = bufio.NewScanner(f)
+		time.Sleep(1 * time.Second)
 	}
-	panic("energy not found")
 }
 
 // ReadOut reads a molpro output file and returns the resulting
@@ -385,90 +393,11 @@ func toAngstrom(geom string) string {
 	return strings.Join(new, "\n")
 }
 
-// BuildPoints uses a file07 file from Intder to construct the
-// single-point energy calculations and return an array of jobs to
-// run. If write is set to true, write the necessary files. Otherwise
-// just return the list of jobs.
-func (g *Gaussian) BuildPoints(filename string, atomNames []string,
-	target *[]CountFloat, write bool) func() ([]Calc, bool) {
-	lines, err := ReadFile(filename)
-	if err != nil {
-		panic(err)
-	}
-	l := len(atomNames)
-	i := 0
-	var (
-		buf  strings.Builder
-		geom int
-	)
-	dir := path.Dir(filename)
-	name := strings.Join(atomNames, "")
-	calcs := make([]Calc, 0)
-	for li, line := range lines {
-		if !strings.Contains(line, "#") {
-			ind := i % l
-			if (ind == 0 && i > 0) || li == len(lines)-1 {
-				// last line needs to write first
-				if li == len(lines)-1 {
-					fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
-				}
-				g.Geom = toAngstrom(buf.String())
-				basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
-				fname := basename + ".inp"
-				if write {
-					g.WriteInput(fname, none)
-				}
-				for len(*target) <= geom {
-					*target = append(*target, CountFloat{Count: 1})
-				}
-				calcs = append(calcs, Calc{
-					Name:  basename,
-					Scale: 1.0,
-					Targets: []Target{
-						{
-							Coeff: 1,
-							Slice: target,
-							Index: geom,
-						},
-					},
-				})
-				geom++
-				buf.Reset()
-			}
-			fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
-			i++
-		}
-	}
-	var (
-		start int
-		pf    int
-		count int
-		end   int
-	)
-	cs := Conf.Int(ChunkSize)
-	if start+cs > len(calcs) {
-		end = len(calcs)
-	} else {
-		end = start + cs
-	}
-	// returns a list of calcs and whether or not it should be
-	// called again
-	return func() ([]Calc, bool) {
-		defer func() {
-			pf++
-			count++
-			start += cs
-			if end+cs > len(calcs) {
-				end = len(calcs)
-			} else {
-				end += cs
-			}
-		}()
-		if end == len(calcs) {
-			return Push(filepath.Join(dir, "inp"), pf, count, calcs[start:end]), false
-		}
-		return Push(filepath.Join(dir, "inp"), pf, count, calcs[start:end]), true
-	}
+// no-op to meet interface
+func (g *Gaussian) AugmentHead() {}
+
+func (g *Gaussian) FormatGeom(coords string) string {
+	return toAngstrom(coords)
 }
 
 // Derivative is a helper for calling Make(2|3|4)D in the same way

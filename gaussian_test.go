@@ -36,7 +36,7 @@ H -0.5110183966  0.8851098265 -0.3613445025
 `
 	g.makeInput(&got, opt)
 	want := `%nprocs=4
-#P PM6=(print,zero,input) opt
+#P PM6=(print,zero,input) opt=VeryTight
 
 the title
 
@@ -114,7 +114,7 @@ func TestGaussReadOut(t *testing.T) {
 		time   float64
 		grad   []float64
 		err    error
-	}{-0.195847985171e-01, 0.7, nil, nil}
+	}{1.597082773539640e-01, 0.7, nil, nil}
 	if energy != want.energy {
 		t.Errorf("got %v, wanted %v\n", energy, want.energy)
 	}
@@ -131,7 +131,7 @@ func TestGaussReadOut(t *testing.T) {
 
 func TestGaussHandleOutput(t *testing.T) {
 	g := new(Gaussian)
-	cart, zmat, err := g.HandleOutput("testfiles/gaussian/zmat_opt.out")
+	cart, zmat, err := g.HandleOutput("testfiles/gaussian/zmat_opt")
 	want := struct {
 		cart string
 		zmat string

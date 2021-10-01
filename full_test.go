@@ -32,7 +32,7 @@ func TestSIC(t *testing.T) {
 	intder.WritePts("tests/sic/pts/intder.in")
 	RunIntder("tests/sic/pts/intder")
 	var cenergies []CountFloat
-	gen := prog.BuildPoints("tests/sic/pts/file07", names, &cenergies, true)
+	gen := BuildPoints(prog, "tests/sic/pts/file07", names, &cenergies, true)
 	E0 := -76.369839620287
 	min, _ := Drain(prog, 0, E0, gen)
 	energies := FloatsFromCountFloats(cenergies)
@@ -91,7 +91,7 @@ func TestCart(t *testing.T) {
 	}()
 	prog, _, _ := initialize("tests/cart/cart.in")
 	prog.FormatCart(Conf.Str(Geometry))
-	cart := prog.GetGeometry()
+	cart := prog.GetGeom()
 	E0 := prog.Run(none)
 	names, coords := XYZGeom(cart)
 	natoms := len(names)
@@ -146,7 +146,7 @@ func TestGrad(t *testing.T) {
 	}()
 	prog, _, _ := initialize("tests/grad/grad.in")
 	prog.FormatCart(Conf.Str(Geometry))
-	cart := prog.GetGeometry()
+	cart := prog.GetGeom()
 	E0 := 0.0
 	names, coords := XYZGeom(cart)
 	natoms := len(names)

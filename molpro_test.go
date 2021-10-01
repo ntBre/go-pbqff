@@ -24,7 +24,7 @@ nocompress;
 
 geometry={
 `,
-		Geometry: "",
+		Geom: "",
 		Tail: `basis={
 default,cc-pvdz-f12
 }
@@ -56,7 +56,7 @@ AlX = 0.85 Ang
 OX = 1.1 Ang
 XXO = 80.0 Deg`,
 	)
-	got := m.Geometry
+	got := m.Geom
 	want := `X
 X 1 1.0
 Al 1 AlX 2 90.0
@@ -137,7 +137,7 @@ OX=                  1.26606700 ANG
 			_, zmat, _ := prog.HandleOutput(test.out)
 			prog.FormatZmat(test.geom)
 			prog.UpdateZmat(zmat)
-			got := prog.Geometry
+			got := prog.Geom
 			if got != test.want {
 				t.Errorf("got\n%q, wanted\n%q\n", got, test.want)
 			}

@@ -34,12 +34,12 @@ func (p Procedure) String() string {
 
 // Molpro holds the data for writing molpro input files
 type Molpro struct {
-	Dir      string
-	Head     string
-	Geometry string
-	Tail     string
-	Opt      string
-	Extra    string
+	Dir   string
+	Head  string
+	Geom  string
+	Tail  string
+	Opt   string
+	Extra string
 }
 
 func (m *Molpro) SetDir(dir string) {
@@ -49,8 +49,12 @@ func (m *Molpro) GetDir() string {
 	return m.Dir
 }
 
-func (m *Molpro) GetGeometry() string {
-	return m.Geometry
+func (m *Molpro) SetGeom(geom string) {
+	m.Geom = geom
+}
+
+func (m *Molpro) GetGeom() string {
+	return m.Geom
 }
 
 // LoadMolpro loads a template molpro input file
@@ -88,7 +92,7 @@ func LoadMolpro(filename string) (*Molpro, error) {
 func (m *Molpro) WriteInput(filename string, p Procedure) {
 	var buf bytes.Buffer
 	buf.WriteString(m.Head)
-	buf.WriteString(m.Geometry + "\n")
+	buf.WriteString(m.Geom + "\n")
 	buf.WriteString(m.Tail)
 	switch p {
 	case opt:
@@ -113,20 +117,20 @@ func (m *Molpro) FormatZmat(geom string) (err error) {
 			break
 		}
 	}
-	m.Geometry = strings.Join(out, "\n")
+	m.Geom = strings.Join(out, "\n")
 	return
 }
 
 // FormatCart formats a Cartesian geometry for use in Molpro input and
 // places it in the Geometry field of m
 func (m *Molpro) FormatCart(geom string) (err error) {
-	m.Geometry = geom + "\n}\n"
+	m.Geom = geom + "\n}\n"
 	return
 }
 
 // UpdateZmat updates an old zmat with new parameters
 func (m *Molpro) UpdateZmat(new string) {
-	old := m.Geometry
+	old := m.Geom
 	lines := strings.Split(old, "\n")
 	for i, line := range lines {
 		if strings.Contains(line, "}") {
@@ -135,7 +139,7 @@ func (m *Molpro) UpdateZmat(new string) {
 		}
 	}
 	updated := strings.Join(lines, "\n")
-	m.Geometry = updated + "\n" + new
+	m.Geom = updated + "\n" + new
 }
 
 // ReadOut reads a molpro output file and returns the resulting
@@ -320,8 +324,8 @@ func (m Molpro) ReadFreqs(filename string) (freqs []float64) {
 	return
 }
 
-// AugmentHead augments the header of a molpro input file
-// with a specification of the geometry type and units
+// AugmentHead augments the header of a Molpro input file with a
+// specification of the geometry type and units
 func (m *Molpro) AugmentHead() {
 	lines := strings.Split(m.Head, "\n")
 	add := "geomtyp=xyz\nbohr"
@@ -338,13 +342,16 @@ func (m *Molpro) AugmentHead() {
 	}
 }
 
+func (m *Molpro) FormatGeom(coords string) string {
+	return fmt.Sprint(coords, "}\n")
+}
+
 // BuildPoints uses a file07 file from Intder to construct the
 // single-point energy calculations and return an array of jobs to
 // run. If write is set to true, write the necessary files. Otherwise
 // just return the list of jobs.
-func (m *Molpro) BuildPoints(filename string, atomNames []string, target *[]CountFloat, write bool) func() ([]Calc, bool) {
-	// TODO I'd like a scanner here but not straightforward
-	// because it's nice to know that we're on the last line
+func (m *Molpro) BuildPoints(filename string, atomNames []string,
+	target *[]CountFloat, write bool) func() ([]Calc, bool) {
 	lines, err := ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -359,7 +366,6 @@ func (m *Molpro) BuildPoints(filename string, atomNames []string, target *[]Coun
 	name := strings.Join(atomNames, "")
 	m.AugmentHead()
 	calcs := make([]Calc, 0)
-	// read file07, assemble list of calcs, and write molpro files
 	for li, line := range lines {
 		if !strings.Contains(line, "#") {
 			ind := i % l
@@ -368,7 +374,7 @@ func (m *Molpro) BuildPoints(filename string, atomNames []string, target *[]Coun
 				if li == len(lines)-1 {
 					fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
 				}
-				m.Geometry = fmt.Sprint(buf.String(), "}\n")
+				m.SetGeom(m.FormatGeom(buf.String()))
 				basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
 				fname := basename + ".inp"
 				if write {
@@ -452,7 +458,7 @@ func (m *Molpro) Derivative(dir string, names []string,
 	}
 	for _, p := range protos {
 		coords := Step(coords, p.Steps...)
-		m.Geometry = ZipXYZ(names, coords) + "}\n"
+		m.Geom = ZipXYZ(names, coords) + "}\n"
 		temp := Calc{
 			Name:  filepath.Join(dir, p.Name),
 			Scale: p.Scale,
@@ -592,7 +598,7 @@ func (m *Molpro) GradDerivative(dir string, names []string, coords []float64,
 	}
 	for _, p := range protos {
 		coords := Step(coords, p.Steps...)
-		m.Geometry = ZipXYZ(names, coords) + "}\n"
+		m.Geom = ZipXYZ(names, coords) + "}\n"
 		temp := Calc{Name: filepath.Join(dir, p.Name), Scale: p.Scale}
 		var index int
 		for g := 1; g <= dimmax; g++ {

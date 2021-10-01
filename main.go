@@ -671,7 +671,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		cart = prog.GetGeometry()
+		cart = prog.GetGeom()
 		// only required for cartesians
 		if DoCart() {
 			E0 = prog.Run(none)
@@ -689,15 +689,15 @@ func main() {
 		if DoPts() {
 			intder.WritePts("pts/intder.in")
 			RunIntder("pts/intder")
-			gen = prog.BuildPoints("pts/file07", names,
-				&cenergies, true)
+			gen = BuildPoints(prog, "pts/file07",
+				names, &cenergies, true)
 		} else {
 			// this works if no points were deleted and
 			// the files are named the same way between
 			// runs, else need a resume from checkpoint
 			// thing - actually this should read rel.dat
 			// since I dump that now
-			gen = prog.BuildPoints("pts/file07", names, &cenergies, false)
+			gen = BuildPoints(prog, "pts/file07", names, &cenergies, false)
 		}
 	} else {
 		names, coords = XYZGeom(cart)
