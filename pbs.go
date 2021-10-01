@@ -26,6 +26,10 @@ type Job struct {
 	PBSMem   int
 }
 
+func (j Job) Basename(file string) string {
+	return TrimExt(file)
+}
+
 const mapleCmd = `molpro -t 1`
 
 var ptsMaple = `#!/bin/sh
@@ -115,6 +119,7 @@ date
 hostname
 {{range $j := .Jobs}}
 g16 {{ $j }}
+formchk {{$.Basename $j}}.chk {{$.Basename $j}}.fchk
 {{- end }}
 date
 
@@ -190,6 +195,7 @@ cd $PBS_O_WORKDIR
 
 date
 g16 {{.Filename}}
+formchk {{.Basename .Filename}}.chk {{.Basename .Filename}}.fchk
 date
 
 rm -rf $TMPDIR

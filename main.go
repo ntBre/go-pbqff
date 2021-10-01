@@ -417,12 +417,14 @@ func queueClear(jobs []string) error {
 			}
 		}
 		if host != "" {
-			out, err := exec.Command("ssh", host, "-t",
-				"rm -rf /tmp/$USER/"+job+".maple").CombinedOutput()
-			if *debug {
-				fmt.Println("CombinedOutput and error from queueClear: ",
-					string(out), err)
-			}
+			// I think this doesn't work anymore and it's very slow
+			// it's now $USER.jobid.maple
+			// out, err := exec.Command("ssh", host, "-t",
+			// 	"rm -rf /tmp/$USER/"+job+".maple").CombinedOutput()
+			// if *debug {
+			// 	fmt.Println("CombinedOutput and error from queueClear: ",
+			// 		string(out), err)
+			// }
 		}
 	}
 	err := exec.Command("qdel", jobs...).Run()

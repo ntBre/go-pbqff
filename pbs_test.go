@@ -36,8 +36,11 @@ func TestReadPBSNodes(t *testing.T) {
 }
 
 func TestTemplate(t *testing.T) {
-	_, err := template.New("pbs").Parse(pbsMapleGauss)
+	tmpl, err := template.New("pbs").Parse(ptsMapleGauss)
 	if err != nil {
 		t.Errorf("template failed:  %v\n", err)
 	}
+	tmpl.Execute(os.Stdout, Job{
+		Jobs: []string{"first.com", "second.com", "third.com"},
+	})
 }

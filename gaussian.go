@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"path"
 	"path/filepath"
@@ -107,11 +106,13 @@ func (g *Gaussian) makeInput(w io.Writer, p Procedure) {
 
 // WriteInput writes a Gaussian input file
 func (g *Gaussian) WriteInput(filename string, p Procedure) {
+	basename := TrimExt(filename)
 	f, err := os.Create(filename)
 	defer f.Close()
 	if err != nil {
 		panic(err)
 	}
+	fmt.Fprintf(f, "%%chk=%s.chk\n", basename)
 	g.makeInput(f, p)
 }
 
@@ -163,6 +164,26 @@ func (g *Gaussian) UpdateZmat(new string) {
 	g.Geom = updated + "\n" + new
 }
 
+// readChk reads a Gaussian fchk file and return the SCF energy
+func readChk(filename string) float64 {
+	f, err := os.Open(filename)
+	defer f.Close()
+	for err != nil {
+		fmt.Printf("trying to open %s again\n", filename)
+		time.Sleep(1 * time.Second)
+		f, err = os.Open(filename)
+	}
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		if line := scanner.Text(); strings.Contains(line, "SCF Energy") {
+			fields := strings.Fields(line)
+			v, _ := strconv.ParseFloat(fields[3], 64)
+			return v
+		}
+	}
+	panic("energy not found")
+}
+
 // ReadOut reads a molpro output file and returns the resulting
 // energy, the wall time taken in seconds, the gradient vector, and an
 // error describing the status of the output
@@ -202,26 +223,10 @@ func (g *Gaussian) ReadOut(filename string) (result, time float64,
 			return result, time, grad, ErrFileContainsError
 			// since we assume the line contains an '='
 			// below, gate the regex match with that
-		case strings.Contains(line, "=") &&
-			!strings.Contains(line, "gthresh") &&
-			!strings.Contains(line, "hf") &&
-			Conf.RE(EnergyLine).MatchString(line):
-			split := strings.Fields(line)
-			for i := range split {
-				if strings.Contains(split[i], "=") {
-					// take the thing right after search term
-					// not the last entry in the line
-					if i+1 < len(split) {
-						// assume we found energy so no error
-						// from default EnergyNotFound
-						err = nil
-						result, err = strconv.ParseFloat(split[i+1], 64)
-						if err != nil {
-							result = math.NaN()
-						}
-					}
-				}
-			}
+		case strings.Contains(line, "Normal termination of Gaussian"):
+			basename := TrimExt(filename)
+			result = readChk(basename + ".fchk")
+			err = nil
 		case strings.Contains(line, "Elapsed time:"):
 			// TODO this only pulls the seconds portion of
 			// the time
