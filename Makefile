@@ -6,10 +6,10 @@ else
 TESTFLAGS := -v -short
 endif
 
-qsub: qsub/*.go
+qsub/qsub: qsub/*.go
 	go build -o qsub/qsub qsub/*.go
 
-molpro: molpro/*.go
+molpro/molpro: molpro/*.go
 	go build -o molpro/molpro molpro/*.go
 
 experiment:

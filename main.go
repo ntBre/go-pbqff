@@ -455,7 +455,90 @@ func DupOutErr(infile string) {
 	syscall.Dup2(int(errfile.Fd()), 2)
 }
 
+// RunFreqs runs the frequency portion of the QFF starting from anpass
+func RunFreqs(intder *Intder, anpass *Anpass) {
+	energies := make([]float64, 0)
+	f, err := os.Open("rel.dat")
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) == 1 {
+			v, err := strconv.ParseFloat(fields[0], 64)
+			if err != nil {
+				panic(err)
+			}
+			energies = append(energies, v)
+		}
+	}
+	prog := new(Molpro)
+	err = prog.FormatCart(Conf.Str(Geometry))
+	if err != nil {
+		panic(err)
+	}
+	cart := prog.GetGeom()
+	// only required for cartesians
+	names := intder.ConvertCart(cart)
+	lin := anpass.WriteAnpass("anpass1.in", energies, intder)
+	RunAnpass("anpass1")
+	longLine, ok := GetLongLine("anpass1.out")
+	if !ok {
+		panic("Problem getting long line from anpass1.out")
+	}
+	anpass.WriteAnpass2("anpass2.in", longLine, energies, intder)
+	RunAnpass("anpass2")
+	intder.WriteGeom("intder_geom.in", longLine)
+	RunIntder("intder_geom")
+	coords := intder.ReadGeom("intder_geom.out")
+	// if triatomic and linear
+	intder.Read9903("fort.9903", len(names) == 3 && lin)
+	intder.WriteFreqs("intder.in", names, len(names) == 3 && lin)
+	RunIntder("intder")
+	intderHarms := intder.ReadOut("intder.out")
+	err = os.Rename("file15", "fort.15")
+	if err == nil {
+		err = os.Rename("file20", "fort.30")
+	}
+	if err == nil {
+		err = os.Rename("file24", "fort.40")
+	}
+	if err != nil {
+		panic(err)
+	}
+	spec, err := spectro.Load("spectro.in")
+	if err != nil {
+		errExit(err, "loading spectro input")
+	}
+	spec.FormatGeom(names, coords)
+	spec.WriteInput("freqs/spectro.in")
+	err = spec.DoSpectro(".")
+	if err != nil {
+		errExit(err, "running spectro")
+	}
+	res := summarize.SpectroFile("spectro2.out")
+	var mpHarm []float64
+	if mpHarm == nil || len(mpHarm) < len(res.Harm) {
+		mpHarm = make([]float64, spec.Nfreqs)
+	}
+	Summarize(res.ZPT, mpHarm, intderHarms, res.Harm, res.Fund, res.Corr)
+}
+
 func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
+	if *freqs {
+		ParseInfile(infile)
+		spectro.Command = Conf.Str(SpectroCmd)
+		var err error
+		intder, err = LoadIntder("intder.in")
+		if err != nil {
+			errExit(err, "loading intder.in")
+		}
+		anpass, err = LoadAnpass("anpass.in")
+		if err != nil {
+			errExit(err, "loading anpass.in")
+		}
+		RunFreqs(intder, anpass)
+		os.Exit(0)
+	}
 	if !*test {
 		DupOutErr(infile)
 	}
@@ -498,13 +581,11 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	}
 	prog.SetDir(dir)
 	if DoSIC() {
-		intder, err = LoadIntder(
-			filepath.Join(dir, "intder.in"))
+		intder, err = LoadIntder(filepath.Join(dir, "intder.in"))
 		if err != nil {
 			errExit(err, fmt.Sprintf("loading intder input %q", idName))
 		}
-		anpass, err = LoadAnpass(
-			filepath.Join(dir, "anpass.in"))
+		anpass, err = LoadAnpass(filepath.Join(dir, "anpass.in"))
 		if err != nil {
 			errExit(err, fmt.Sprintf("loading anpass input %q", apName))
 		}
