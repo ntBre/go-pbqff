@@ -36,7 +36,6 @@ import (
 
 	"runtime"
 
-	"github.com/ntBre/anpass"
 	"github.com/ntBre/chemutils/spectro"
 	"github.com/ntBre/chemutils/summarize"
 )
@@ -457,6 +456,7 @@ func DupOutErr(infile string) {
 }
 
 // RunFreqs runs the frequency portion of the QFF starting from anpass
+// in the current directory
 func RunFreqs(intder *Intder, anp *Anpass) {
 	energies := make([]float64, 0)
 	f, err := os.Open("rel.dat")
@@ -480,33 +480,8 @@ func RunFreqs(intder *Intder, anp *Anpass) {
 	cart := prog.GetGeom()
 	// only required for cartesians
 	names := intder.ConvertCart(cart)
-	lin := anp.WriteAnpass("anpass1.in", energies, intder)
-	anpass.ReadInput("anpass1.in")
-	out, err := os.Create("anpass1.out")
-	defer out.Close()
-	if err != nil {
-		panic(err)
-	}
-	disps, energies, exps, biases, _ := anpass.ReadInput("anpass1.in")
-	anpass.PrintBias(out, biases)
-	disps, energies = anpass.Bias(disps, energies, biases)
-	longLine, _, _ := anpass.Run(out, disps, energies, exps)
-	infile2 := "anpass2.in"
-	anpass.CopyAnpass("anpass1.in", infile2, longLine)
-	outfile2 := strings.Replace(infile2, "in", "out", -1)
-	out2, err := os.Create(outfile2)
-	defer out2.Close()
-	if err != nil {
-		panic(err)
-	}
-	anpass.PrintBias(out2, longLine)
-	disps, energies = anpass.Bias(disps, energies, longLine)
-	anpass.Run(out2, disps, energies, exps)
-	var str strings.Builder
-	for _, f := range longLine {
-		fmt.Fprintf(&str, "%20.12f", f)
-	}
-	intder.WriteGeom("intder_geom.in", str.String())
+	longLine, lin := DoAnpass(anp, ".", energies, intder)
+	intder.WriteGeom("intder_geom.in", longLine)
 	RunIntder("intder_geom")
 	coords := intder.ReadGeom("intder_geom.out")
 	// if triatomic and linear
@@ -827,7 +802,8 @@ func main() {
 			fmt.Fprintf(f, "%20.12f\n", energies[i])
 		}
 		f.Close()
-		longLine, lin := DoAnpass(anpass, prog.GetDir(), energies, intder)
+		longLine, lin := DoAnpass(anpass,
+			filepath.Join(prog.GetDir(), "freqs"), energies, intder)
 		coords, intderHarms := DoIntder(intder, names, longLine,
 			prog.GetDir(), lin)
 		spec, err := spectro.Load("spectro.in")

@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/ntBre/anpass"
 )
 
 // Anpass is a type for storing the information for an Anpass run
@@ -215,29 +217,40 @@ func GetLongLine(filename string) (string, bool) {
 	return "", false
 }
 
-// RunAnpass takes a filename like freqs/anpass1, runs anpass
-// on freqs/anpass1.in and redirects the output into
-// freqs/anpass1.out
-func RunAnpass(filename string) {
-	err := RunProgram(Conf.Str(AnpassCmd), filename)
+// DoAnpass runs anpass
+func DoAnpass(anp *Anpass, dir string, energies []float64, intder *Intder) (
+	string, bool) {
+	lin := anp.WriteAnpass(filepath.Join(dir, "anpass1.in"),
+		energies, intder)
+	anpass.ReadInput(filepath.Join(dir, "anpass1.in"))
+	out, err := os.Create(filepath.Join(dir, "anpass1.out"))
+	defer out.Close()
 	if err != nil {
 		panic(err)
 	}
-}
-
-// DoAnpass runs anpass
-func DoAnpass(anp *Anpass, dir string, energies []float64, intder *Intder) (string, bool) {
-	lin := anp.WriteAnpass(filepath.Join(dir, "freqs/anpass1.in"), energies, intder)
+	disps, energies, exps, biases, _ := anpass.ReadInput(
+		filepath.Join(dir, "anpass1.in"),
+	)
+	anpass.PrintBias(out, biases)
+	disps, energies = anpass.Bias(disps, energies, biases)
+	longLine, _, _ := anpass.Run(out, dir, disps, energies, exps)
+	infile2 := filepath.Join(dir, "anpass2.in")
+	anpass.CopyAnpass(filepath.Join(dir, "anpass1.in"), infile2, longLine)
+	outfile2 := strings.Replace(infile2, "in", "out", -1)
+	out2, err := os.Create(outfile2)
+	defer out2.Close()
+	if err != nil {
+		panic(err)
+	}
+	anpass.PrintBias(out2, longLine)
+	disps, energies = anpass.Bias(disps, energies, longLine)
+	anpass.Run(out2, dir, disps, energies, exps)
 	if lin {
 		Warn("linear molecule detected")
 	}
-	RunAnpass(filepath.Join(dir, "freqs/anpass1"))
-	longLine, ok := GetLongLine(filepath.Join(dir, "freqs/anpass1.out"))
-	if !ok {
-		panic("Problem getting long line from anpass1.out")
+	var str strings.Builder
+	for _, f := range longLine {
+		fmt.Fprintf(&str, "%20.12f", f)
 	}
-	anp.WriteAnpass2(filepath.Join(dir, "freqs/anpass2.in"),
-		longLine, energies, intder)
-	RunAnpass(filepath.Join(dir, "freqs/anpass2"))
-	return longLine, lin
+	return str.String(), lin
 }

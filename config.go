@@ -35,7 +35,6 @@ const (
 	NumCPUs
 	PBSMem
 	IntderCmd
-	AnpassCmd
 	SpectroCmd
 	Ncoords
 	EnergyLine
@@ -65,7 +64,6 @@ func (k Key) String() string {
 		"NumCPUs",
 		"PBSMem",
 		"IntderCmd",
-		"AnpassCmd",
 		"SpectroCmd",
 		"Ncoords",
 		"EnergyLine",
@@ -394,10 +392,6 @@ func NewConfig() Config {
 		},
 		IntderCmd: {
 			Re:      regexp.MustCompile(`(?i)intder=`),
-			Extract: StringKeyword,
-		},
-		AnpassCmd: {
-			Re:      regexp.MustCompile(`(?i)anpass=`),
 			Extract: StringKeyword,
 		},
 		SpectroCmd: {

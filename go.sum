@@ -17,6 +17,10 @@ github.com/jung-kurt/gofpdf v1.0.0/go.mod h1:7Id9E/uU8ce6rXgefFLlgrJj/GYY22cpxn+
 github.com/jung-kurt/gofpdf v1.0.3-0.20190309125859-24315acbbda5/go.mod h1:7Id9E/uU8ce6rXgefFLlgrJj/GYY22cpxn+r32jIOes=
 github.com/ntBre/anpass v0.0.0-20211011191257-f7d2c60b6a18 h1:ZauMryUzHySOJ9INsSWfkni+AV3xlYpw35Q6U89/Gyk=
 github.com/ntBre/anpass v0.0.0-20211011191257-f7d2c60b6a18/go.mod h1:bCkUBINywnNClqXwsnfNPPj7V7w0j+NgQh2NkwHZ3NA=
+github.com/ntBre/anpass v0.0.0-20211013202349-fcc63ad98656 h1:x8nNg1mSlz6avAfJYTpbOn9F9OPRC4Z3Mh/rmRf1Pgg=
+github.com/ntBre/anpass v0.0.0-20211013202349-fcc63ad98656/go.mod h1:bCkUBINywnNClqXwsnfNPPj7V7w0j+NgQh2NkwHZ3NA=
+github.com/ntBre/anpass v0.0.0-20211013203935-8bd9043b79df h1:jD6xFgGTAK8VJcI3IvMNUYStCI6e1jw+fx3As2dBN1Y=
+github.com/ntBre/anpass v0.0.0-20211013203935-8bd9043b79df/go.mod h1:bCkUBINywnNClqXwsnfNPPj7V7w0j+NgQh2NkwHZ3NA=
 github.com/ntBre/chemutils v0.0.0-20210907232321-7fffa2629629 h1:2lpYkMVOs0kyHSDXDL7ZvV1qT2UOM5wm4DfvQ0VzrKw=
 github.com/ntBre/chemutils v0.0.0-20210907232321-7fffa2629629/go.mod h1:Hj3n1YUp0EzvT27FmnO7c1XdfB5Gi3f8cdawtBZJy40=
 github.com/phpdave11/gofpdf v1.4.2/go.mod h1:zpO6xFn9yxo3YLyMvW8HcKWVdbNqgIfOOp2dXMnm1mY=
