@@ -504,7 +504,10 @@ func RunFreqs(intder *Intder, anp *Anpass) {
 		errExit(err, "loading spectro input")
 	}
 	spec.FormatGeom(names, coords)
-	spec.WriteInput("freqs/spectro.in")
+	err = spec.WriteInput("spectro.in")
+	if err != nil {
+		panic(err)
+	}
 	err = spec.DoSpectro(".")
 	if err != nil {
 		errExit(err, "running spectro")
