@@ -416,10 +416,6 @@ func TestReadFreqs(t *testing.T) {
 	}
 }
 
-func dummySubmit(s string) string {
-	return "1"
-}
-
 func dumpCalc(calcs []Calc) string {
 	byt, _ := json.MarshalIndent(calcs, "", "\t")
 	return string(byt)
@@ -427,12 +423,13 @@ func dumpCalc(calcs []Calc) string {
 
 // TODO test write=false case
 func TestBuildPoints(t *testing.T) {
-	ts := Submit
-	Submit = dummySubmit
+	queue := TestQueue{
+		SinglePt: pbsMaple,
+		ChunkPts: ptsMaple,
+	}
 	qsub = "qsub/qsub"
 	defer func() {
 		qsub = "qsub"
-		Submit = ts
 	}()
 	prog, _ := LoadMolpro("testfiles/load/molpro.in")
 	cart, _, _ := prog.HandleOutput("testfiles/opt")
@@ -441,7 +438,6 @@ func TestBuildPoints(t *testing.T) {
 	defer os.RemoveAll("testfiles/read/inp")
 	paraCount = make(map[string]int)
 	cf := new([]CountFloat)
-	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
 	gen := BuildPoints(prog, queue, "testfiles/read/file07", names, cf, true)
 	got, _ := gen()
 	want := []Calc{
@@ -647,18 +643,16 @@ func TestPush(t *testing.T) {
 		{Name: "job2"},
 		{Name: "job3"},
 	}
-	tmp := Submit
 	tmp2 := Conf
 	defer func() {
-		Submit = tmp
 		Conf = tmp2
 	}()
-	Submit = func(str string) string {
-		return ""
-	}
 	paraCount = make(map[string]int)
 	Conf.Set(ChunkSize, 2)
-	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+	queue := TestQueue{
+		SinglePt: pbsMaple,
+		ChunkPts: ptsMaple,
+	}
 	got := Push(queue, dir, pf, count, calcs[0:2])
 	got = append(got, Push(queue, dir, pf+1, count, calcs[2:])...)
 	want := []Calc{
@@ -666,16 +660,19 @@ func TestPush(t *testing.T) {
 			Name:     "job1",
 			SubFile:  filepath.Join(dir, "main0.pbs"),
 			ChunkNum: 0,
+			JobID:    "1",
 		},
 		{
 			Name:     "job2",
 			SubFile:  filepath.Join(dir, "main0.pbs"),
 			ChunkNum: 0,
+			JobID:    "1",
 		},
 		{
 			Name:     "job3",
 			SubFile:  filepath.Join(dir, "main1.pbs"),
 			ChunkNum: 1,
+			JobID:    "1",
 		},
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -723,14 +720,11 @@ rm -rf $TMPDIR
 }
 
 func TestBuildCartPoints(t *testing.T) {
-	ts := Submit
-	Submit = dummySubmit
 	qsub = "qsub/qsub"
 	// test to make sure we get the right number of points
 	tmp := Conf
 	defer func() {
 		qsub = "qsub"
-		Submit = ts
 		Conf = tmp
 	}()
 	Conf.Set(Deltas, []float64{
@@ -756,7 +750,10 @@ func TestBuildCartPoints(t *testing.T) {
 		(4*n*n*n*n+12*n*n*n+11*n*n+3*n)/6
 	mp := new(Molpro)
 	dir := t.TempDir()
-	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+	queue := TestQueue{
+		SinglePt: pbsMaple,
+		ChunkPts: ptsMaple,
+	}
 	gen := BuildCartPoints(mp, queue, dir, names, coords)
 	paraCount = make(map[string]int)
 	got := make([]Calc, 0)
@@ -852,14 +849,15 @@ func TestGradDerivative(t *testing.T) {
 }
 
 func TestBuildGradPoints(t *testing.T) {
-	ts := Submit
-	Submit = dummySubmit
+	queue := TestQueue{
+		SinglePt: pbsMaple,
+		ChunkPts: ptsMaple,
+	}
 	qsub = "qsub/qsub"
 	// test to make sure we get the right number of points
 	tmp := Conf
 	defer func() {
 		qsub = "qsub"
-		Submit = ts
 		Conf = tmp
 	}()
 	Conf.Set(Deltas, []float64{
@@ -882,7 +880,6 @@ func TestBuildGradPoints(t *testing.T) {
 	n := len(coords)
 	want := (4*n*n*n + 12*n*n + 11*n) / 3
 	mp := new(Molpro)
-	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
 	gen := BuildGradPoints(mp, queue, dir, names, coords)
 	paraCount = make(map[string]int)
 	got := make([]Calc, 0)

@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"text/template"
 	"time"
 )
 
@@ -251,24 +252,25 @@ func TestDoSIC(t *testing.T) {
 	}
 }
 
-var id int
-
-func jobid() string {
-	defer func() { id++ }()
-	return fmt.Sprintf("%d", id)
+type TestQueue struct {
+	SinglePt *template.Template
+	ChunkPts *template.Template
 }
 
-func mockPush(calcs []Calc, ch chan Calc) {
-	for _, calc := range calcs {
-		ch <- calc
-		jobid := jobid()
-		ptsJobs = append(ptsJobs, jobid)
-		paraJobs = append(paraJobs, jobid)
-		paraCount[jobid] = Conf.Int(ChunkSize)
-		submitted++
+func (tq TestQueue) WritePBS(infile string, job *Job, pbs *template.Template) {
+	f, err := os.Create(infile)
+	defer f.Close()
+	if err != nil {
+		panic(err)
 	}
-	close(ch)
+	pbs.Execute(f, job)
 }
+
+func (tq TestQueue) SinglePBS() *template.Template { return tq.SinglePt }
+func (tq TestQueue) ChunkPBS() *template.Template  { return tq.ChunkPts }
+func (tq TestQueue) Submit(string) string          { return "1" }
+func (tq TestQueue) Resubmit(string, error) string { return "" }
+func (tq TestQueue) Stat(*map[string]bool)         {}
 
 // TODO
 // This is only testing that it runs, add targets to calcs and see if
@@ -323,15 +325,8 @@ func TestDrain(t *testing.T) {
 			ChunkNum: 0,
 		},
 	}
-	ts := Submit
-	Submit = func(s string) string {
-		return "1"
-	}
-	defer func() {
-		Submit = ts
-	}()
 	dir := t.TempDir()
-	queue := PBS{
+	queue := TestQueue{
 		SinglePt: pbsMaple,
 		ChunkPts: ptsMaple,
 	}
@@ -339,7 +334,7 @@ func TestDrain(t *testing.T) {
 		return Push(queue, dir, 0, 0, calcs), false
 	}
 	errMap = make(map[error]int)
-	min, time := Drain(prog, ncoords, E0, gen)
+	min, time := Drain(prog, queue, ncoords, E0, gen)
 	wmin, wtime := -56.499802779375, 867.46
 	if min != wmin {
 		t.Errorf("got %v, wanted %v\n", min, wmin)

@@ -35,7 +35,7 @@ func TestSIC(t *testing.T) {
 	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
 	gen := BuildPoints(prog, queue, "tests/sic/pts/file07", names, &cenergies, true)
 	E0 := -76.369839620287
-	min, _ := Drain(prog, 0, E0, gen)
+	min, _ := Drain(prog, queue, 0, E0, gen)
 	energies := FloatsFromCountFloats(cenergies)
 	for i := range energies {
 		energies[i] -= min
@@ -100,7 +100,7 @@ func TestCart(t *testing.T) {
 	natoms := len(names)
 	ncoords := len(coords)
 	gen := BuildCartPoints(prog, queue, "pts/inp", names, coords)
-	Drain(prog, ncoords, E0, gen)
+	Drain(prog, queue, ncoords, E0, gen)
 	N3N := natoms * 3 // from spectro manual pg 12
 	other3 := N3N * (N3N + 1) * (N3N + 2) / 6
 	other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24
@@ -156,7 +156,7 @@ func TestGrad(t *testing.T) {
 	ncoords := len(coords)
 	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
 	gen := BuildGradPoints(prog, queue, "pts/inp", names, coords)
-	Drain(prog, ncoords, E0, gen)
+	Drain(prog, queue, ncoords, E0, gen)
 	N3N := natoms * 3 // from spectro manual pg 12
 	other3 := N3N * (N3N + 1) * (N3N + 2) / 6
 	other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24
