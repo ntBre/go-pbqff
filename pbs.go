@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"embed"
 	"fmt"
 	"io"
 	"os"
@@ -30,222 +31,43 @@ func (j Job) Basename(file string) string {
 	return TrimExt(file)
 }
 
-const mapleCmd = `molpro -t 1`
+//go:embed templates/*
+var templates embed.FS
+var (
+	ptsMaple, _      = template.ParseFS(templates, "templates/ptsMaple.pbs")
+	ptsMapleGauss, _ = template.ParseFS(templates, "templates/ptsMapleGauss.pbs")
+	pbsMaple, _      = template.ParseFS(templates, "templates/pbsMaple.pbs")
+	pbsMapleGauss, _ = template.ParseFS(templates, "templates/pbsMapleGauss.pbs")
+	pbsSequoia, _    = template.ParseFS(templates, "templates/pbsSequoia.pbs")
+)
 
-var ptsMaple = `#!/bin/sh
-#PBS -N {{.Name}}
-#PBS -S /bin/bash
-#PBS -j oe
-#PBS -o {{.Filename}}.out
-#PBS -W umask=022
-#PBS -l walltime=5000:00:00
-#PBS -l ncpus=1
-#PBS -l mem={{.PBSMem}}gb
-{{- if .Queue}}
-#PBS -q {{.Queue}}
-{{- end}}
-{{- if .Host}}
-#PBS -l host={{.Host}}
-{{- end}}
+type PBS struct {
+	SinglePt *template.Template
+	ChunkPts *template.Template
+}
 
-module load pbspro molpro
+func (p PBS) SinglePBS() *template.Template {
+	return p.SinglePt
+}
 
-export WORKDIR=$PBS_O_WORKDIR
-export TMPDIR=/tmp/$USER/$PBS_JOBID
-cd $WORKDIR
-mkdir -p $TMPDIR
-
-date
-hostname
-{{range $j := .Jobs}}
-molpro -t 1 {{ $j }} --no-xml-output
-{{- end }}
-date
-
-rm -rf $TMPDIR
-`
-
-var ptsMapleGauss = `#!/bin/sh
-#PBS -N {{.Name}}
-#PBS -S /bin/bash
-#PBS -j oe
-#PBS -o {{.Filename}}.out
-#PBS -W umask=022
-#PBS -l walltime=5000:00:00
-#PBS -l ncpus=1
-#PBS -l mem={{.PBSMem}}gb
-{{- if .Queue}}
-#PBS -q {{.Queue}}
-{{- end}}
-{{- if .Host}}
-#PBS -l host={{.Host}}
-{{- end}}
-
-scrdir=/tmp/$USER.$PBS_JOBID
-
-mkdir -p $scrdir
-export GAUSS_SCRDIR=$scrdir
-export OMP_NUM_THREADS=1
-
-echo "exec_host = $HOSTNAME"
-
-if [[ $HOSTNAME =~ cn([0-9]{3}) ]];
-then
-  nodenum=${BASH_REMATCH[1]};
-  nodenum=$((10#$nodenum));
-  echo $nodenum
-
-  if (( $nodenum <= 29 ))
-  then
-    echo "Using AVX version";
-    export g16root=/usr/local/apps/gaussian/g16-c01-avx/
-  elif (( $nodenum > 29 ))
-  then
-    echo "Using AVX2 version";
-    export g16root=/usr/local/apps/gaussian/g16-c01-avx2/
-  else
-    echo "Unexpected condition!"
-    exit 1;
-  fi
-else
-  echo "Not on a compute node!"
-  exit 1;
-fi
-
-cd $PBS_O_WORKDIR
-. $g16root/g16/bsd/g16.profile
-
-date
-hostname
-{{range $j := .Jobs}}
-g16 {{ $j }}
-formchk {{$.Basename $j}}.chk {{$.Basename $j}}.fchk
-{{- end }}
-date
-
-rm -rf $TMPDIR
-`
-
-var pbsMaple = `#!/bin/sh
-#PBS -N {{.Name}}
-#PBS -S /bin/bash
-#PBS -j oe
-#PBS -o pbs.{{.Filename}}.out
-#PBS -W umask=022
-#PBS -l walltime=5000:00:00
-#PBS -l ncpus=1
-#PBS -l mem=9gb
-
-module load pbspro molpro
-
-export WORKDIR=$PBS_O_WORKDIR
-export TMPDIR=/tmp/$USER/$PBS_JOBID
-cd $WORKDIR
-mkdir -p $TMPDIR
-
-date
-molpro -t 1 --no-xml-output {{.Filename}}
-date
-
-rm -rf $TMPDIR
-`
-
-var pbsMapleGauss = `#!/bin/sh
-#PBS -N {{.Name}}
-#PBS -S /bin/bash
-#PBS -j oe
-#PBS -o pbs.{{.Filename}}.out
-#PBS -W umask=022
-#PBS -l walltime=5000:00:00
-#PBS -l ncpus=1
-#PBS -l mem=9gb
-
-scrdir=/tmp/$USER.$PBS_JOBID
-
-mkdir -p $scrdir
-export GAUSS_SCRDIR=$scrdir
-export OMP_NUM_THREADS=1
-
-echo "exec_host = $HOSTNAME"
-if [[ $HOSTNAME =~ cn([0-9]{3}) ]];
-then
-  nodenum=${BASH_REMATCH[1]};
-  nodenum=$((10#$nodenum));
-  echo $nodenum
-
-  if (( $nodenum <= 29 ))
-  then
-    echo "Using AVX version";
-    export g16root=/usr/local/apps/gaussian/g16-c01-avx/
-  elif (( $nodenum > 29 ))
-  then
-    echo "Using AVX2 version";
-    export g16root=/usr/local/apps/gaussian/g16-c01-avx2/
-  else
-    echo "Unexpected condition!"
-    exit 1;
-  fi
-else
-  echo "Not on a compute node!"
-  exit 1;
-fi
-
-cd $PBS_O_WORKDIR
-. $g16root/g16/bsd/g16.profile
-
-date
-g16 {{.Filename}}
-formchk {{.Basename .Filename}}.chk {{.Basename .Filename}}.fchk
-date
-
-rm -rf $TMPDIR
-`
-
-const pbsSequoia = `#!/bin/sh
-#PBS -N {{.Name}}
-#PBS -S /bin/bash
-#PBS -j oe
-#PBS -o /dev/null
-#PBS -W umask=022
-#PBS -l walltime=5000:00:00
-#PBS -l ncpus=1
-#PBS -l mem=9gb
-
-module load intel
-module load mpt
-export PATH=/ptmp/bwhopkin/molpro_mpt/2012/molprop_2012_1_Linux_x86_64_i8/bin:$PATH
-
-export WORKDIR=$PBS_O_WORKDIR
-export TMPDIR=/tmp/$USER/$PBS_JOBID
-cd $WORKDIR
-mkdir -p $TMPDIR
-
-date
-mpiexec molpro.exe {{.Filename}}
-date
-
-rm -rf $TMPDIR
-`
+func (p PBS) ChunkPBS() *template.Template {
+	return p.ChunkPts
+}
 
 // WritePBS writes a pbs infile based on the queue type and
 // the templates above, with job information from job
-func WritePBS(infile string, job *Job, pbs string) {
-	var t *template.Template
+func (p PBS) WritePBS(infile string, job *Job, pbs *template.Template) {
 	f, err := os.Create(infile)
 	defer f.Close()
 	if err != nil {
 		panic(err)
 	}
-	t, err = template.New("pbs").Parse(pbs)
-	if err != nil {
-		panic(err)
-	}
-	t.Execute(f, job)
+	pbs.Execute(f, job)
 }
 
 // Submit submits the pbs script defined by filename to the queue and
 // returns the jobid
-var Submit = func(filename string) (jobid string) {
+func (p PBS) Submit(filename string) (jobid string) {
 	var (
 		maxRetries = 15
 		maxTime    = 1 << maxRetries
@@ -262,6 +84,90 @@ var Submit = func(filename string) (jobid string) {
 		out, err = cmd.Output()
 	}
 	return strings.TrimSpace(string(out))
+}
+
+// Resubmit copies the input file associated with name to
+// name_redo.inp, writes a new PBS file, submits the new PBS job, and
+// returns the associated jobid
+func (p PBS) Resubmit(name string, err error) string {
+	fmt.Fprintf(os.Stderr, "resubmitting %s for %s\n", name, err)
+	src, _ := os.Open(name + ".inp")
+	dst, _ := os.Create(name + "_redo.inp")
+	io.Copy(dst, src)
+	defer func() {
+		src.Close()
+		dst.Close()
+	}()
+	p.WritePBS(name+"_redo.pbs",
+		&Job{
+			Name:     "redo",
+			Filename: name + "_redo.inp",
+			Jobs:     []string{name + "_redo.inp"},
+			Host:     "",
+			Queue:    "",
+			NumCPUs:  Conf.Int(NumCPUs),
+			PBSMem:   Conf.Int(PBSMem),
+		}, p.SinglePBS())
+	return p.Submit(name + "_redo.pbs")
+}
+
+// Stat returns a map of job names to their queue status. The map
+// value is true if the job is either queued (Q) or running (R) and
+// false otherwise
+func (p PBS) Stat(qstat *map[string]bool) {
+	status, _ := exec.Command("qstat", "-u", os.Getenv("USER")).CombinedOutput()
+	scanner := bufio.NewScanner(strings.NewReader(string(status)))
+	var (
+		line   string
+		fields []string
+		header = true
+	)
+	// initialize them all to false and set true if run
+	for key := range *qstat {
+		(*qstat)[key] = false
+	}
+	for scanner.Scan() {
+		line = scanner.Text()
+		if strings.Contains(line, "------") {
+			header = false
+			continue
+		} else if header {
+			continue
+		}
+		fields = strings.Fields(line)
+		if _, ok := (*qstat)[fields[0]]; ok {
+			if strings.Contains("QR", fields[9]) {
+				(*qstat)[fields[0]] = true
+			}
+		}
+	}
+}
+
+// Clear the PBS queue of the pts jobs
+func queueClear(jobs []string) error {
+	for _, job := range jobs {
+		var host string
+		status, _ := exec.Command("qstat", "-f", job).Output()
+		fields := strings.Fields(string(status))
+		for f := range fields {
+			if strings.Contains(fields[f], "exec_host") {
+				host = strings.Split(fields[f+2], "/")[0]
+				break
+			}
+		}
+		if host != "" {
+			// I think this doesn't work anymore and it's very slow
+			// it's now $USER.jobid.maple
+			// out, err := exec.Command("ssh", host, "-t",
+			// 	"rm -rf /tmp/$USER/"+job+".maple").CombinedOutput()
+			// if *debug {
+			// 	fmt.Println("CombinedOutput and error from queueClear: ",
+			// 		string(out), err)
+			// }
+		}
+	}
+	err := exec.Command("qdel", jobs...).Run()
+	return err
 }
 
 // PBSnodes runs the pbsnodes -a command and returns a list of free

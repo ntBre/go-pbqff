@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"text/template"
 )
 
 // Key is a type for input keyword indices
@@ -18,10 +19,10 @@ type Key int
 // below. If it requires other Keywords to fully process, add a method
 // on Config and call it at the end of ParseInfile in input.go.
 const (
-	Cluster  Key = iota
-	Package      // the quantum chemistry package to use
-	ChemProg     // the type of calculation sic|cart|grad
-	Queue
+	Cluster   Key = iota
+	Package       // the quantum chemistry package to use
+	ChemProg      // the type of calculation sic|cart|grad
+	WorkQueue     // queue to select in the PBSTmpl
 	Delta
 	Deltas
 	Geometry
@@ -38,7 +39,8 @@ const (
 	SpectroCmd
 	Ncoords
 	EnergyLine
-	PBS
+	PBSTmpl     // internal template to use for job submission
+	QueueSystem // pbs or slurm
 	MolproTmpl
 	AnpassTmpl
 	IntderTmpl
@@ -67,7 +69,8 @@ func (k Key) String() string {
 		"SpectroCmd",
 		"Ncoords",
 		"EnergyLine",
-		"PBS",
+		"PBSTmpl",
+		"QueueSystem",
 		"MolproTmpl",
 		"AnpassTmpl",
 		"IntderTmpl",
@@ -152,7 +155,7 @@ func (c *Config) WhichCluster() {
 	cluster := c.Str(Cluster)
 	sequoia := regexp.MustCompile(`(?i)sequoia`)
 	maple := regexp.MustCompile(`(?i)maple`)
-	var pbs string
+	pbs := new(template.Template)
 	switch {
 	case cluster == "", maple.MatchString(cluster):
 		pbs = pbsMaple
@@ -162,7 +165,7 @@ func (c *Config) WhichCluster() {
 	default:
 		panic("unsupported option for keyword cluster")
 	}
-	c.Set(PBS, pbs)
+	c.Set(PBSTmpl, pbs)
 }
 
 // WhichProgram is a helper function for setting Config.EnergyLine
@@ -293,16 +296,16 @@ func NewConfig() Config {
 			Value:   "maple",
 		},
 		Package: {
-			Re: regexp.MustCompile(`(?i)package=`),
+			Re:      regexp.MustCompile(`(?i)package=`),
 			Extract: StringKeyword,
-			Value: "molpro",
+			Value:   "molpro",
 		},
 		ChemProg: {
 			Re:      regexp.MustCompile(`(?i)program=`),
 			Extract: StringKeyword,
 			Value:   "sic",
 		},
-		Queue: { // TODO these queues are maple-specific
+		WorkQueue: { // TODO these queues are maple-specific
 			Re: regexp.MustCompile(`(?i)queue=`),
 			Extract: func(str string) interface{} {
 				switch str {
@@ -404,6 +407,11 @@ func NewConfig() Config {
 			Extract: func(s string) interface{} {
 				return regexp.MustCompile(s)
 			},
+		},
+		QueueSystem: {
+			Re:      regexp.MustCompile(`(?i)queuesystem=`),
+			Value:   "pbs",
+			Extract: StringKeyword,
 		},
 		MolproTmpl: {
 			Re:      regexp.MustCompile(`(?i)molprotmpl=`),

@@ -441,7 +441,8 @@ func TestBuildPoints(t *testing.T) {
 	defer os.RemoveAll("testfiles/read/inp")
 	paraCount = make(map[string]int)
 	cf := new([]CountFloat)
-	gen := prog.BuildPoints("testfiles/read/file07", names, cf, true)
+	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+	gen := BuildPoints(prog, queue, "testfiles/read/file07", names, cf, true)
 	got, _ := gen()
 	want := []Calc{
 		{
@@ -539,7 +540,7 @@ func TestSelectNode(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		Conf.Set(Queue, test.queue)
+		Conf.Set(WorkQueue, test.queue)
 		Global.Nodes = test.nodes
 		gn, gq := SelectNode()
 		if gn != test.node {
@@ -657,8 +658,9 @@ func TestPush(t *testing.T) {
 	}
 	paraCount = make(map[string]int)
 	Conf.Set(ChunkSize, 2)
-	got := Push(dir, pf, count, calcs[0:2])
-	got = append(got, Push(dir, pf+1, count, calcs[2:])...)
+	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+	got := Push(queue, dir, pf, count, calcs[0:2])
+	got = append(got, Push(queue, dir, pf+1, count, calcs[2:])...)
 	want := []Calc{
 		{
 			Name:     "job1",
@@ -754,7 +756,8 @@ func TestBuildCartPoints(t *testing.T) {
 		(4*n*n*n*n+12*n*n*n+11*n*n+3*n)/6
 	mp := new(Molpro)
 	dir := t.TempDir()
-	gen := mp.BuildCartPoints(dir, names, coords)
+	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+	gen := BuildCartPoints(mp, queue, dir, names, coords)
 	paraCount = make(map[string]int)
 	got := make([]Calc, 0)
 	hold, ok := gen()
@@ -879,7 +882,8 @@ func TestBuildGradPoints(t *testing.T) {
 	n := len(coords)
 	want := (4*n*n*n + 12*n*n + 11*n) / 3
 	mp := new(Molpro)
-	gen := mp.BuildGradPoints(dir, names, coords)
+	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+	gen := BuildGradPoints(mp, queue, dir, names, coords)
 	paraCount = make(map[string]int)
 	got := make([]Calc, 0)
 	hold, ok := gen()

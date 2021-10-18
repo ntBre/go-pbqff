@@ -331,8 +331,12 @@ func TestDrain(t *testing.T) {
 		Submit = ts
 	}()
 	dir := t.TempDir()
+	queue := PBS{
+		SinglePt: pbsMaple,
+		ChunkPts: ptsMaple,
+	}
 	gen := func() ([]Calc, bool) {
-		return Push(dir, 0, 0, calcs), false
+		return Push(queue, dir, 0, 0, calcs), false
 	}
 	errMap = make(map[error]int)
 	min, time := Drain(prog, ncoords, E0, gen)

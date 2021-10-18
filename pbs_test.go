@@ -4,7 +4,6 @@ import (
 	"os"
 	"reflect"
 	"testing"
-	"text/template"
 )
 
 func TestWritePBS(t *testing.T) {
@@ -18,7 +17,8 @@ func TestWritePBS(t *testing.T) {
 	}
 	write := "testfiles/write/mp.pbs"
 	right := "testfiles/right/mp.pbs"
-	WritePBS(write, &p, pbsSequoia)
+	q := PBS{}
+	q.WritePBS(write, &p, pbsSequoia)
 	if !compareFile(write, right) {
 		t.Errorf("mismatch between %s and %s\n(diff %[1]q %[2]q)", right, write)
 	}
@@ -36,11 +36,8 @@ func TestReadPBSNodes(t *testing.T) {
 }
 
 func TestTemplate(t *testing.T) {
-	tmpl, err := template.New("pbs").Parse(ptsMapleGauss)
-	if err != nil {
-		t.Errorf("template failed:  %v\n", err)
-		tmpl.Execute(os.Stdout, Job{
-			Jobs: []string{"first.com", "second.com", "third.com"},
-		})
-	}
+	t.Skip()
+	ptsMapleGauss.Execute(os.Stdout, Job{
+		Jobs: []string{"first.com", "second.com", "third.com"},
+	})
 }

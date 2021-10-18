@@ -19,21 +19,21 @@ type Program interface {
 	FormatZmat(string) error
 	FormatGeom(string) string
 	AugmentHead()
-	Run(Procedure) float64
+	Run(Procedure, Queue) float64
 	HandleOutput(string) (string, string, error)
 	UpdateZmat(string)
 	FormatCart(string) error
-	BuildCartPoints(string, []string, []float64) func() ([]Calc, bool)
-	BuildGradPoints(string, []string, []float64) func() ([]Calc, bool)
 	ReadOut(string) (float64, float64, []float64, error)
 	ReadFreqs(string) []float64
+	Derivative(string, []string, []float64, int, int, int, int) []Calc
+	GradDerivative(string, []string, []float64, int, int, int) []Calc
 }
 
 // BuildPoints uses a file07 file from Intder to construct the
 // single-point energy calculations and return an array of jobs to
 // run. If write is set to true, write the necessary files. Otherwise
 // just return the list of jobs.
-func BuildPoints(p Program, filename string, atomNames []string,
+func BuildPoints(p Program, q Queue, filename string, atomNames []string,
 	target *[]CountFloat, write bool) func() ([]Calc, bool) {
 	lines, err := ReadFile(filename)
 	if err != nil {
@@ -110,8 +110,93 @@ func BuildPoints(p Program, filename string, atomNames []string,
 			}
 		}()
 		if end == len(calcs) {
-			return Push(filepath.Join(dir, "inp"), pf, count, calcs[start:end]), false
+			return Push(q, filepath.Join(dir, "inp"), pf, count, calcs[start:end]), false
 		}
-		return Push(filepath.Join(dir, "inp"), pf, count, calcs[start:end]), true
+		return Push(q, filepath.Join(dir, "inp"), pf, count, calcs[start:end]), true
+	}
+}
+
+func BuildCartPoints(p Program, q Queue, dir string, names []string,
+	coords []float64) func() ([]Calc, bool) {
+	dir = filepath.Join(p.GetDir(), dir)
+	ncoords := len(coords)
+	var (
+		start int
+		pf    int
+		count int
+	)
+	cs := Conf.Int(ChunkSize)
+	jnit, knit, lnit := 1, 0, 0
+	i, j, k, l := 1, jnit, knit, lnit
+	// returns a list of calcs and whether or not it should be
+	// called again
+	return func() ([]Calc, bool) {
+		defer func() {
+			pf++
+			count++
+			start += cs
+		}()
+		calcs := make([]Calc, 0)
+		for ; i <= ncoords; i++ {
+			for j = jnit; j <= i; j++ {
+				for k = knit; k <= j; k++ {
+					for l = lnit; l <= k; l++ {
+						calcs = append(calcs,
+							p.Derivative(dir, names, coords, i, j, k, l)...,
+						)
+						if len(calcs) >= Conf.Int(ChunkSize) {
+							jnit, knit, lnit = j, k, l+1
+							return Push(q, dir, pf, count, calcs), true
+						}
+					}
+					lnit = 0
+				}
+				knit = 0
+			}
+			jnit = 1
+		}
+		return Push(q, dir, pf, count, calcs), false
+	}
+}
+
+// BuildGradPoints constructs the calculations needed to run a
+// Cartesian quartic force field using gradients
+func BuildGradPoints(p Program, q Queue, dir string, names []string,
+	coords []float64) func() ([]Calc, bool) {
+	dir = filepath.Join(p.GetDir(), dir)
+	ncoords := len(coords)
+	var (
+		start int
+		pf    int
+		count int
+	)
+	cs := Conf.Int(ChunkSize)
+	jnit, knit := 0, 0
+	i, j, k := 1, jnit, knit
+	// returns a list of calcs and whether or not it should be
+	// called again
+	return func() ([]Calc, bool) {
+		defer func() {
+			pf++
+			count++
+			start += cs
+		}()
+		calcs := make([]Calc, 0)
+		for ; i <= ncoords; i++ {
+			for j = jnit; j <= i; j++ {
+				for k = knit; k <= j; k++ {
+					calcs = append(calcs,
+						p.GradDerivative(dir, names, coords, i, j, k)...,
+					)
+					if len(calcs) >= Conf.Int(ChunkSize) {
+						jnit, knit = j, k+1
+						return Push(q, dir, pf, count, calcs), true
+					}
+				}
+				knit = 0
+			}
+			jnit = 0
+		}
+		return Push(q, dir, pf, count, calcs), false
 	}
 }

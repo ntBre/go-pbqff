@@ -1,0 +1,49 @@
+#!/bin/sh
+#PBS -N {{.Name}}
+#PBS -S /bin/bash
+#PBS -j oe
+#PBS -o pbs.{{.Filename}}.out
+#PBS -W umask=022
+#PBS -l walltime=5000:00:00
+#PBS -l ncpus=1
+#PBS -l mem=9gb
+
+scrdir=/tmp/$USER.$PBS_JOBID
+
+mkdir -p $scrdir
+export GAUSS_SCRDIR=$scrdir
+export OMP_NUM_THREADS=1
+
+echo "exec_host = $HOSTNAME"
+if [[ $HOSTNAME =~ cn([0-9]{3}) ]];
+then
+  nodenum=${BASH_REMATCH[1]};
+  nodenum=$((10#$nodenum));
+  echo $nodenum
+
+  if (( $nodenum <= 29 ))
+  then
+    echo "Using AVX version";
+    export g16root=/usr/local/apps/gaussian/g16-c01-avx/
+  elif (( $nodenum > 29 ))
+  then
+    echo "Using AVX2 version";
+    export g16root=/usr/local/apps/gaussian/g16-c01-avx2/
+  else
+    echo "Unexpected condition!"
+    exit 1;
+  fi
+else
+  echo "Not on a compute node!"
+  exit 1;
+fi
+
+cd $PBS_O_WORKDIR
+. $g16root/g16/bsd/g16.profile
+
+date
+g16 {{.Filename}}
+formchk {{.Basename .Filename}}.chk {{.Basename .Filename}}.fchk
+date
+
+rm -rf $TMPDIR

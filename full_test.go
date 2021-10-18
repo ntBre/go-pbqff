@@ -32,7 +32,8 @@ func TestSIC(t *testing.T) {
 	intder.WritePts("tests/sic/pts/intder.in")
 	RunIntder("tests/sic/pts/intder")
 	var cenergies []CountFloat
-	gen := BuildPoints(prog, "tests/sic/pts/file07", names, &cenergies, true)
+	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+	gen := BuildPoints(prog, queue, "tests/sic/pts/file07", names, &cenergies, true)
 	E0 := -76.369839620287
 	min, _ := Drain(prog, 0, E0, gen)
 	energies := FloatsFromCountFloats(cenergies)
@@ -93,11 +94,12 @@ func TestCart(t *testing.T) {
 	prog, _, _ := initialize("tests/cart/cart.in")
 	prog.FormatCart(Conf.Str(Geometry))
 	cart := prog.GetGeom()
-	E0 := prog.Run(none)
+	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+	E0 := prog.Run(none, queue)
 	names, coords := XYZGeom(cart)
 	natoms := len(names)
 	ncoords := len(coords)
-	gen := prog.BuildCartPoints("pts/inp", names, coords)
+	gen := BuildCartPoints(prog, queue, "pts/inp", names, coords)
 	Drain(prog, ncoords, E0, gen)
 	N3N := natoms * 3 // from spectro manual pg 12
 	other3 := N3N * (N3N + 1) * (N3N + 2) / 6
@@ -152,7 +154,8 @@ func TestGrad(t *testing.T) {
 	names, coords := XYZGeom(cart)
 	natoms := len(names)
 	ncoords := len(coords)
-	gen := prog.BuildGradPoints("pts/inp", names, coords)
+	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+	gen := BuildGradPoints(prog, queue, "pts/inp", names, coords)
 	Drain(prog, ncoords, E0, gen)
 	N3N := natoms * 3 // from spectro manual pg 12
 	other3 := N3N * (N3N + 1) * (N3N + 2) / 6

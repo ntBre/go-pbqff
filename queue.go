@@ -3,11 +3,21 @@ package main
 import (
 	"fmt"
 	"strings"
+	"text/template"
 )
+
+type Queue interface {
+	WritePBS(string, *Job, *template.Template)
+	SinglePBS() *template.Template
+	ChunkPBS() *template.Template
+	Submit(string) string
+	Resubmit(string, error) string
+	Stat(*map[string]bool)
+}
 
 // SelectNode returns a node and queue from the Global node list
 func SelectNode() (node, queue string) {
-	queue = Conf.Str(Queue)
+	queue = Conf.Str(WorkQueue)
 	// regenerate empty node list if empty
 	if len(Global.Nodes) == 0 {
 		Global.Nodes = PBSnodes()
@@ -24,7 +34,7 @@ func SelectNode() (node, queue string) {
 }
 
 // Push sends calculations to the queue
-func Push(dir string, pf, count int, calcs []Calc) []Calc {
+func Push(q Queue, dir string, pf, count int, calcs []Calc) []Calc {
 	subfile := fmt.Sprintf("%s/main%d.pbs", dir, pf)
 	jobs := make([]string, 0)
 	for c := range calcs {
@@ -39,7 +49,7 @@ func Push(dir string, pf, count int, calcs []Calc) []Calc {
 	}
 	node, queue := SelectNode()
 	// This should be using the PBS from Config
-	WritePBS(subfile,
+	q.WritePBS(subfile,
 		&Job{
 			Name:     MakeName(Conf.Str(Geometry)) + "pts",
 			Filename: subfile,
@@ -48,8 +58,8 @@ func Push(dir string, pf, count int, calcs []Calc) []Calc {
 			Queue:    queue,
 			NumCPUs:  Conf.Int(NumCPUs),
 			PBSMem:   Conf.Int(PBSMem),
-		}, ptsMaple)
-	jobid := Submit(subfile)
+		}, q.ChunkPBS())
+	jobid := q.Submit(subfile)
 	if *debug {
 		fmt.Printf("submitted %s from %s\n", jobid, subfile)
 	}

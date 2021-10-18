@@ -21,10 +21,10 @@ cover:
 profcart:
 	go test . -v -short -run '^TestCart$$' -cpuprofile=/tmp/cart.prof
 
-deploy: build
+deploy: pbqff
 	scp -C pbqff 'woods:Programs/pbqff/.'
 
-beta: build
+beta: pbqff
 	scp -C pbqff 'woods:Programs/pbqff/beta/.'
 
 test: qsub molpro
@@ -46,6 +46,9 @@ clean:
 	rm -rf tests/sic/opt tests/sic/freq tests/sic/freqs tests/sic/pts
 	rm -rf tests/cart/fort.* tests/cart/spectro.out
 
-build: *.go
+pbqff: *.go
 	./scripts/version.pl
 	go build .
+
+eland: pbqff
+	scp -C pbqff 'eland:programs/pbqff/.'

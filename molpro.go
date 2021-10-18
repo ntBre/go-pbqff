@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -346,93 +345,6 @@ func (m *Molpro) FormatGeom(coords string) string {
 	return fmt.Sprint(coords, "}\n")
 }
 
-// BuildPoints uses a file07 file from Intder to construct the
-// single-point energy calculations and return an array of jobs to
-// run. If write is set to true, write the necessary files. Otherwise
-// just return the list of jobs.
-func (m *Molpro) BuildPoints(filename string, atomNames []string,
-	target *[]CountFloat, write bool) func() ([]Calc, bool) {
-	lines, err := ReadFile(filename)
-	if err != nil {
-		panic(err)
-	}
-	l := len(atomNames)
-	i := 0
-	var (
-		buf  strings.Builder
-		geom int
-	)
-	dir := path.Dir(filename)
-	name := strings.Join(atomNames, "")
-	m.AugmentHead()
-	calcs := make([]Calc, 0)
-	for li, line := range lines {
-		if !strings.Contains(line, "#") {
-			ind := i % l
-			if (ind == 0 && i > 0) || li == len(lines)-1 {
-				// last line needs to write first
-				if li == len(lines)-1 {
-					fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
-				}
-				m.SetGeom(m.FormatGeom(buf.String()))
-				basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
-				fname := basename + ".inp"
-				if write {
-					m.WriteInput(fname, none)
-				}
-				for len(*target) <= geom {
-					*target = append(*target, CountFloat{Count: 1})
-				}
-				calcs = append(calcs, Calc{
-					Name:  basename,
-					Scale: 1.0,
-					Targets: []Target{
-						{
-							Coeff: 1,
-							Slice: target,
-							Index: geom,
-						},
-					},
-				})
-				geom++
-				buf.Reset()
-			}
-			fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
-			i++
-		}
-	}
-	var (
-		start int
-		pf    int
-		count int
-		end   int
-	)
-	cs := Conf.Int(ChunkSize)
-	if start+cs > len(calcs) {
-		end = len(calcs)
-	} else {
-		end = start + cs
-	}
-	// returns a list of calcs and whether or not it should be
-	// called again
-	return func() ([]Calc, bool) {
-		defer func() {
-			pf++
-			count++
-			start += cs
-			if end+cs > len(calcs) {
-				end = len(calcs)
-			} else {
-				end += cs
-			}
-		}()
-		if end == len(calcs) {
-			return Push(filepath.Join(dir, "inp"), pf, count, calcs[start:end]), false
-		}
-		return Push(filepath.Join(dir, "inp"), pf, count, calcs[start:end]), true
-	}
-}
-
 // Derivative is a helper for calling Make(2|3|4)D in the same way
 func (m *Molpro) Derivative(dir string, names []string,
 	coords []float64, i, j, k, l int) (calcs []Calc) {
@@ -522,51 +434,6 @@ func (m *Molpro) Derivative(dir string, names []string,
 	return
 }
 
-// BuildCartPoints constructs the calculations needed to run a
-// Cartesian quartic force field
-func (m *Molpro) BuildCartPoints(dir string, names []string,
-	coords []float64) func() ([]Calc, bool) {
-	dir = filepath.Join(m.Dir, dir)
-	ncoords := len(coords)
-	var (
-		start int
-		pf    int
-		count int
-	)
-	cs := Conf.Int(ChunkSize)
-	jnit, knit, lnit := 1, 0, 0
-	i, j, k, l := 1, jnit, knit, lnit
-	// returns a list of calcs and whether or not it should be
-	// called again
-	return func() ([]Calc, bool) {
-		defer func() {
-			pf++
-			count++
-			start += cs
-		}()
-		calcs := make([]Calc, 0)
-		for ; i <= ncoords; i++ {
-			for j = jnit; j <= i; j++ {
-				for k = knit; k <= j; k++ {
-					for l = lnit; l <= k; l++ {
-						calcs = append(calcs,
-							m.Derivative(dir, names, coords, i, j, k, l)...,
-						)
-						if len(calcs) >= Conf.Int(ChunkSize) {
-							jnit, knit, lnit = j, k, l+1
-							return Push(dir, pf, count, calcs), true
-						}
-					}
-					lnit = 0
-				}
-				knit = 0
-			}
-			jnit = 1
-		}
-		return Push(dir, pf, count, calcs), false
-	}
-}
-
 // GradDerivative is the Derivative analog for Gradients
 func (m *Molpro) GradDerivative(dir string, names []string, coords []float64,
 	i, j, k int) (calcs []Calc) {
@@ -649,53 +516,11 @@ func (m *Molpro) GradDerivative(dir string, names []string, coords []float64,
 	return
 }
 
-// BuildGradPoints constructs the calculations needed to run a
-// Cartesian quartic force field using gradients
-func (m *Molpro) BuildGradPoints(dir string, names []string,
-	coords []float64) func() ([]Calc, bool) {
-	dir = filepath.Join(m.Dir, dir)
-	ncoords := len(coords)
-	var (
-		start int
-		pf    int
-		count int
-	)
-	cs := Conf.Int(ChunkSize)
-	jnit, knit := 0, 0
-	i, j, k := 1, jnit, knit
-	// returns a list of calcs and whether or not it should be
-	// called again
-	return func() ([]Calc, bool) {
-		defer func() {
-			pf++
-			count++
-			start += cs
-		}()
-		calcs := make([]Calc, 0)
-		for ; i <= ncoords; i++ {
-			for j = jnit; j <= i; j++ {
-				for k = knit; k <= j; k++ {
-					calcs = append(calcs,
-						m.GradDerivative(dir, names, coords, i, j, k)...,
-					)
-					if len(calcs) >= Conf.Int(ChunkSize) {
-						jnit, knit = j, k+1
-						return Push(dir, pf, count, calcs), true
-					}
-				}
-				knit = 0
-			}
-			jnit = 0
-		}
-		return Push(dir, pf, count, calcs), false
-	}
-}
-
 // Run runs a single Molpro calculation. The type of calculation is
 // determined by proc. opt calls for a geometry optimization, freq
 // calls for a harmonic frequency calculation, and none calls for a
 // single point
-func (m *Molpro) Run(proc Procedure) (E0 float64) {
+func (m *Molpro) Run(proc Procedure, q Queue) (E0 float64) {
 	var (
 		dir  string
 		name string
@@ -720,25 +545,25 @@ func (m *Molpro) Run(proc Procedure) (E0 float64) {
 		return
 	}
 	m.WriteInput(infile, proc)
-	WritePBS(pbsfile,
+	q.WritePBS(pbsfile,
 		&Job{
 			Name: fmt.Sprintf("%s-%s",
 				MakeName(Conf.Str(Geometry)), proc),
 			Filename: infile,
 			NumCPUs:  Conf.Int(NumCPUs),
 			PBSMem:   Conf.Int(PBSMem),
-		}, pbsMaple)
-	jobid := Submit(pbsfile)
+		}, q.SinglePBS())
+	jobid := q.Submit(pbsfile)
 	jobMap := make(map[string]bool)
 	jobMap[jobid] = false
 	// only wait for opt and ref to run
 	for proc != freq && err != nil {
 		E0, _, _, err = m.ReadOut(outfile)
-		Qstat(&jobMap)
+		q.Stat(&jobMap)
 		if err == ErrFileNotFound && !jobMap[jobid] {
 			fmt.Fprintf(os.Stderr, "resubmitting %s for %v\n",
 				pbsfile, err)
-			jobid = Submit(pbsfile)
+			jobid = q.Submit(pbsfile)
 			jobMap[jobid] = false
 		}
 		time.Sleep(time.Duration(Conf.Int(SleepInt)) * time.Second)

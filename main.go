@@ -25,10 +25,7 @@ import (
 
 	"strconv"
 
-	"os/exec"
-
 	"bytes"
-	"io"
 	"path"
 	"runtime/pprof"
 
@@ -171,67 +168,10 @@ func Summarize(zpt float64, mpHarm, idHarm, spHarm, spFund, spCorr []float64) er
 	return nil
 }
 
-// Resubmit copies the input file associated with name to
-// name_redo.inp, writes a new PBS file, submits the new PBS job, and
-// returns the associated jobid
-func Resubmit(name string, err error) string {
-	fmt.Fprintf(os.Stderr, "resubmitting %s for %s\n", name, err)
-	src, _ := os.Open(name + ".inp")
-	dst, _ := os.Create(name + "_redo.inp")
-	io.Copy(dst, src)
-	defer func() {
-		src.Close()
-		dst.Close()
-	}()
-	WritePBS(name+"_redo.pbs",
-		&Job{
-			Name:     "redo",
-			Filename: name + "_redo.inp",
-			Jobs:     []string{name + "_redo.inp"},
-			Host:     "",
-			Queue:    "",
-			NumCPUs:  Conf.Int(NumCPUs),
-			PBSMem:   Conf.Int(PBSMem),
-		}, pbsMaple)
-	return Submit(name + "_redo.pbs")
-}
-
-// Qstat returns a map of job names to their queue status. The map
-// value is true if the job is either queued (Q) or running (R) and
-// false otherwise
-func Qstat(qstat *map[string]bool) {
-	status, _ := exec.Command("qstat", "-u", os.Getenv("USER")).CombinedOutput()
-	scanner := bufio.NewScanner(strings.NewReader(string(status)))
-	var (
-		line   string
-		fields []string
-		header = true
-	)
-	// initialize them all to false and set true if run
-	for key := range *qstat {
-		(*qstat)[key] = false
-	}
-	for scanner.Scan() {
-		line = scanner.Text()
-		if strings.Contains(line, "------") {
-			header = false
-			continue
-		} else if header {
-			continue
-		}
-		fields = strings.Fields(line)
-		if _, ok := (*qstat)[fields[0]]; ok {
-			if strings.Contains("QR", fields[9]) {
-				(*qstat)[fields[0]] = true
-			}
-		}
-	}
-}
-
 // Drain drains the queue of jobs and receives on ch when ready for
 // more. prog is only used for its ReadOut method, and ncoords is used
 // to construct the zero gradient array.
-func Drain(prog Program, ncoords int, E0 float64,
+func Drain(prog Program, q Queue, ncoords int, E0 float64,
 	gen func() ([]Calc, bool)) (min, realTime float64) {
 	start := time.Now()
 	if Conf.At(Deltas) != nil {
@@ -309,7 +249,7 @@ func Drain(prog Program, ncoords int, E0 float64,
 				// can't use job.whatever if you want to modify the thing
 				points[i].Resub = &Calc{
 					Name:    job.Name + "_redo",
-					ResubID: Resubmit(job.Name, err),
+					ResubID: q.Resubmit(job.Name, err),
 				}
 				resubs++
 				ptsJobs = append(ptsJobs, points[i].Resub.ResubID)
@@ -366,7 +306,7 @@ func Drain(prog Program, ncoords int, E0 float64,
 		}
 		if shortenBy < 1 {
 			fmt.Fprintln(os.Stderr, "Didn't shorten, sleeping")
-			Qstat(&qstat)
+			q.Stat(&qstat)
 			time.Sleep(time.Duration(Conf.Int(SleepInt)) * time.Second)
 		} else {
 			fmt.Fprintf(os.Stderr, "finished %d/%d submitted, %v polling %d jobs\n",
@@ -402,33 +342,6 @@ func Drain(prog Program, ncoords int, E0 float64,
 			return
 		}
 	}
-}
-
-// Clear the PBS queue of the pts jobs
-func queueClear(jobs []string) error {
-	for _, job := range jobs {
-		var host string
-		status, _ := exec.Command("qstat", "-f", job).Output()
-		fields := strings.Fields(string(status))
-		for f := range fields {
-			if strings.Contains(fields[f], "exec_host") {
-				host = strings.Split(fields[f+2], "/")[0]
-				break
-			}
-		}
-		if host != "" {
-			// I think this doesn't work anymore and it's very slow
-			// it's now $USER.jobid.maple
-			// out, err := exec.Command("ssh", host, "-t",
-			// 	"rm -rf /tmp/$USER/"+job+".maple").CombinedOutput()
-			// if *debug {
-			// 	fmt.Println("CombinedOutput and error from queueClear: ",
-			// 		string(out), err)
-			// }
-		}
-	}
-	err := exec.Command("qdel", jobs...).Run()
-	return err
 }
 
 // CartPoints returns the number of points required for a Cartesian
@@ -724,7 +637,21 @@ func main() {
 		ncoords   int
 		names     []string
 		coords    []float64
+		queue     Queue
 	)
+
+	switch Conf.Str(QueueSystem) {
+	case "pbs":
+		queue = PBS{
+			SinglePt: pbsMaple,
+			ChunkPts: ptsMaple,
+		}
+	case "slurm":
+		queue = Slurm{
+			SinglePt: pbsSlurm,
+			ChunkPts: ptsSlurm,
+		}
+	}
 
 	if DoOpt() {
 		if Conf.Str(GeomType) != "zmat" {
@@ -734,13 +661,13 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		E0 = prog.Run(opt)
+		E0 = prog.Run(opt, queue)
 		cart, zmat, err = prog.HandleOutput("opt/opt")
 		if err != nil {
 			panic(err)
 		}
 		prog.UpdateZmat(zmat)
-		prog.Run(freq)
+		prog.Run(freq, queue)
 	} else {
 		if !strings.Contains("cart,xyz", Conf.Str(GeomType)) {
 			panic("expecting cartesian geometry")
@@ -752,7 +679,7 @@ func main() {
 		cart = prog.GetGeom()
 		// only required for cartesians
 		if DoCart() {
-			E0 = prog.Run(none)
+			E0 = prog.Run(none, queue)
 		}
 	}
 
@@ -767,28 +694,29 @@ func main() {
 		if DoPts() {
 			intder.WritePts("pts/intder.in")
 			RunIntder("pts/intder")
-			gen = BuildPoints(prog, "pts/file07",
-				names, &cenergies, true)
+			gen = BuildPoints(prog, queue, "pts/file07", names,
+				&cenergies, true)
 		} else {
 			// this works if no points were deleted and
 			// the files are named the same way between
 			// runs, else need a resume from checkpoint
 			// thing - actually this should read rel.dat
 			// since I dump that now
-			gen = BuildPoints(prog, "pts/file07", names, &cenergies, false)
+			gen = BuildPoints(prog, queue, "pts/file07", names,
+				&cenergies, false)
 		}
 	} else {
 		names, coords = XYZGeom(cart)
 		natoms = len(names)
 		ncoords = len(coords)
 		if DoCart() {
-			gen = prog.BuildCartPoints("pts/inp", names, coords)
+			gen = BuildCartPoints(prog, queue, "pts/inp", names, coords)
 		} else if DoGrad() {
-			gen = prog.BuildGradPoints("pts/inp", names, coords)
+			gen = BuildGradPoints(prog, queue, "pts/inp", names, coords)
 		}
 	}
 
-	min, _ = Drain(prog, ncoords, E0, gen)
+	min, _ = Drain(prog, queue, ncoords, E0, gen)
 	queueClear(ptsJobs)
 
 	if DoSIC() {

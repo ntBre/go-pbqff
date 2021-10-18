@@ -1,0 +1,31 @@
+#!/bin/sh
+#PBS -N {{.Name}}
+#PBS -S /bin/bash
+#PBS -j oe
+#PBS -o {{.Filename}}.out
+#PBS -W umask=022
+#PBS -l walltime=5000:00:00
+#PBS -l ncpus=1
+#PBS -l mem={{.PBSMem}}gb
+{{- if .Queue}}
+#PBS -q {{.Queue}}
+{{- end}}
+{{- if .Host}}
+#PBS -l host={{.Host}}
+{{- end}}
+
+module load pbspro molpro
+
+export WORKDIR=$PBS_O_WORKDIR
+export TMPDIR=/tmp/$USER/$PBS_JOBID
+cd $WORKDIR
+mkdir -p $TMPDIR
+
+date
+hostname
+{{range $j := .Jobs}}
+molpro -t 1 {{ $j }} --no-xml-output
+{{- end }}
+date
+
+rm -rf $TMPDIR
