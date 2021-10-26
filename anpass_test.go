@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -53,6 +54,7 @@ func TestWriteAnpass(t *testing.T) {
 		a, _ := LoadAnpass(test.load)
 		a.WriteAnpass(test.write, []float64{0, 0, 0, 0, 0, 0}, nil)
 		if !compareFile(test.write, test.right) {
+			fmt.Printf("(diff %q %q)\n", test.write, test.right)
 			t.Errorf("mismatch between %s and %s\n", test.write, test.right)
 		}
 	}

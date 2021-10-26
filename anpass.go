@@ -26,50 +26,48 @@ type Anpass struct {
 // LoadAnpass reads a template anpass input file and stores the
 // results in an Anpass
 func LoadAnpass(filename string) (*Anpass, error) {
-	file, err := ioutil.ReadFile(filename)
+	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
 	}
-	lines := strings.Split(string(file), "\n")
 	var (
-		a          Anpass
-		buf        bytes.Buffer
-		body, tail bool
+		a    Anpass
+		buf  strings.Builder
+		line string
+		body bool
 	)
-	head := true
-	for _, line := range lines {
-		if head && string(line[0]) == "(" {
-			head = false
-			buf.WriteString(line + "\n")
+	fstr := regexp.MustCompile(`(?i)\(\d+f([0-9.]+),f([0-9.]+)\)`)
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line = scanner.Text()
+		switch {
+		case fstr.MatchString(line):
+			fmt.Fprintf(&buf, "%s\n", line)
 			a.Head = buf.String()
 			buf.Reset()
-			// assume leading and trailing parentheses
-			s := strings.Split(strings.ToUpper(line[1:len(line)-1]), "F")
-			// assume trailing comma
-			a.Fmt1 = "%" + string(s[1][:len(s[1])-1]) + "f"
-			a.Fmt2 = "%" + string(s[2]) + "f"
+			matches := fstr.FindStringSubmatch(line)
+			a.Fmt1 = fmt.Sprintf("%%%sf", matches[1])
+			a.Fmt2 = fmt.Sprintf("%%%sf", matches[2])
 			body = true
-			continue
-		}
-		if body && strings.Contains(line, "UNKNOWNS") {
-			body = false
-			tail = true
-		} else if body {
-			f := strings.Fields(line)
-			for i := 0; i < len(f)-1; i++ {
-				val, _ := strconv.ParseFloat(f[i], 64)
-				fmt.Fprintf(&buf, a.Fmt1, val)
-			}
-			buf.WriteString("\n")
-			a.Body += buf.String()
+		case strings.Contains(line, "UNKNOWNS"):
+			a.Body = buf.String()
 			buf.Reset()
-			continue
+			fmt.Fprintf(&buf, "%s\n", line)
+			body = false
+		case body:
+			// TODO check length and don't trim if the
+			// energies aren't there
+			fields := strings.Fields(line)
+			for _, f := range fields[:len(fields)-1] {
+				v, _ := strconv.ParseFloat(f, 64)
+				fmt.Fprintf(&buf, a.Fmt1, v)
+			}
+			fmt.Fprint(&buf, "\n")
+		default:
+			fmt.Fprintf(&buf, "%s\n", line)
 		}
-		if tail {
-			a.Tail += line + "\n"
-		}
-		buf.WriteString(line + "\n")
 	}
+	a.Tail = buf.String()
 	return &a, nil
 }
 
