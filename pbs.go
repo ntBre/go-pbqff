@@ -147,7 +147,10 @@ func (p PBS) Stat(qstat *map[string]bool) {
 func queueClear(jobs []string) error {
 	for _, job := range jobs {
 		var host string
-		status, _ := exec.Command("qstat", "-f", job).Output()
+		status, err := exec.Command("qstat", "-f", job).Output()
+		if err != nil {
+			return err
+		}
 		fields := strings.Fields(string(status))
 		for f := range fields {
 			if strings.Contains(fields[f], "exec_host") {
