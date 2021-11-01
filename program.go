@@ -53,29 +53,44 @@ func BuildPoints(p Program, q Queue, filename string, atomNames []string,
 		if !strings.Contains(line, "#") {
 			ind := i % l
 			if (ind == 0 && i > 0) || li == len(lines)-1 {
+				var (
+					norun    bool
+					basename string
+					targs    []Target
+					res float64
+				)
 				// last line needs to write first
 				if li == len(lines)-1 {
 					fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
 				}
-				p.SetGeom(p.FormatGeom(buf.String()))
-				basename := fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
-				fname := basename + ".inp"
-				if write {
-					p.WriteInput(fname, none)
-				}
 				for len(cenergies) <= geom {
-					cenergies = append(cenergies, CountFloat{Count: 1})
+					cenergies = append(cenergies, CountFloat{Count: 0})
 				}
-				calcs = append(calcs, Calc{
-					Name:  basename,
-					Scale: 1.0,
-					Targets: []Target{
+				if !cenergies[geom].Loaded {
+					cenergies[geom].Count = 1
+					p.SetGeom(p.FormatGeom(buf.String()))
+					basename = fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
+					fname := basename + ".inp"
+					if write {
+						p.WriteInput(fname, none)
+					}
+					targs = []Target{
 						{
 							Coeff: 1,
 							Slice: &cenergies,
 							Index: geom,
 						},
-					},
+					}
+				} else {
+					norun = true
+					res = cenergies[geom].Val
+				}
+				calcs = append(calcs, Calc{
+					Name:    basename,
+					Scale:   1.0,
+					Targets: targs,
+					noRun:   norun,
+					Result: res,
 				})
 				geom++
 				buf.Reset()
