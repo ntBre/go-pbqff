@@ -57,7 +57,7 @@ func BuildPoints(p Program, q Queue, filename string, atomNames []string,
 					norun    bool
 					basename string
 					targs    []Target
-					res float64
+					res      float64
 				)
 				// last line needs to write first
 				if li == len(lines)-1 {
@@ -90,7 +90,7 @@ func BuildPoints(p Program, q Queue, filename string, atomNames []string,
 					Scale:   1.0,
 					Targets: targs,
 					noRun:   norun,
-					Result: res,
+					Result:  res,
 				})
 				geom++
 				buf.Reset()
