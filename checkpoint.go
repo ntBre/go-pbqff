@@ -14,6 +14,9 @@ var (
 
 // MakeCheckpoint makes a checkpoint
 func MakeCheckpoint(dir string) {
+	if DoSIC() {
+		arrs = []*[]CountFloat{&cenergies}
+	}
 	for a, arr := range arrs {
 		temp := make([]CountFloat, 0, len(*arrs[a]))
 		for _, v := range *arr {

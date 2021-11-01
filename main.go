@@ -116,6 +116,11 @@ var (
 	e2d []CountFloat
 )
 
+// SIC array
+var (
+	cenergies []CountFloat
+)
+
 // Errors
 var (
 	ErrBlankOutput         = errors.New("Molpro output file exists but is blank")
@@ -626,18 +631,17 @@ func main() {
 	}
 	fmt.Printf("Available nodes: %q\n\n", Global.Nodes)
 	var (
-		mpHarm    []float64
-		cart      string
-		zmat      string
-		energies  []float64
-		cenergies []CountFloat
-		min       float64
-		E0        float64
-		natoms    int
-		ncoords   int
-		names     []string
-		coords    []float64
-		queue     Queue
+		mpHarm   []float64
+		cart     string
+		zmat     string
+		energies []float64
+		min      float64
+		E0       float64
+		natoms   int
+		ncoords  int
+		names    []string
+		coords   []float64
+		queue    Queue
 	)
 
 	switch Conf.Str(QueueSystem) {
@@ -694,16 +698,15 @@ func main() {
 		if DoPts() {
 			intder.WritePts("pts/intder.in")
 			RunIntder("pts/intder")
-			gen = BuildPoints(prog, queue, "pts/file07", names,
-				&cenergies, true)
+			gen = BuildPoints(prog, queue, "pts/file07", names, true)
 		} else {
+			// TODO LoadCheckpoint here
 			// this works if no points were deleted and
 			// the files are named the same way between
 			// runs, else need a resume from checkpoint
 			// thing - actually this should read rel.dat
 			// since I dump that now
-			gen = BuildPoints(prog, queue, "pts/file07", names,
-				&cenergies, false)
+			gen = BuildPoints(prog, queue, "pts/file07", names, false)
 		}
 	} else {
 		names, coords = XYZGeom(cart)

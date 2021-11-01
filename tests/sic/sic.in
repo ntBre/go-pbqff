@@ -12,6 +12,7 @@ HOH=               104.40102058 DEG
 flags=noopt
 sleepint=1
 chunksize=69
+checkint=35
 intder=../../../bin/intder
 anpass=../../../bin/anpass
 spectro=../../../bin/spectro

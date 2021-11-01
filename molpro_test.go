@@ -429,6 +429,7 @@ func TestBuildPoints(t *testing.T) {
 	qsub = "qsub/qsub"
 	defer func() {
 		qsub = "qsub"
+		cenergies = *new([]CountFloat)
 	}()
 	prog, _ := LoadMolpro("testfiles/load/molpro.in")
 	cart, _, _ := prog.HandleOutput("testfiles/opt")
@@ -436,25 +437,24 @@ func TestBuildPoints(t *testing.T) {
 	os.Mkdir("testfiles/read/inp", 0755)
 	defer os.RemoveAll("testfiles/read/inp")
 	paraCount = make(map[string]int)
-	cf := new([]CountFloat)
-	gen := BuildPoints(prog, queue, "testfiles/read/file07", names, cf, true)
+	gen := BuildPoints(prog, queue, "testfiles/read/file07", names, true)
 	got, _ := gen()
 	want := []Calc{
 		{
 			Name:    "testfiles/read/inp/NHHH.00000",
-			Targets: []Target{{1, cf, 0}},
+			Targets: []Target{{1, &cenergies, 0}},
 			SubFile: "testfiles/read/inp/main0.pbs",
 			JobID:   "1",
 			Scale:   1},
 		{
 			Name:    "testfiles/read/inp/NHHH.00001",
-			Targets: []Target{{1, cf, 1}},
+			Targets: []Target{{1, &cenergies, 1}},
 			SubFile: "testfiles/read/inp/main0.pbs",
 			JobID:   "1",
 			Scale:   1},
 		{
 			Name:    "testfiles/read/inp/NHHH.00002",
-			Targets: []Target{{1, cf, 2}},
+			Targets: []Target{{1, &cenergies, 2}},
 			SubFile: "testfiles/read/inp/main0.pbs",
 			JobID:   "1",
 			Scale:   1},

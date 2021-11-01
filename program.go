@@ -34,7 +34,7 @@ type Program interface {
 // run. If write is set to true, write the necessary files. Otherwise
 // just return the list of jobs.
 func BuildPoints(p Program, q Queue, filename string, atomNames []string,
-	target *[]CountFloat, write bool) func() ([]Calc, bool) {
+	write bool) func() ([]Calc, bool) {
 	lines, err := ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -63,8 +63,8 @@ func BuildPoints(p Program, q Queue, filename string, atomNames []string,
 				if write {
 					p.WriteInput(fname, none)
 				}
-				for len(*target) <= geom {
-					*target = append(*target, CountFloat{Count: 1})
+				for len(cenergies) <= geom {
+					cenergies = append(cenergies, CountFloat{Count: 1})
 				}
 				calcs = append(calcs, Calc{
 					Name:  basename,
@@ -72,7 +72,7 @@ func BuildPoints(p Program, q Queue, filename string, atomNames []string,
 					Targets: []Target{
 						{
 							Coeff: 1,
-							Slice: target,
+							Slice: &cenergies,
 							Index: geom,
 						},
 					},

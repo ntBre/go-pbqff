@@ -26,14 +26,14 @@ func TestSIC(t *testing.T) {
 		*test = false
 		qsub = "qsub"
 		submitted = 0
+		cenergies = *new([]CountFloat)
 	}()
 	prog, intder, anpass := initialize("tests/sic/sic.in")
 	names := strings.Fields("H O H")
 	intder.WritePts("tests/sic/pts/intder.in")
 	RunIntder("tests/sic/pts/intder")
-	var cenergies []CountFloat
 	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
-	gen := BuildPoints(prog, queue, "tests/sic/pts/file07", names, &cenergies, true)
+	gen := BuildPoints(prog, queue, "tests/sic/pts/file07", names, true)
 	E0 := -76.369839620287
 	min, _ := Drain(prog, queue, 0, E0, gen)
 	energies := FloatsFromCountFloats(cenergies)
