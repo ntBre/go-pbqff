@@ -489,8 +489,6 @@ func (g *Gaussian) Derivative(dir string, names []string,
 	return
 }
 
-// BuildCartPoints constructs the calculations needed to run a
-// Cartesian quartic force field
 // GradDerivative is the Derivative analog for Gradients
 func (g *Gaussian) GradDerivative(dir string, names []string, coords []float64,
 	i, j, k int) (calcs []Calc) {
