@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -100,7 +99,7 @@ func (m *Molpro) WriteInput(filename string, p Procedure) {
 		buf.WriteString("{frequencies}\n")
 	}
 	buf.WriteString(m.Extra)
-	ioutil.WriteFile(filename, buf.Bytes(), 0755)
+	os.WriteFile(filename, buf.Bytes(), 0755)
 }
 
 // FormatZmat formats a z-matrix for use in Molpro input and places it

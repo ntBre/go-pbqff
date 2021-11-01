@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -410,7 +409,7 @@ func TestLoadIntder(t *testing.T) {
 	}
 	for _, test := range tests {
 		got, _ := LoadIntder(test.infile)
-		data, err := ioutil.ReadFile(test.outfile)
+		data, err := os.ReadFile(test.outfile)
 		if err != nil {
 			panic(err)
 		}
@@ -493,7 +492,7 @@ func TestRead9903(t *testing.T) {
 	i.ReadGeom("testfiles/read/intder_geom.out")
 	i.Read9903("testfiles/read/fort.9903", false)
 	got := i.Tail
-	bytes, _ := ioutil.ReadFile("testfiles/right/fort.9903")
+	bytes, _ := os.ReadFile("testfiles/right/fort.9903")
 	want := string(bytes)
 	if got != want {
 		t.Errorf("got\n%v, wanted\n%v\n", got, want)

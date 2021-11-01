@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"reflect"
@@ -91,11 +90,11 @@ func TestHandleSignal(t *testing.T) {
 }
 
 func compareFile(file1, file2 string) bool {
-	str1, err := ioutil.ReadFile(file1)
+	str1, err := os.ReadFile(file1)
 	if err != nil {
 		panic(err)
 	}
-	str2, err := ioutil.ReadFile(file2)
+	str2, err := os.ReadFile(file2)
 	if err != nil {
 		panic(err)
 	}

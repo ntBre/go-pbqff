@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 )
 
@@ -28,14 +28,14 @@ func MakeCheckpoint(dir string) {
 		if err != nil {
 			panic(err)
 		}
-		ioutil.WriteFile(filepath.Join(dir, fnames[a]), aJSON, 0755)
+		os.WriteFile(filepath.Join(dir, fnames[a]), aJSON, 0755)
 	}
 }
 
 // LoadCheckpoint restores the result arrays from a checkpoint
 func LoadCheckpoint() {
 	for a := range arrs {
-		lines, _ := ioutil.ReadFile(fnames[a])
+		lines, _ := os.ReadFile(fnames[a])
 		err := json.Unmarshal(lines, arrs[a])
 		if err != nil {
 			errExit(err, fmt.Sprintf("loading %s for checkpoint", fnames[a]))

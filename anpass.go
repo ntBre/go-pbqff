@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -168,7 +167,7 @@ func (a *Anpass) WriteAnpass(filename string, energies []float64, intder *Intder
 	buf.WriteString(a.Head)
 	lin = a.BuildBody(&buf, energies, intder)
 	buf.WriteString(a.Tail)
-	ioutil.WriteFile(filename, []byte(buf.String()), 0755)
+	os.WriteFile(filename, []byte(buf.String()), 0755)
 	return
 }
 
@@ -186,7 +185,7 @@ func (a *Anpass) WriteAnpass2(filename, longLine string, energies []float64, int
 		}
 		buf.WriteString(line + "\n")
 	}
-	ioutil.WriteFile(filename, []byte(buf.String()), 0755)
+	os.WriteFile(filename, []byte(buf.String()), 0755)
 }
 
 // GetLongLine scans an anpass output file and return the "long line"

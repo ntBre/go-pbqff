@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -385,7 +384,7 @@ func ApplyPattern(ord []int, lines []string) (ordered []string) {
 func (i *Intder) WritePts(filename string) {
 	var buf bytes.Buffer
 	buf.WriteString(i.Head + i.Geometry + "\n" + i.Tail)
-	ioutil.WriteFile(filename, buf.Bytes(), 0755)
+	os.WriteFile(filename, buf.Bytes(), 0755)
 }
 
 // WriteGeom writes an intder_geom.in file to filename, using
@@ -403,7 +402,7 @@ func (i *Intder) WriteGeom(filename, longLine string) {
 		}
 	}
 	fmt.Fprintf(&buf, "%5d\n", 0)
-	ioutil.WriteFile(filename, buf.Bytes(), 0755)
+	os.WriteFile(filename, buf.Bytes(), 0755)
 }
 
 // SecondLine updates the input directives of an intder
@@ -487,7 +486,7 @@ func (i *Intder) WriteFreqs(filename string, names []string, lintri bool) {
 	}
 	fmt.Fprint(&buf, "\n")
 	buf.WriteString(i.Tail)
-	ioutil.WriteFile(filename, buf.Bytes(), 0755)
+	os.WriteFile(filename, buf.Bytes(), 0755)
 }
 
 // ReadGeom updates i.Geometry with the results of intder_geom

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -707,12 +706,12 @@ date
 
 rm -rf $TMPDIR
 `, want[0].SubFile+".out")
-	ioutil.WriteFile(right, buf.Bytes(), 0755)
+	os.WriteFile(right, buf.Bytes(), 0755)
 	if !compareFile(want[0].SubFile, right) {
-		byt, _ := ioutil.ReadFile(right)
+		byt, _ := os.ReadFile(right)
 		fmt.Println("wanted: ")
 		fmt.Printf("%q\n", string(byt))
-		byt, _ = ioutil.ReadFile(want[0].SubFile)
+		byt, _ = os.ReadFile(want[0].SubFile)
 		fmt.Println("got: ")
 		fmt.Printf("%q\n", string(byt))
 		t.Errorf("commands file mismatch\n")
