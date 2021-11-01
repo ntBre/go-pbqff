@@ -16,6 +16,8 @@ var (
 func MakeCheckpoint(dir string) {
 	if DoSIC() {
 		arrs = []*[]CountFloat{&cenergies}
+		fnames = []string{"chk.json"}
+
 	}
 	for a, arr := range arrs {
 		temp := make([]CountFloat, 0, len(*arrs[a]))
@@ -37,6 +39,11 @@ func MakeCheckpoint(dir string) {
 
 // LoadCheckpoint restores the result arrays from a checkpoint
 func LoadCheckpoint() {
+	if DoSIC() {
+		arrs = []*[]CountFloat{&cenergies}
+		fnames = []string{"chk.json"}
+
+	}
 	for a := range arrs {
 		lines, _ := os.ReadFile(fnames[a])
 		err := json.Unmarshal(lines, arrs[a])
