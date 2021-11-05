@@ -242,9 +242,6 @@ func (tq TestQueue) Submit(string) string          { return "1" }
 func (tq TestQueue) Resubmit(string, error) string { return "" }
 func (tq TestQueue) Stat(*map[string]bool)         {}
 
-// TODO
-// This is only testing that it runs, add targets to calcs and see if
-// the values that come out are right
 func TestDrain(t *testing.T) {
 	submitted = 0
 	conf := Conf
