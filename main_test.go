@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"reflect"
 	"strings"
@@ -245,7 +244,6 @@ func (tq TestQueue) Stat(*map[string]bool)         {}
 func TestDrain(t *testing.T) {
 	submitted = 0
 	conf := Conf
-	fmt.Println(os.Getwd())
 	qsub = "qsub/qsub"
 	defer func() {
 		Conf = conf
