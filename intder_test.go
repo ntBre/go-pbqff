@@ -355,7 +355,6 @@ func workDir(filename string, f func(string), test bool) {
 
 func TestWorkDir(t *testing.T) {
 	workDir("testfiles/write/opt.inp", func(s string) {
-		fmt.Println(s)
 	}, true)
 	if !compareFile("tmp/opt.inp", "testfiles/write/opt.inp") {
 		t.Errorf("mismatch\n")
