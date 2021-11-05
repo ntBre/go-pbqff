@@ -702,14 +702,6 @@ func main() {
 			intder.WritePts("pts/intder.in")
 			RunIntder("pts/intder")
 			gen = BuildPoints(prog, queue, "pts/file07", names, true)
-		} else {
-			// TODO LoadCheckpoint here
-			// this works if no points were deleted and
-			// the files are named the same way between
-			// runs, else need a resume from checkpoint
-			// thing - actually this should read rel.dat
-			// since I dump that now
-			gen = BuildPoints(prog, queue, "pts/file07", names, false)
 		}
 	} else {
 		names, coords = XYZGeom(cart)
