@@ -35,6 +35,7 @@ import (
 
 	"github.com/ntBre/chemutils/spectro"
 	"github.com/ntBre/chemutils/summarize"
+	symm "github.com/ntBre/chemutils/symmetry"
 )
 
 // Flags for the procedures to be run
@@ -686,6 +687,8 @@ func main() {
 			E0 = prog.Run(none, queue)
 		}
 	}
+	mol := symm.ReadXYZ(strings.NewReader(cart))
+	fmt.Printf("Point group %s\n", mol.Group)
 
 	var gen func() ([]Calc, bool)
 
