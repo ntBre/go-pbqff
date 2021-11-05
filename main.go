@@ -52,9 +52,6 @@ const (
 // DoOpt is a helper function for checking whether the OPT flag is set
 func DoOpt() bool { return flags&OPT > 0 }
 
-// DoPts is a helper function for checking whether the PTS flag is set
-func DoPts() bool { return flags&PTS > 0 }
-
 // DoFreqs is a helper function for checking whether the FREQS flag is
 // set
 func DoFreqs() bool { return flags&FREQS > 0 }
@@ -698,11 +695,9 @@ func main() {
 		} else {
 			names = strings.Fields(*irdy)
 		}
-		if DoPts() {
-			intder.WritePts("pts/intder.in")
-			RunIntder("pts/intder")
-			gen = BuildPoints(prog, queue, "pts/file07", names, true)
-		}
+		intder.WritePts("pts/intder.in")
+		RunIntder("pts/intder")
+		gen = BuildPoints(prog, queue, "pts/file07", names, true)
 	} else {
 		names, coords = XYZGeom(cart)
 		natoms = len(names)
