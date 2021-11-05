@@ -89,28 +89,27 @@ func TestPattern(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		t.Run(test.msg, func(t *testing.T) {
-			got, _ := Pattern(test.inp, test.ndummy, test.negate)
-			if !reflect.DeepEqual(got, test.want) {
-				t.Errorf("got %v, wanted %v\n", got, test.want)
-			}
-		})
+		got, _ := Pattern(test.inp, test.ndummy, test.negate)
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf("%s: got %v, wanted %v\n",
+				test.msg, got, test.want)
+		}
 	}
 }
 
 func TestSwap(t *testing.T) {
 	start := [][]int{
-		[]int{2, 1, 1},
-		[]int{4, 2, 1},
-		[]int{1, 2, 1},
-		[]int{2, 4, 1},
+		{2, 1, 1},
+		{4, 2, 1},
+		{1, 2, 1},
+		{2, 4, 1},
 	}
 	got := Swap(start, 0, 1)
 	want := [][]int{
-		[]int{1, 2, 1},
-		[]int{2, 4, 1},
-		[]int{2, 1, 1},
-		[]int{4, 2, 1},
+		{1, 2, 1},
+		{2, 4, 1},
+		{2, 1, 1},
+		{4, 2, 1},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, wanted %v\n", got, want)
@@ -118,24 +117,43 @@ func TestSwap(t *testing.T) {
 }
 
 func TestMatchPattern(t *testing.T) {
-	t.Run("columns match", func(t *testing.T) {
-		p1, _ := Pattern(text, 0, false)
-		p2, _ := Pattern(text1, 0, false)
+	tests := []struct {
+		msg          string
+		geom1, geom2 string
+		ndum1, ndum2 int
+		neg1, neg2   bool
+		want         []int
+	}{
+		{
+			msg:   "columns match",
+			geom1: text,
+			ndum1: 0,
+			neg1:  false,
+			geom2: text1,
+			ndum2: 0,
+			neg2:  false,
+			want:  []int{2, 0, 1, 3},
+		},
+		{
+			msg:   "column mismatch",
+			geom1: text,
+			ndum1: 0,
+			neg1:  false,
+			geom2: text2,
+			ndum2: 0,
+			neg2:  false,
+			want:  []int{0, 1, 2, 3},
+		},
+	}
+	for _, test := range tests {
+		p1, _ := Pattern(test.geom1, test.ndum1, test.neg1)
+		p2, _ := Pattern(test.geom2, test.ndum2, test.neg2)
 		_, got, _ := MatchPattern(p1, p2)
-		want := []int{2, 0, 1, 3}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("got %v, wanted %v\n", got, want)
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf("%s: got %v, wanted %v\n",
+				test.msg, got, test.want)
 		}
-	})
-	t.Run("column mismatch", func(t *testing.T) {
-		p1, _ := Pattern(text, 0, false)
-		p2, _ := Pattern(text2, 0, false)
-		_, got, _ := MatchPattern(p1, p2)
-		want := []int{0, 1, 2, 3}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("got %v, wanted %v\n", got, want)
-		}
-	})
+	}
 	// 	nh3Opt := `-0.000015401   -0.128410268    0.000000000
 	// 	     1.771141442    0.594753632    0.000000000
 	// 	    -0.885463713    0.594841026   -1.533900726
@@ -172,8 +190,8 @@ func TestSwapStr(t *testing.T) {
 		"7 8 9",
 	}
 	swps := [][]int{
-		[]int{0, 1},
-		[]int{1, 2},
+		{0, 1},
+		{1, 2},
 	}
 	got := SwapStr(swps, txt, "%s %s %s")
 	want := []string{
@@ -279,8 +297,12 @@ func TestConvertCart(t *testing.T) {
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, wanted %v\n", got, want)
 		}
-		wantDum := []Dummy{Dummy{Coords: []float64{0.000000000, 1.111111111, -1.079963204},
-			Matches: []int{0, -1, 5}}} // position in intder is 5
+		wantDum := []Dummy{
+			{
+				Coords:  []float64{0.000000000, 1.111111111, -1.079963204},
+				Matches: []int{0, -1, 5},
+			},
+		} // position in intder is 5
 		if !reflect.DeepEqual(i.Dummies, wantDum) {
 			t.Errorf("got %v, wanted %v\n", i.Dummies, wantDum)
 		}

@@ -9,21 +9,33 @@ import (
 )
 
 func TestCleanSplit(t *testing.T) {
-	t.Run("trailing newline", func(t *testing.T) {
-		got := CleanSplit("this is\nan\nexample\n", "\n")
-		want := []string{"this is", "an", "example"}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("got %v, wanted %v\n", got, want)
-		}
-	})
+	tests := []struct {
+		msg  string
+		inp  string
+		sep  string
+		want []string
+	}{
+		{
+			msg:  "trailing newline",
+			inp:  "this is\nan\nexample\n",
+			sep:  "\n",
+			want: []string{"this is", "an", "example"},
+		},
+		{
+			msg:  "internal newline",
+			inp:  "this is\nan\n\nexample\n",
+			sep:  "\n",
+			want: []string{"this is", "an", "example"},
+		},
+	}
 
-	t.Run("internal newline", func(t *testing.T) {
-		got := CleanSplit("this is\nan\n\nexample\n", "\n")
-		want := []string{"this is", "an", "example"}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("got %v, wanted %v\n", got, want)
+	for _, test := range tests {
+		got := CleanSplit(test.inp, test.sep)
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf("%s: got %v, wanted %v\n",
+				test.msg, got, test.want)
 		}
-	})
+	}
 }
 
 func TestRunProgram(t *testing.T) {
