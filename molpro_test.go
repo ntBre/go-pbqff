@@ -134,16 +134,15 @@ OX=                  1.26606700 ANG
 		},
 	}
 	for _, test := range tests {
-		t.Run(test.msg, func(t *testing.T) {
-			prog, _ := LoadMolpro(test.load)
-			_, zmat, _ := prog.HandleOutput(test.out)
-			prog.FormatZmat(test.geom)
-			prog.UpdateZmat(zmat)
-			got := prog.Geom
-			if got != test.want {
-				t.Errorf("got\n%q, wanted\n%q\n", got, test.want)
-			}
-		})
+		prog, _ := LoadMolpro(test.load)
+		_, zmat, _ := prog.HandleOutput(test.out)
+		prog.FormatZmat(test.geom)
+		prog.UpdateZmat(zmat)
+		got := prog.Geom
+		if got != test.want {
+			t.Errorf("%s: got\n%q, wanted\n%q\n",
+				test.msg, got, test.want)
+		}
 	}
 }
 
