@@ -9,7 +9,10 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"strings"
 	"testing"
+
+	symm "github.com/ntBre/chemutils/symmetry"
 )
 
 func TestLoadMolpro(t *testing.T) {
@@ -625,7 +628,7 @@ func TestDerivative(t *testing.T) {
 			deltas[i] = 1.0
 		}
 		Conf.Set(Deltas, deltas)
-		calcs := prog.Derivative(dir, test.names, test.coords,
+		calcs := Derivative(prog, dir, test.names, test.coords,
 			test.dims[0], test.dims[1], test.dims[2], test.dims[3])
 		if !reflect.DeepEqual(calcs, test.calcs) {
 			t.Errorf("got\n%v, wanted\n%v\n", calcs, test.calcs)
@@ -753,7 +756,9 @@ func TestBuildCartPoints(t *testing.T) {
 		SinglePt: pbsMaple,
 		ChunkPts: ptsMaple,
 	}
-	gen := BuildCartPoints(mp, queue, dir, names, coords)
+	cart := ZipXYZ(names, coords)
+	mol := symm.ReadXYZ(strings.NewReader(cart))
+	gen := BuildCartPoints(mp, queue, dir, names, coords, mol)
 	paraCount = make(map[string]int)
 	got := make([]Calc, 0)
 	hold, ok := gen()
@@ -839,7 +844,7 @@ func TestGradDerivative(t *testing.T) {
 			deltas[i] = 1.0
 		}
 		Conf.Set(Deltas, deltas)
-		calcs := prog.GradDerivative(dir, test.names, test.coords,
+		calcs := GradDerivative(prog, dir, test.names, test.coords,
 			test.dims[0], test.dims[1], test.dims[2])
 		if !reflect.DeepEqual(calcs, test.calcs) {
 			t.Errorf("got\n%v, wanted\n%v\n", calcs, test.calcs)
@@ -879,7 +884,9 @@ func TestBuildGradPoints(t *testing.T) {
 	n := len(coords)
 	want := (4*n*n*n + 12*n*n + 11*n) / 3
 	mp := new(Molpro)
-	gen := BuildGradPoints(mp, queue, dir, names, coords)
+	cart := ZipXYZ(names, coords)
+	mol := symm.ReadXYZ(strings.NewReader(cart))
+	gen := BuildGradPoints(mp, queue, dir, names, coords, mol)
 	paraCount = make(map[string]int)
 	got := make([]Calc, 0)
 	hold, ok := gen()

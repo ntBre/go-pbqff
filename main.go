@@ -651,9 +651,9 @@ func main() {
 		natoms = len(names)
 		ncoords = len(coords)
 		if DoCart() {
-			gen = BuildCartPoints(prog, queue, "pts/inp", names, coords)
+			gen = BuildCartPoints(prog, queue, "pts/inp", names, coords, mol)
 		} else if DoGrad() {
-			gen = BuildGradPoints(prog, queue, "pts/inp", names, coords)
+			gen = BuildGradPoints(prog, queue, "pts/inp", names, coords, mol)
 		}
 	}
 

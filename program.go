@@ -5,16 +5,18 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	symm "github.com/ntBre/chemutils/symmetry"
 )
 
 // Program is an interface for using different quantum chemical
 // programs in the place of Molpro. TODO this is a massive interface,
 // how many of these are really necessary?
 type Program interface {
-	SetDir(string)
 	GetDir() string
-	SetGeom(string)
+	SetDir(string)
 	GetGeom() string
+	SetGeom(string)
 	WriteInput(string, Procedure)
 	FormatZmat(string) error
 	FormatGeom(string) string
@@ -25,8 +27,6 @@ type Program interface {
 	FormatCart(string) error
 	ReadOut(string) (float64, float64, []float64, error)
 	ReadFreqs(string) []float64
-	Derivative(string, []string, []float64, int, int, int, int) []Calc
-	GradDerivative(string, []string, []float64, int, int, int) []Calc
 }
 
 // BuildPoints uses a file07 file from Intder to construct the
@@ -69,7 +69,8 @@ func BuildPoints(p Program, q Queue, filename string, atomNames []string,
 				if !cenergies[geom].Loaded {
 					cenergies[geom].Count = 1
 					p.SetGeom(p.FormatGeom(buf.String()))
-					basename = fmt.Sprintf("%s/inp/%s.%05d", dir, name, geom)
+					basename = fmt.Sprintf("%s/inp/%s.%05d",
+						dir, name, geom)
 					fname := basename + ".inp"
 					if write {
 						p.WriteInput(fname, none)
@@ -125,9 +126,11 @@ func BuildPoints(p Program, q Queue, filename string, atomNames []string,
 			}
 		}()
 		if end == len(calcs) {
-			return Push(q, filepath.Join(dir, "inp"), pf, count, calcs[start:end]), false
+			return Push(q, filepath.Join(dir, "inp"), pf, count,
+				calcs[start:end]), false
 		}
-		return Push(q, filepath.Join(dir, "inp"), pf, count, calcs[start:end]), true
+		return Push(q, filepath.Join(dir, "inp"), pf, count,
+			calcs[start:end]), true
 	}
 }
 
@@ -139,7 +142,7 @@ func min(a, b int) int {
 }
 
 func BuildCartPoints(p Program, q Queue, dir string, names []string,
-	coords []float64) func() ([]Calc, bool) {
+	coords []float64, mol symm.Molecule) func() ([]Calc, bool) {
 	dir = filepath.Join(p.GetDir(), dir)
 	ncoords := len(coords)
 	var (
@@ -178,7 +181,8 @@ func BuildCartPoints(p Program, q Queue, dir string, names []string,
 				for k = knit; k <= min(j, kmax); k++ {
 					for l = lnit; l <= min(k, lmax); l++ {
 						calcs = append(calcs,
-							p.Derivative(dir, names, coords, i, j, k, l)...,
+							Derivative(p, dir, names,
+								coords, i, j, k, l)...,
 						)
 						if len(calcs) >= Conf.Int(ChunkSize) {
 							jnit, knit, lnit = j, k, l+1
@@ -198,7 +202,7 @@ func BuildCartPoints(p Program, q Queue, dir string, names []string,
 // BuildGradPoints constructs the calculations needed to run a
 // Cartesian quartic force field using gradients
 func BuildGradPoints(p Program, q Queue, dir string, names []string,
-	coords []float64) func() ([]Calc, bool) {
+	coords []float64, mol symm.Molecule) func() ([]Calc, bool) {
 	dir = filepath.Join(p.GetDir(), dir)
 	ncoords := len(coords)
 	var (
@@ -233,7 +237,8 @@ func BuildGradPoints(p Program, q Queue, dir string, names []string,
 			for j = jnit; j <= min(i, jmax); j++ {
 				for k = knit; k <= min(j, kmax); k++ {
 					calcs = append(calcs,
-						p.GradDerivative(dir, names, coords, i, j, k)...,
+						GradDerivative(p, dir, names,
+							coords, i, j, k)...,
 					)
 					if len(calcs) >= Conf.Int(ChunkSize) {
 						jnit, knit = j, k+1
@@ -246,4 +251,175 @@ func BuildGradPoints(p Program, q Queue, dir string, names []string,
 		}
 		return Push(q, dir, pf, count, calcs), false
 	}
+}
+
+// Derivative is a helper for calling Make(2|3|4)D in the same way
+func Derivative(prog Program, dir string, names []string,
+	coords []float64, i, j, k, l int) (calcs []Calc) {
+	var (
+		protos []ProtoCalc
+		target *[]CountFloat
+		ndims  int
+	)
+	ncoords := len(coords)
+	switch {
+	case k == 0 && l == 0:
+		protos = Make2D(i, j)
+		target = &fc2
+		ndims = 2
+	case l == 0:
+		protos = Make3D(i, j, k)
+		target = &fc3
+		ndims = 3
+	default:
+		protos = Make4D(i, j, k, l)
+		target = &fc4
+		ndims = 4
+	}
+	for _, p := range protos {
+		coords := Step(coords, p.Steps...)
+		prog.FormatCart(ZipXYZ(names, coords))
+		temp := Calc{
+			Name:  filepath.Join(dir, p.Name),
+			Scale: p.Scale,
+		}
+		for _, v := range Index(ncoords, false, p.Index...) {
+			for len(*target) <= v {
+				*target = append(*target, CountFloat{Val: 0, Count: 0})
+			}
+			if !(*target)[v].Loaded {
+				(*target)[v].Count = len(protos)
+			}
+			temp.Targets = append(temp.Targets,
+				Target{Coeff: p.Coeff, Slice: target, Index: v})
+		}
+		if len(p.Steps) == 2 && ndims == 2 {
+			for _, v := range E2dIndex(ncoords, p.Steps...) {
+				// also have to append to e2d, but count is always 1 there
+				for len(e2d) <= v {
+					e2d = append(e2d, CountFloat{Val: 0, Count: 1})
+				}
+				// if it was loaded, the count is
+				// already 0 from the checkpoint
+				if !e2d[v].Loaded {
+					e2d[v].Count = 1
+				}
+				temp.Targets = append(temp.Targets,
+					Target{Coeff: 1, Slice: &e2d, Index: v})
+			}
+		} else if len(p.Steps) == 2 && ndims == 4 {
+			// either take fourth derivative from finished
+			// e2d point or promise a source for later
+			if id := E2dIndex(ncoords, p.Steps...)[0]; len(e2d) > id &&
+				e2d[id].Val != 0 {
+				temp.Result = e2d[id].Val
+			} else {
+				temp.Src = &Source{&e2d, id}
+			}
+			temp.noRun = true
+		}
+		// if target was loaded, remove it from list of targets
+		// then only submit if len(Targets) > 0
+		for t := 0; t < len(temp.Targets); {
+			targ := temp.Targets[t]
+			if (*targ.Slice)[targ.Index].Loaded {
+				temp.Targets = append(temp.Targets[:t], temp.Targets[t+1:]...)
+			} else {
+				t++
+			}
+		}
+		if len(temp.Targets) > 0 {
+			fname := filepath.Join(dir, p.Name+".inp")
+			if strings.Contains(p.Name, "E0") {
+				temp.noRun = true
+			}
+			if !temp.noRun {
+				prog.WriteInput(fname, none)
+			}
+			calcs = append(calcs, temp)
+		}
+	}
+	return
+}
+
+// GradDerivative is the Derivative analog for Gradients
+func GradDerivative(prog Program, dir string, names []string,
+	coords []float64, i, j, k int) (calcs []Calc) {
+	ncoords := len(coords)
+	var (
+		protos []ProtoCalc
+		dimmax int
+		ndims  int
+		target *[]CountFloat
+	)
+	switch {
+	case j == 0 && k == 0:
+		// gradient second derivatives are just first derivatives and so on
+		protos = Make1D(i)
+		dimmax = ncoords
+		ndims = 1
+		target = &fc2
+	case k == 0:
+		// except E0 needs to be G(ref geom) == 0, handled this in Drain
+		protos = Make2D(i, j)
+		dimmax = j
+		ndims = 2
+		target = &fc3
+	default:
+		protos = Make3D(i, j, k)
+		dimmax = k
+		ndims = 3
+		target = &fc4
+	}
+	for _, p := range protos {
+		coords := Step(coords, p.Steps...)
+		prog.FormatCart(ZipXYZ(names, coords))
+		temp := Calc{Name: filepath.Join(dir, p.Name), Scale: p.Scale}
+		var index int
+		for g := 1; g <= dimmax; g++ {
+			switch ndims {
+			case 1:
+				index = Index(ncoords, true, i, g)[0]
+			case 2:
+				index = Index(ncoords, false, i, j, g)[0]
+			case 3:
+				index = Index(ncoords, false, i, j, k, g)[0]
+			}
+			temp.Targets = append(temp.Targets, Target{
+				Coeff: p.Coeff,
+				Slice: target,
+				Index: index,
+			})
+			for len(*target) <= index {
+				*target = append(*target, CountFloat{})
+			}
+			// every time this index is added as a target,
+			// increment its count
+			if !(*target)[index].Loaded {
+				(*target)[index].Count++
+			}
+		}
+		// if target was loaded, remove it from list of targets
+		// then only submit if len(Targets) > 0
+		for t := 0; t < len(temp.Targets); {
+			targ := temp.Targets[t]
+			if (*targ.Slice)[targ.Index].Loaded {
+				temp.Targets = append(temp.Targets[:t],
+					temp.Targets[t+1:]...)
+			} else {
+				t++
+			}
+		}
+		if len(temp.Targets) > 0 {
+			fname := filepath.Join(dir, p.Name+".inp")
+			if strings.Contains(p.Name, "E0") {
+				temp.noRun = true
+			}
+			if !temp.noRun {
+				prog.WriteInput(fname, none)
+			}
+			calcs = append(calcs, temp)
+		}
+	}
+	return
 }

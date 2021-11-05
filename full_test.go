@@ -10,6 +10,7 @@ import (
 
 	"github.com/ntBre/chemutils/spectro"
 	"github.com/ntBre/chemutils/summarize"
+	symm "github.com/ntBre/chemutils/symmetry"
 )
 
 func TestSIC(t *testing.T) {
@@ -99,7 +100,8 @@ func TestCart(t *testing.T) {
 	names, coords := XYZGeom(cart)
 	natoms := len(names)
 	ncoords := len(coords)
-	gen := BuildCartPoints(prog, queue, "pts/inp", names, coords)
+	mol := symm.ReadXYZ(strings.NewReader(cart))
+	gen := BuildCartPoints(prog, queue, "pts/inp", names, coords, mol)
 	Drain(prog, queue, ncoords, E0, gen)
 	N3N := natoms * 3 // from spectro manual pg 12
 	other3 := N3N * (N3N + 1) * (N3N + 2) / 6
@@ -155,7 +157,8 @@ func TestGrad(t *testing.T) {
 	natoms := len(names)
 	ncoords := len(coords)
 	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
-	gen := BuildGradPoints(prog, queue, "pts/inp", names, coords)
+	mol := symm.ReadXYZ(strings.NewReader(cart))
+	gen := BuildGradPoints(prog, queue, "pts/inp", names, coords, mol)
 	Drain(prog, queue, ncoords, E0, gen)
 	N3N := natoms * 3 // from spectro manual pg 12
 	other3 := N3N * (N3N + 1) * (N3N + 2) / 6
