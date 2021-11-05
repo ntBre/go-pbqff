@@ -557,42 +557,6 @@ func PrintFortFile(fc []CountFloat, natoms, other int, filename string) int {
 	return len(fc)
 }
 
-// GetCPU returns the CPU time used by the current process in
-// nanoseconds
-func GetCPU() int64 {
-	use := new(syscall.Rusage)
-	syscall.Getrusage(syscall.RUSAGE_SELF, use)
-	return use.Utime.Nano() + use.Stime.Nano()
-}
-
-// GetCPULimit returns the Cur (soft) and Max (hard) CPU time limits
-// in seconds
-func GetCPULimit() (cur, max uint64) {
-	lim := new(syscall.Rlimit)
-	syscall.Getrlimit(syscall.RLIMIT_CPU, lim)
-	return lim.Cur, lim.Max
-}
-
-// CatchPanic recovers from a panic to clear the queue and then
-// continues the panic
-func CatchPanic() {
-	if r := recover(); r != nil {
-		fmt.Println("running queueClear before panic")
-		queueClear(ptsJobs)
-		panic(r)
-	}
-}
-
-// CatchKill catches SIGTERM to clear the queue before exiting cleanly
-func CatchKill() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Signal(syscall.SIGTERM))
-	<-c
-	fmt.Println("running queueClear before SIGTERM")
-	queueClear(ptsJobs)
-	errExit(fmt.Errorf("received SIGTERM"), "")
-}
-
 func main() {
 	StartCPU = GetCPU()
 	defer CatchPanic()
