@@ -131,6 +131,13 @@ func BuildPoints(p Program, q Queue, filename string, atomNames []string,
 	}
 }
 
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func BuildCartPoints(p Program, q Queue, dir string, names []string,
 	coords []float64) func() ([]Calc, bool) {
 	dir = filepath.Join(p.GetDir(), dir)
@@ -140,6 +147,17 @@ func BuildCartPoints(p Program, q Queue, dir string, names []string,
 		pf    int
 		count int
 	)
+	kmax, lmax := ncoords, ncoords
+	switch Conf.Int(Deriv) {
+	case 4:
+	case 3:
+		lmax = 0
+	case 2:
+		lmax = 0
+		kmax = 0
+	default:
+		panic("unrecognized derivative level")
+	}
 	cs := Conf.Int(ChunkSize)
 	jnit, knit, lnit := 1, 0, 0
 	i, j, k, l := 1, jnit, knit, lnit
@@ -154,8 +172,11 @@ func BuildCartPoints(p Program, q Queue, dir string, names []string,
 		calcs := make([]Calc, 0)
 		for ; i <= ncoords; i++ {
 			for j = jnit; j <= i; j++ {
-				for k = knit; k <= j; k++ {
-					for l = lnit; l <= k; l++ {
+				// if we don't want these derivative
+				// levels, {k,l}max will be 0 and
+				// these will only be entered once
+				for k = knit; k <= min(j, kmax); k++ {
+					for l = lnit; l <= min(k, lmax); l++ {
 						calcs = append(calcs,
 							p.Derivative(dir, names, coords, i, j, k, l)...,
 						)
@@ -185,6 +206,17 @@ func BuildGradPoints(p Program, q Queue, dir string, names []string,
 		pf    int
 		count int
 	)
+	jmax, kmax := ncoords, ncoords
+	switch Conf.Int(Deriv) {
+	case 4:
+	case 3:
+		kmax = 0
+	case 2:
+		jmax = 0
+		kmax = 0
+	default:
+		panic("unrecognized derivative level")
+	}
 	cs := Conf.Int(ChunkSize)
 	jnit, knit := 0, 0
 	i, j, k := 1, jnit, knit
@@ -198,8 +230,8 @@ func BuildGradPoints(p Program, q Queue, dir string, names []string,
 		}()
 		calcs := make([]Calc, 0)
 		for ; i <= ncoords; i++ {
-			for j = jnit; j <= i; j++ {
-				for k = knit; k <= j; k++ {
+			for j = jnit; j <= min(i, jmax); j++ {
+				for k = knit; k <= min(j, kmax); k++ {
 					calcs = append(calcs,
 						p.GradDerivative(dir, names, coords, i, j, k)...,
 					)
