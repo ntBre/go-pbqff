@@ -352,7 +352,6 @@ func (g Gaussian) ReadFreqs(filename string) (freqs []float64) {
 		line = scanner.Text()
 		if strings.Contains(line, "Frequencies --") {
 			fields := strings.Fields(line)[2:]
-			fmt.Printf("%q\n", fields)
 			for _, val := range fields {
 				val, _ := strconv.ParseFloat(val, 64)
 				freqs = append(freqs, val)

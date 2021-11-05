@@ -204,6 +204,7 @@ func TestConvertCart(t *testing.T) {
 		cart       string
 		intderFile string
 		want       []string
+		wantDum    []Dummy
 		match      bool
 	}{
 		{
@@ -215,6 +216,7 @@ func TestConvertCart(t *testing.T) {
 `,
 			intderFile: "testfiles/load/intder.full",
 			want:       []string{"O", "Al", "Al", "O"},
+			wantDum:    []Dummy{},
 		},
 		{
 			msg: "columns swapped order",
@@ -225,6 +227,7 @@ func TestConvertCart(t *testing.T) {
 	`,
 			intderFile: "testfiles/load/intder.full",
 			want:       []string{"O", "Al", "Al", "O"},
+			wantDum:    []Dummy{},
 		},
 		{
 			msg: "signs opposite",
@@ -235,6 +238,7 @@ func TestConvertCart(t *testing.T) {
     `,
 			intderFile: "testfiles/load/intder.signs",
 			want:       []string{"O", "C", "H", "H"},
+			wantDum:    []Dummy{},
 		},
 		{
 			msg: "nomatch",
@@ -244,7 +248,25 @@ func TestConvertCart(t *testing.T) {
 `,
 			intderFile: "testfiles/load/ally.in",
 			want:       []string{"H", "S", "S"},
+			wantDum:    []Dummy{},
 			match:      true,
+		},
+		{
+			msg: "dummy atom in intder",
+			cart: `C       0.000000000    0.000000000   -1.079963204
+	O       0.000000000    0.000000000    1.008829581
+	H       0.000000000    0.000000000   -3.144264495
+	`,
+			intderFile: "testfiles/lin.intder",
+			want:       []string{"O", "C", "H"},
+			wantDum: []Dummy{
+				{
+					Coords: []float64{
+						0.000000000, 1.111111111, -1.079963204,
+					},
+					Matches: []int{0, -1, 5},
+				},
+			},
 		},
 	}
 	for _, test := range tests {
@@ -252,34 +274,16 @@ func TestConvertCart(t *testing.T) {
 		*nomatch = test.match
 		i, _ := LoadIntder(test.intderFile)
 		got := i.ConvertCart(test.cart)
-		want := test.want
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("ConvertCart(%s): got %v, wanted %v\n", test.msg, got, want)
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf("ConvertCart(%s): got %v, wanted %v\n",
+				test.msg, got, test.want)
+		}
+		if !reflect.DeepEqual(i.Dummies, test.wantDum) {
+			t.Errorf("%s: got %v, wanted %v\n",
+				test.msg, i.Dummies, test.wantDum)
 		}
 		*nomatch = tmp
 	}
-
-	t.Run("dummy atom in intder", func(t *testing.T) {
-		cart := `C       0.000000000    0.000000000   -1.079963204
-	O       0.000000000    0.000000000    1.008829581
-	H       0.000000000    0.000000000   -3.144264495
-	`
-		i, _ := LoadIntder("testfiles/lin.intder")
-		got := i.ConvertCart(cart)
-		want := []string{"O", "C", "H"}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("got %v, wanted %v\n", got, want)
-		}
-		wantDum := []Dummy{
-			{
-				Coords:  []float64{0.000000000, 1.111111111, -1.079963204},
-				Matches: []int{0, -1, 5},
-			},
-		} // position in intder is 5
-		if !reflect.DeepEqual(i.Dummies, wantDum) {
-			t.Errorf("got %v, wanted %v\n", i.Dummies, wantDum)
-		}
-	})
 }
 
 func TestAddDummy(t *testing.T) {
