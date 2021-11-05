@@ -3,12 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"reflect"
 	"strings"
 	"testing"
 	"text/template"
-	"time"
 )
 
 func TestMain(m *testing.M) {
@@ -60,33 +58,6 @@ func TestReadFile(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, wanted %v\n", got, want)
 	}
-}
-
-func TestHandleSignal(t *testing.T) {
-	t.Run("received signal", func(t *testing.T) {
-		c := make(chan error)
-		go func(c chan error) {
-			err := HandleSignal(35, 5*time.Second)
-			c <- err
-		}(c)
-		exec.Command("pkill", "-35", "pbqff").Run()
-		err := <-c
-		if err != nil {
-			t.Errorf("did not receive signal")
-		}
-	})
-	t.Run("no signal", func(t *testing.T) {
-		c := make(chan error)
-		go func(c chan error) {
-			err := HandleSignal(35, 50*time.Millisecond)
-			c <- err
-		}(c)
-		exec.Command("pkill", "-34", "go-cart").Run()
-		err := <-c
-		if err == nil {
-			t.Errorf("received signal and didn't want one")
-		}
-	})
 }
 
 func compareFile(file1, file2 string) bool {

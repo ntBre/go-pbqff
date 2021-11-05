@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"os/signal"
 	"regexp"
 	"strings"
 	"syscall"
@@ -130,21 +129,6 @@ var (
 	ErrInputGeomNotFound   = errors.New("Geometry not found in input file")
 	ErrTimeout             = errors.New("Timeout waiting for signal")
 )
-
-// HandleSignal waits to receive a real-time signal or times out
-func HandleSignal(sig int, timeout time.Duration) error {
-	sigChan := make(chan os.Signal, 1)
-	sig1Want := os.Signal(syscall.Signal(sig))
-	signal.Notify(sigChan, sig1Want)
-	select {
-	// either receive signal
-	case <-sigChan:
-		return nil
-	// or timeout after and retry
-	case <-time.After(timeout):
-		return ErrTimeout
-	}
-}
 
 // Summarize prints a summary table of the vibrational frequency data
 func Summarize(zpt float64, mpHarm, idHarm, spHarm, spFund, spCorr []float64) error {
