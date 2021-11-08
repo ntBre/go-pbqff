@@ -182,7 +182,8 @@ func BuildCartPoints(p Program, q Queue, dir string, names []string,
 					for l = lnit; l <= min(k, lmax); l++ {
 						calcs = append(calcs,
 							Derivative(p, dir, names,
-								coords, i, j, k, l)...,
+								coords, i, j, k, l,
+								mol)...,
 						)
 						if len(calcs) >= Conf.Int(ChunkSize) {
 							jnit, knit, lnit = j, k, l+1
@@ -238,7 +239,8 @@ func BuildGradPoints(p Program, q Queue, dir string, names []string,
 				for k = knit; k <= min(j, kmax); k++ {
 					calcs = append(calcs,
 						GradDerivative(p, dir, names,
-							coords, i, j, k)...,
+							coords, i, j, k,
+							mol)...,
 					)
 					if len(calcs) >= Conf.Int(ChunkSize) {
 						jnit, knit = j, k+1
@@ -255,7 +257,7 @@ func BuildGradPoints(p Program, q Queue, dir string, names []string,
 
 // Derivative is a helper for calling Make(2|3|4)D in the same way
 func Derivative(prog Program, dir string, names []string,
-	coords []float64, i, j, k, l int) (calcs []Calc) {
+	coords []float64, i, j, k, l int, mol symm.Molecule) (calcs []Calc) {
 	var (
 		protos []ProtoCalc
 		target *[]CountFloat
@@ -264,15 +266,15 @@ func Derivative(prog Program, dir string, names []string,
 	ncoords := len(coords)
 	switch {
 	case k == 0 && l == 0:
-		protos = Make2D(i, j)
+		protos = Make2D(mol, i, j)
 		target = &fc2
 		ndims = 2
 	case l == 0:
-		protos = Make3D(i, j, k)
+		protos = Make3D(mol, i, j, k)
 		target = &fc3
 		ndims = 3
 	default:
-		protos = Make4D(i, j, k, l)
+		protos = Make4D(mol, i, j, k, l)
 		target = &fc4
 		ndims = 4
 	}
@@ -294,8 +296,31 @@ func Derivative(prog Program, dir string, names []string,
 				Target{Coeff: p.Coeff, Slice: target, Index: v})
 		}
 		if len(p.Steps) == 2 && ndims == 2 {
-			for _, v := range E2dIndex(ncoords, p.Steps...) {
-				// also have to append to e2d, but count is always 1 there
+			ranger := E2dIndex(ncoords, p.Steps...)
+			// extend the set of target protos if some
+			// were eliminated by symmetry
+			switch {
+			case p.Steps[0] == p.Steps[1] && OOP(p.Steps[0], mol):
+				ranger = append(ranger,
+					E2dIndex(ncoords, -p.Steps[0], -p.Steps[0])...)
+			case OOP(p.Steps[0], mol) && OOP(p.Steps[1], mol):
+				ranger = append(ranger,
+					E2dIndex(ncoords, -p.Steps[0], p.Steps[1])...)
+				ranger = append(ranger,
+					E2dIndex(ncoords, -p.Steps[0], -p.Steps[1])...)
+			case OOP(p.Steps[0], mol) || OOP(p.Steps[1], mol):
+				// ranger = append(ranger,
+				// 	E2dIndex(ncoords, p.Steps[0], p.Steps[1])...)
+				ranger = append(ranger,
+					E2dIndex(ncoords, p.Steps[0], -p.Steps[1])...)
+				ranger = append(ranger,
+					E2dIndex(ncoords, -p.Steps[0], p.Steps[1])...)
+				ranger = append(ranger,
+					E2dIndex(ncoords, -p.Steps[0], -p.Steps[1])...)
+			}
+			for _, v := range ranger {
+				// also have to append to e2d, but
+				// count is always 1 there
 				for len(e2d) <= v {
 					e2d = append(e2d, CountFloat{Val: 0, Count: 1})
 				}
@@ -344,7 +369,7 @@ func Derivative(prog Program, dir string, names []string,
 
 // GradDerivative is the Derivative analog for Gradients
 func GradDerivative(prog Program, dir string, names []string,
-	coords []float64, i, j, k int) (calcs []Calc) {
+	coords []float64, i, j, k int, mol symm.Molecule) (calcs []Calc) {
 	ncoords := len(coords)
 	var (
 		protos []ProtoCalc
@@ -355,18 +380,18 @@ func GradDerivative(prog Program, dir string, names []string,
 	switch {
 	case j == 0 && k == 0:
 		// gradient second derivatives are just first derivatives and so on
-		protos = Make1D(i)
+		protos = Make1D(mol, i)
 		dimmax = ncoords
 		ndims = 1
 		target = &fc2
 	case k == 0:
 		// except E0 needs to be G(ref geom) == 0, handled this in Drain
-		protos = Make2D(i, j)
+		protos = Make2D(mol, i, j)
 		dimmax = j
 		ndims = 2
 		target = &fc3
 	default:
-		protos = Make3D(i, j, k)
+		protos = Make3D(mol, i, j, k)
 		dimmax = k
 		ndims = 3
 		target = &fc4

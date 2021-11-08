@@ -296,7 +296,8 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 			q.Stat(&qstat)
 			time.Sleep(time.Duration(Conf.Int(SleepInt)) * time.Second)
 		} else {
-			fmt.Fprintf(os.Stderr, "finished %d/%d submitted, %v polling %d jobs\n",
+			fmt.Fprintf(os.Stderr,
+				"finished %d/%d submitted, %v polling %d jobs\n",
 				finished, submitted,
 				time.Since(pollStart).Round(time.Millisecond), nJobs-norun)
 		}

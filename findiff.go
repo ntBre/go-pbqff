@@ -1,8 +1,12 @@
 package main
 
+import (
+	symm "github.com/ntBre/chemutils/symmetry"
+)
+
 // Make1D makes the Job slices for finite differences first
 // derivative force constants
-func Make1D(i int) []ProtoCalc {
+func Make1D(mol symm.Molecule, i int) []ProtoCalc {
 	scale := angbohr / (2 * Conf.FlSlice(Deltas)[i-1])
 	return []ProtoCalc{
 		{1, HashName(), []int{i}, []int{i}, scale},
@@ -10,15 +14,32 @@ func Make1D(i int) []ProtoCalc {
 	}
 }
 
+// OOP returns whether the coordinate i is out of the plane defined by
+// mol.Main
+func OOP(i int, mol symm.Molecule) bool {
+	ix := i - 1
+	ax := int(mol.Main.Not())
+	if ix == 0 && ax == 0 || ax != 0 && ix%ax == 0 {
+		return true
+	}
+	return false
+}
+
 // Make2D makes the Job slices for finite differences second
 // derivative force constants
-func Make2D(i, j int) []ProtoCalc {
+func Make2D(mol symm.Molecule, i, j int) []ProtoCalc {
 	scale := angbohr * angbohr /
 		(4 * Conf.FlSlice(Deltas)[i-1] *
 			Conf.FlSlice(Deltas)[j-1])
 	switch {
 	case i == j:
 		// E(+i+i) - 2*E(0) + E(-i-i) / (2d)^2
+		if OOP(i, mol) {
+			return []ProtoCalc{
+				{2, HashName(), []int{i, i}, []int{i, i}, scale},
+				{-2, "E0", []int{}, []int{i, i}, scale},
+			}
+		}
 		return []ProtoCalc{
 			{1, HashName(), []int{i, i}, []int{i, i}, scale},
 			{-2, "E0", []int{}, []int{i, i}, scale},
@@ -26,6 +47,16 @@ func Make2D(i, j int) []ProtoCalc {
 		}
 	case i != j:
 		// E(+i+j) - E(+i-j) - E(-i+j) + E(-i-j) / (2d)^2
+		if OOP(i, mol) && OOP(j, mol) {
+			return []ProtoCalc{
+				{2, HashName(), []int{i, j}, []int{i, j}, scale},
+				{-2, HashName(), []int{i, -j}, []int{i, j}, scale},
+			}
+		} else if OOP(i, mol) || OOP(j, mol) {
+			return []ProtoCalc{
+				{0, "E0", []int{i, j}, []int{}, scale},
+			}
+		}
 		return []ProtoCalc{
 			{1, HashName(), []int{i, j}, []int{i, j}, scale},
 			{-1, HashName(), []int{i, -j}, []int{i, j}, scale},
@@ -39,7 +70,7 @@ func Make2D(i, j int) []ProtoCalc {
 
 // Make3D makes the ProtoCalc slices for finite differences third
 // derivative force constants
-func Make3D(i, j, k int) []ProtoCalc {
+func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 	scale := angbohr * angbohr * angbohr /
 		(8 * Conf.FlSlice(Deltas)[i-1] *
 			Conf.FlSlice(Deltas)[j-1] *
@@ -98,7 +129,7 @@ func Make3D(i, j, k int) []ProtoCalc {
 
 // Make4D makes the ProtoCalc slices for finite differences fourth
 // derivative force constants
-func Make4D(i, j, k, l int) []ProtoCalc {
+func Make4D(mol symm.Molecule, i, j, k, l int) []ProtoCalc {
 	scale := angbohr * angbohr * angbohr * angbohr /
 		(16 * Conf.FlSlice(Deltas)[i-1] *
 			Conf.FlSlice(Deltas)[j-1] *

@@ -577,7 +577,7 @@ func TestDerivative(t *testing.T) {
 					Name: filepath.Join(dir, "job.0000000000"),
 					Targets: []Target{
 						{
-							Coeff: 1,
+							Coeff: 2,
 							Slice: target,
 							Index: 0,
 						},
@@ -585,6 +585,11 @@ func TestDerivative(t *testing.T) {
 							Coeff: 1,
 							Slice: &e2d,
 							Index: 0,
+						},
+						{
+							Coeff: 1,
+							Slice: &e2d,
+							Index: 78,
 						},
 					},
 					Scale: angbohr * angbohr / 4,
@@ -601,22 +606,6 @@ func TestDerivative(t *testing.T) {
 					noRun: true,
 					Scale: angbohr * angbohr / 4,
 				},
-				{
-					Name: filepath.Join(dir, "job.0000000001"),
-					Targets: []Target{
-						{
-							Coeff: 1,
-							Slice: target,
-							Index: 0,
-						},
-						{
-							Coeff: 1,
-							Slice: &e2d,
-							Index: 78,
-						},
-					},
-					Scale: angbohr * angbohr / 4,
-				},
 			},
 		},
 	}
@@ -627,8 +616,10 @@ func TestDerivative(t *testing.T) {
 			deltas[i] = 1.0
 		}
 		Conf.Set(Deltas, deltas)
+		mol := symm.ReadXYZ(strings.NewReader(ZipXYZ(test.names, test.coords)))
 		calcs := Derivative(prog, dir, test.names, test.coords,
-			test.dims[0], test.dims[1], test.dims[2], test.dims[3])
+			test.dims[0], test.dims[1], test.dims[2], test.dims[3],
+			mol)
 		if !reflect.DeepEqual(calcs, test.calcs) {
 			t.Errorf("got\n%v, wanted\n%v\n", calcs, test.calcs)
 		}
@@ -745,10 +736,7 @@ func TestBuildCartPoints(t *testing.T) {
 		fc2, fc3, fc4 = t2, t3, t4
 	}()
 	fc2, fc3, fc4 = *new([]CountFloat), *new([]CountFloat), *new([]CountFloat)
-	n := len(coords)
-	want := 2*n*n + n +
-		(4*n*n*n+6*n*n+2*n)/3 +
-		(4*n*n*n*n+12*n*n*n+11*n*n+3*n)/6
+	want := 7271
 	mp := new(Molpro)
 	dir := t.TempDir()
 	queue := TestQueue{
@@ -803,7 +791,7 @@ func TestGradDerivative(t *testing.T) {
 					Name: filepath.Join(dir, "job.0000000000"),
 					Targets: []Target{
 						{
-							Coeff: 1,
+							Coeff: 2,
 							Slice: target,
 							Index: 0,
 						},
@@ -822,17 +810,6 @@ func TestGradDerivative(t *testing.T) {
 					noRun: true,
 					Scale: angbohr * angbohr / 4,
 				},
-				{
-					Name: filepath.Join(dir, "job.0000000001"),
-					Targets: []Target{
-						{
-							Coeff: 1,
-							Slice: target,
-							Index: 0,
-						},
-					},
-					Scale: angbohr * angbohr / 4,
-				},
 			},
 		},
 	}
@@ -843,8 +820,9 @@ func TestGradDerivative(t *testing.T) {
 			deltas[i] = 1.0
 		}
 		Conf.Set(Deltas, deltas)
+		mol := symm.ReadXYZ(strings.NewReader(ZipXYZ(test.names, test.coords)))
 		calcs := GradDerivative(prog, dir, test.names, test.coords,
-			test.dims[0], test.dims[1], test.dims[2])
+			test.dims[0], test.dims[1], test.dims[2], mol)
 		if !reflect.DeepEqual(calcs, test.calcs) {
 			t.Errorf("got\n%v, wanted\n%v\n", calcs, test.calcs)
 		}
@@ -880,8 +858,7 @@ func TestBuildGradPoints(t *testing.T) {
 		fc2, fc3, fc4 = t2, t3, t4
 	}()
 	fc2, fc3, fc4 = *new([]CountFloat), *new([]CountFloat), *new([]CountFloat)
-	n := len(coords)
-	want := (4*n*n*n + 12*n*n + 11*n) / 3
+	want := 1304
 	mp := new(Molpro)
 	cart := ZipXYZ(names, coords)
 	mol := symm.ReadXYZ(strings.NewReader(cart))

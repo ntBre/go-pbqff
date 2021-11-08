@@ -28,6 +28,8 @@ func Index(ncoords int, nosort bool, id ...int) []int {
 		sort.Ints(id)
 	}
 	switch len(id) {
+	case 0:
+		return []int{}
 	case 2:
 		if id[0] == id[1] {
 			return []int{ncoords*(id[0]-1) + id[1] - 1}
