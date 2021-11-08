@@ -736,7 +736,7 @@ func TestBuildCartPoints(t *testing.T) {
 		fc2, fc3, fc4 = t2, t3, t4
 	}()
 	fc2, fc3, fc4 = *new([]CountFloat), *new([]CountFloat), *new([]CountFloat)
-	want := 7271
+	want := 6979
 	mp := new(Molpro)
 	dir := t.TempDir()
 	queue := TestQueue{
@@ -858,7 +858,7 @@ func TestBuildGradPoints(t *testing.T) {
 		fc2, fc3, fc4 = t2, t3, t4
 	}()
 	fc2, fc3, fc4 = *new([]CountFloat), *new([]CountFloat), *new([]CountFloat)
-	want := 1304
+	want := 1048
 	mp := new(Molpro)
 	cart := ZipXYZ(names, coords)
 	mol := symm.ReadXYZ(strings.NewReader(cart))

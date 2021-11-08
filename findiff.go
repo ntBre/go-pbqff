@@ -4,10 +4,19 @@ import (
 	symm "github.com/ntBre/chemutils/symmetry"
 )
 
+var (
+	None = ProtoCalc{0, "E0", []int{}, []int{}, 1}
+)
+
 // Make1D makes the Job slices for finite differences first
 // derivative force constants
 func Make1D(mol symm.Molecule, i int) []ProtoCalc {
 	scale := angbohr / (2 * Conf.FlSlice(Deltas)[i-1])
+	if OOP(i, mol) {
+		return []ProtoCalc{
+			{0, "E0", []int{i}, []int{}, scale},
+		}
+	}
 	return []ProtoCalc{
 		{1, HashName(), []int{i}, []int{i}, scale},
 		{-1, HashName(), []int{-i}, []int{i}, scale},
@@ -78,6 +87,11 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 	switch {
 	case i == j && i == k:
 		// E(+i+i+i) - 3*E(i) + 3*E(-i) -E(-i-i-i) / (2d)^3
+		if OOP(i, mol) {
+			return []ProtoCalc{
+				{0, "E0", []int{i, j, k}, []int{}, scale},
+			}
+		}
 		return []ProtoCalc{
 			{1, HashName(), []int{i, i, i}, []int{i, i, i}, scale},
 			{-3, HashName(), []int{i}, []int{i, i, i}, scale},
@@ -85,6 +99,18 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 			{-1, HashName(), []int{-i, -i, -i}, []int{i, i, i}, scale},
 		}
 	case i == j && i != k:
+		if OOP(i, mol) {
+			return []ProtoCalc{
+				{2, HashName(), []int{i, i, k}, []int{i, i, k}, scale},
+				{-2, HashName(), []int{k}, []int{i, i, k}, scale},
+				{-2, HashName(), []int{i, i, -k}, []int{i, i, k}, scale},
+				{2, HashName(), []int{-k}, []int{i, i, k}, scale},
+			}
+		} else if OOP(k, mol) {
+			return []ProtoCalc{
+				{0, "E0", []int{i, j, k}, []int{}, scale},
+			}
+		}
 		return []ProtoCalc{
 			{1, HashName(), []int{i, i, k}, []int{i, i, k}, scale},
 			{-2, HashName(), []int{k}, []int{i, i, k}, scale},
@@ -94,6 +120,18 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 			{-1, HashName(), []int{-i, -i, -k}, []int{i, i, k}, scale},
 		}
 	case i == k && i != j:
+		if OOP(i, mol) {
+			return []ProtoCalc{
+				{2, HashName(), []int{i, i, j}, []int{i, i, j}, scale},
+				{-2, HashName(), []int{j}, []int{i, i, j}, scale},
+				{-2, HashName(), []int{i, i, -j}, []int{i, i, j}, scale},
+				{2, HashName(), []int{-j}, []int{i, i, j}, scale},
+			}
+		} else if OOP(j, mol) {
+			return []ProtoCalc{
+				{0, "E0", []int{i, j, k}, []int{}, scale},
+			}
+		}
 		return []ProtoCalc{
 			{1, HashName(), []int{i, i, j}, []int{i, i, j}, scale},
 			{-2, HashName(), []int{j}, []int{i, i, j}, scale},
@@ -103,6 +141,18 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 			{-1, HashName(), []int{-i, -i, -j}, []int{i, i, j}, scale},
 		}
 	case j == k && i != j:
+		if OOP(j, mol) {
+			return []ProtoCalc{
+				{2, HashName(), []int{j, j, i}, []int{j, j, i}, scale},
+				{-2, HashName(), []int{i}, []int{j, j, i}, scale},
+				{-2, HashName(), []int{j, j, -i}, []int{j, j, i}, scale},
+				{2, HashName(), []int{-i}, []int{j, j, i}, scale},
+			}
+		} else if OOP(i, mol) {
+			return []ProtoCalc{
+				{0, "E0", []int{i, j, k}, []int{}, scale},
+			}
+		}
 		return []ProtoCalc{
 			{1, HashName(), []int{j, j, i}, []int{j, j, i}, scale},
 			{-2, HashName(), []int{i}, []int{j, j, i}, scale},
@@ -112,6 +162,11 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 			{-1, HashName(), []int{-j, -j, -i}, []int{j, j, i}, scale},
 		}
 	case i != j && i != k && j != k:
+		if OOP(i, mol) || OOP(j, mol) || OOP(k, mol) {
+			return []ProtoCalc{
+				None,
+			}
+		}
 		return []ProtoCalc{
 			{1, HashName(), []int{i, j, k}, []int{i, j, k}, scale},
 			{-1, HashName(), []int{i, -j, k}, []int{i, j, k}, scale},
