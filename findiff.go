@@ -27,7 +27,10 @@ func Make1D(mol symm.Molecule, i int) []ProtoCalc {
 // mol.Main
 func OOP(i int, mol symm.Molecule) bool {
 	ix := i - 1
-	ax := int(mol.Main.Not())
+	if len(mol.Planes) < 1 {
+		return false
+	}
+	ax := int(mol.Planes[0].Not())
 	if ix == 0 && ax == 0 || ax != 0 && ix%ax == 0 {
 		return true
 	}

@@ -564,10 +564,11 @@ func TestDerivative(t *testing.T) {
 		calcs  []Calc
 	}{
 		{
-			names: []string{"O", "H"},
+			names: []string{"O", "H", "H"},
 			coords: []float64{
-				0.1, 0.2, 0.3,
-				0.4, 0.5, 0.6,
+				0.0000000000, 0.0000000000, -0.0657441568,
+				0.0000000000, 0.7574590974, 0.5217905143,
+				0.0000000000, -0.7574590974, 0.5217905143,
 			},
 			dims: []int{1, 1, 0, 0},
 			calcs: []Calc{
@@ -587,7 +588,7 @@ func TestDerivative(t *testing.T) {
 						{
 							Coeff: 1,
 							Slice: &e2d,
-							Index: 78,
+							Index: 171,
 						},
 					},
 					Scale: angbohr * angbohr / 4,
@@ -619,7 +620,7 @@ func TestDerivative(t *testing.T) {
 			test.dims[0], test.dims[1], test.dims[2], test.dims[3],
 			mol)
 		if !reflect.DeepEqual(calcs, test.calcs) {
-			t.Errorf("got\n%v, wanted\n%v\n", calcs, test.calcs)
+			t.Errorf("got\n%+v, wanted\n%+v\n", calcs, test.calcs)
 		}
 	}
 }
@@ -725,9 +726,9 @@ func TestBuildCartPoints(t *testing.T) {
 	Conf.Set(Deriv, 4)
 	names := []string{"O", "H", "H"}
 	coords := []float64{
-		0.1, 0.2, 0.3,
-		0.4, 0.5, 0.6,
-		0.4, 0.5, 0.6,
+		0.0000000000, 0.0000000000, -0.0657441568,
+		0.0000000000, 0.7574590974, 0.5217905143,
+		0.0000000000, -0.7574590974, 0.5217905143,
 	}
 	t2, t3, t4 := fc2, fc3, fc4
 	defer func() {
@@ -778,10 +779,11 @@ func TestGradDerivative(t *testing.T) {
 		calcs  []Calc
 	}{
 		{
-			names: []string{"O", "H"},
+			names: []string{"O", "H", "H"},
 			coords: []float64{
-				0.1, 0.2, 0.3,
-				0.4, 0.5, 0.6,
+				0.0000000000, 0.0000000000, -0.0657441568,
+				0.0000000000, 0.7574590974, 0.5217905143,
+				0.0000000000, -0.7574590974, 0.5217905143,
 			},
 			dims: []int{1, 1, 0},
 			calcs: []Calc{
@@ -847,9 +849,9 @@ func TestBuildGradPoints(t *testing.T) {
 	dir := t.TempDir()
 	names := []string{"O", "H", "H"}
 	coords := []float64{
-		0.1, 0.2, 0.3,
-		0.4, 0.5, 0.6,
-		0.4, 0.5, 0.6,
+		0.0000000000, 0.0000000000, -0.0657441568,
+		0.0000000000, 0.7574590974, 0.5217905143,
+		0.0000000000, -0.7574590974, 0.5217905143,
 	}
 	t2, t3, t4 := fc2, fc3, fc4
 	defer func() {
