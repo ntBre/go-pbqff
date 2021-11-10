@@ -309,8 +309,6 @@ func Derivative(prog Program, dir string, names []string,
 				ranger = append(ranger,
 					E2dIndex(ncoords, -p.Steps[0], -p.Steps[1])...)
 			case OOP(p.Steps[0], mol) || OOP(p.Steps[1], mol):
-				// ranger = append(ranger,
-				// 	E2dIndex(ncoords, p.Steps[0], p.Steps[1])...)
 				ranger = append(ranger,
 					E2dIndex(ncoords, p.Steps[0], -p.Steps[1])...)
 				ranger = append(ranger,
