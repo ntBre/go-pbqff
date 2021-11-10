@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"reflect"
 	"strings"
@@ -82,25 +83,43 @@ func compareFile(file1, file2 string) bool {
 }
 
 func TestSummarize(t *testing.T) {
-	zpt := 100.0
-	mph := []float64{1, 2, 3}
-	idh := []float64{4, 5, 6}
-	sph := []float64{7, 8, 9}
-	spf := []float64{10, 11, 12}
-	spc := []float64{13, 14, 15}
-	t.Run("dimension mismatch", func(t *testing.T) {
-		spc := []float64{13, 14, 15, 16}
-		err := Summarize(zpt, mph, idh, sph, spf, spc)
-		if err == nil {
-			t.Errorf("wanted an error, didn't get one")
+	tests := []struct {
+		msg string
+		zpt float64
+		mph []float64
+		idh []float64
+		sph []float64
+		spf []float64
+		spc []float64
+		err bool
+	}{
+		{
+			msg: "dimension mismatch",
+			zpt: 100.0,
+			mph: []float64{1, 2, 3},
+			idh: []float64{4, 5, 6},
+			sph: []float64{7, 8, 9},
+			spf: []float64{10, 11, 12},
+			spc: []float64{13, 14, 15, 16},
+			err: true,
+		},
+		{
+			msg: "success",
+			zpt: 100.0,
+			mph: []float64{1, 2, 3},
+			idh: []float64{4, 5, 6},
+			sph: []float64{7, 8, 9},
+			spf: []float64{10, 11, 12},
+			spc: []float64{13, 14, 15},
+		},
+	}
+	for _, test := range tests {
+		err := Summarize(io.Discard, test.zpt, test.mph, test.idh, test.sph,
+			test.spf, test.spc)
+		if err == nil && test.err || err != nil && !test.err {
+			t.Errorf("%s: wanted an error, didn't get one", test.msg)
 		}
-	})
-	t.Run("success", func(t *testing.T) {
-		err := Summarize(zpt, mph, idh, sph, spf, spc)
-		if err != nil {
-			t.Errorf("didn't want an error, got one")
-		}
-	})
+	}
 }
 
 func TestXYZGeom(t *testing.T) {

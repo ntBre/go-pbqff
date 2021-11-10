@@ -351,12 +351,10 @@ XXO = 80.0 Deg`)
 		},
 	}
 	for _, test := range tests {
-		t.Run(test.msg, func(t *testing.T) {
-			_, _, err := mp.HandleOutput(test.file)
-			if err != test.err {
-				t.Errorf("got %q, wanted %q\n", err, test.err)
-			}
-		})
+		_, _, err := mp.HandleOutput(test.file)
+		if err != test.err {
+			t.Errorf("%s: got %q, wanted %q\n", test.msg, err, test.err)
+		}
 	}
 }
 
@@ -396,15 +394,15 @@ OX=                  1.26606700 ANG
 		},
 	}
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			cart, zmat := ReadLog(test.log)
-			if cart != test.cart {
-				t.Errorf("got %v, wanted %v\n", cart, test.cart)
-			}
-			if zmat != test.zmat {
-				t.Errorf("got %v, wanted %v\n", zmat, test.zmat)
-			}
-		})
+		cart, zmat := ReadLog(test.log)
+		if cart != test.cart {
+			t.Errorf("%s: got %v, wanted %v\n",
+				test.name, cart, test.cart)
+		}
+		if zmat != test.zmat {
+			t.Errorf("%s: got %v, wanted %v\n",
+				test.name, zmat, test.zmat)
+		}
 	}
 }
 

@@ -13,6 +13,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"regexp"
@@ -131,26 +132,27 @@ var (
 )
 
 // Summarize prints a summary table of the vibrational frequency data
-func Summarize(zpt float64, mpHarm, idHarm, spHarm, spFund, spCorr []float64) error {
-	fmt.Print("\n== Results == \n\n")
+func Summarize(w io.Writer, zpt float64, mpHarm, idHarm, spHarm, spFund,
+	spCorr []float64) error {
+	fmt.Fprint(w, "\n== Results == \n\n")
 	if len(mpHarm) != len(idHarm) ||
 		len(mpHarm) != len(spHarm) ||
 		len(mpHarm) != len(spFund) ||
 		len(mpHarm) != len(spCorr) {
 		return fmt.Errorf("error Summarize: dimension mismatch")
 	}
-	fmt.Printf("ZPT = %.1f\n", zpt)
-	fmt.Printf("+%8s-+%8s-+%8s-+%8s-+%8s-+\n",
+	fmt.Fprintf(w, "ZPT = %.1f\n", zpt)
+	fmt.Fprintf(w, "+%8s-+%8s-+%8s-+%8s-+%8s-+\n",
 		"--------", "--------", "--------", "--------", "--------")
-	fmt.Printf("|%8s |%8s |%8s |%8s |%8s |\n",
+	fmt.Fprintf(w, "|%8s |%8s |%8s |%8s |%8s |\n",
 		"Mp Harm", "Id Harm", "Sp Harm", "Sp Fund", "Sp Corr")
-	fmt.Printf("+%8s-+%8s-+%8s-+%8s-+%8s-+\n",
+	fmt.Fprintf(w, "+%8s-+%8s-+%8s-+%8s-+%8s-+\n",
 		"--------", "--------", "--------", "--------", "--------")
 	for i := range mpHarm {
-		fmt.Printf("|%8.1f |%8.1f |%8.1f |%8.1f |%8.1f |\n",
+		fmt.Fprintf(w, "|%8.1f |%8.1f |%8.1f |%8.1f |%8.1f |\n",
 			mpHarm[i], idHarm[i], spHarm[i], spFund[i], spCorr[i])
 	}
-	fmt.Printf("+%8s-+%8s-+%8s-+%8s-+%8s-+\n\n",
+	fmt.Fprintf(w, "+%8s-+%8s-+%8s-+%8s-+%8s-+\n\n",
 		"--------", "--------", "--------", "--------", "--------")
 	return nil
 }
@@ -418,7 +420,7 @@ func RunFreqs(intder *Intder, anp *Anpass) {
 	if mpHarm == nil || len(mpHarm) < len(res.Harm) {
 		mpHarm = make([]float64, spec.Nfreqs)
 	}
-	Summarize(res.ZPT, mpHarm, intderHarms, res.Harm, res.Fund, res.Corr)
+	Summarize(os.Stdout, res.ZPT, mpHarm, intderHarms, res.Harm, res.Fund, res.Corr)
 }
 
 func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
@@ -694,7 +696,7 @@ func main() {
 		if mpHarm == nil || len(mpHarm) < len(res.Harm) {
 			mpHarm = make([]float64, spec.Nfreqs)
 		}
-		Summarize(res.ZPT, mpHarm, intderHarms, res.Harm, res.Fund, res.Corr)
+		Summarize(os.Stdout, res.ZPT, mpHarm, intderHarms, res.Harm, res.Fund, res.Corr)
 	} else {
 		N3N := natoms * 3 // from spectro manual pg 12
 		other3 := N3N * (N3N + 1) * (N3N + 2) / 6
@@ -725,7 +727,7 @@ func main() {
 			res := summarize.SpectroFile("spectro2.out")
 			// fill molpro and intder freqs slots with empty slices
 			nfreqs := len(res.Harm)
-			err = Summarize(res.ZPT, make([]float64, nfreqs),
+			err = Summarize(os.Stdout, res.ZPT, make([]float64, nfreqs),
 				make([]float64, nfreqs), res.Harm, res.Fund, res.Corr)
 			if err != nil {
 				fmt.Println(err)
