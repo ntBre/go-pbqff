@@ -554,6 +554,11 @@ func Make4D(mol symm.Molecule, i, j, k, l int) []ProtoCalc {
 		}
 	// all different
 	case i != j && i != k && i != l && j != k && j != l && k != l:
+		if OOP(i, mol) || OOP(j, mol) || OOP(k, mol) || OOP(l, mol) {
+			return []ProtoCalc{
+				None,
+			}
+		}
 		return []ProtoCalc{
 			{1, HashName(), []int{i, j, k, l}, []int{i, j, k, l}, scale},
 			{-1, HashName(), []int{i, -j, k, l}, []int{i, j, k, l}, scale},
