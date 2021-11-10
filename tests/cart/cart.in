@@ -14,7 +14,8 @@ flags=noopt
 deriv=4
 sleepint=1
 joblimit=1024
-chunksize=64
+chunksize=256
 numjobs=8
+checkint=3000
 spectro=../../bin/spectro
 

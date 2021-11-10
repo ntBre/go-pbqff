@@ -736,7 +736,7 @@ func TestBuildCartPoints(t *testing.T) {
 		fc2, fc3, fc4 = t2, t3, t4
 	}()
 	fc2, fc3, fc4 = *new([]CountFloat), *new([]CountFloat), *new([]CountFloat)
-	want := 6979
+	want := 6041
 	mp := new(Molpro)
 	dir := t.TempDir()
 	queue := TestQueue{
