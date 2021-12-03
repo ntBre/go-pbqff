@@ -27,6 +27,9 @@ deploy: pbqff
 beta: pbqff
 	scp -C pbqff 'woods:Programs/pbqff/beta/.'
 
+alpha: pbqff
+	scp -C pbqff 'woods:.'
+
 test: qsub molpro
 	go test . $(TESTFLAGS)
 

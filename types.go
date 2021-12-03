@@ -8,6 +8,7 @@ import (
 // the output array
 type Calc struct {
 	Name     string
+	Coords []float64
 	Targets  []Target
 	Result   float64
 	JobID    string

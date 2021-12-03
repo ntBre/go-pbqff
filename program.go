@@ -282,8 +282,9 @@ func Derivative(prog Program, dir string, names []string,
 		coords := Step(coords, p.Steps...)
 		prog.FormatCart(ZipXYZ(names, coords))
 		temp := Calc{
-			Name:  filepath.Join(dir, p.Name),
-			Scale: p.Scale,
+			Name:   filepath.Join(dir, p.Name),
+			Scale:  p.Scale,
+			Coords: coords,
 		}
 		for _, v := range Index(ncoords, false, p.Index...) {
 			for len(*target) <= v {

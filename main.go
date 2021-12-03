@@ -178,12 +178,21 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 		t         float64
 		check     int = 1
 		norun     int
+		dumper    *os.File
 	)
 	qstat := make(map[string]bool)
 	heap := new(GarbageHeap)
 	ok := true
 	var calcs []Calc
 	maxjobs := Conf.Int(JobLimit)
+	if *dump {
+		f, err := os.Create("dump.dat")
+		defer f.Close()
+		if err != nil {
+			panic(err)
+		}
+		dumper = f
+	}
 	for {
 		for maxjobs+norun-nJobs >= Conf.Int(ChunkSize) && ok {
 			calcs, ok = gen()
@@ -258,6 +267,12 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 				points[nJobs-1], points[i] = points[i], points[nJobs-1]
 				nJobs--
 				points = points[:nJobs]
+				if *dump {
+					for _, c := range job.Coords {
+						fmt.Fprintf(dumper, "%15.10f", c)
+					}
+					fmt.Fprintf(dumper, "%20.12f\n", energy)
+				}
 				if !DoGrad() {
 					for _, t := range job.Targets {
 						(*t.Slice)[t.Index].Add(t,
