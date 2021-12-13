@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 )
 
@@ -8,7 +9,7 @@ import (
 // the output array
 type Calc struct {
 	Name     string
-	Coords []float64
+	Coords   []float64
 	Targets  []Target
 	Result   float64
 	JobID    string
@@ -45,6 +46,11 @@ func (c *CountFloat) Add(t Target, scale float64, plus float64) {
 	c.Val += plus
 	c.Count--
 	if c.Count < 0 {
+		fmt.Fprintf(os.Stderr, "e2d: %p\n", &e2d)
+		fmt.Fprintf(os.Stderr, "fc2: %p\n", &fc2)
+		fmt.Fprintf(os.Stderr, "fc3: %p\n", &fc3)
+		fmt.Fprintf(os.Stderr, "fc4: %p\n", &fc4)
+		fmt.Fprintf(os.Stderr, "too many additions to %p\n", t.Slice)
 		panic("added to CountFloat too many times")
 	} else if c.Count == 0 && t.Slice != &e2d {
 		c.Val *= scale
