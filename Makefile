@@ -28,7 +28,7 @@ beta: pbqff
 	scp -C pbqff 'woods:Programs/pbqff/beta/.'
 
 alpha: pbqff
-	scp -C pbqff 'woods:.'
+	scp -C pbqff 'woods:Programs/pbqff/alpha/.'
 
 test: qsub molpro
 	go test . $(TESTFLAGS)
