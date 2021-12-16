@@ -92,45 +92,57 @@ func TestCart(t *testing.T) {
 		fc3 = *new([]CountFloat)
 		fc4 = *new([]CountFloat)
 	}()
-	prog, _, _ := initialize("tests/cart/cart.in")
-	prog.FormatCart(Conf.Str(Geometry))
-	cart := prog.GetGeom()
-	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
-	E0 := prog.Run(none, queue)
-	names, coords := XYZGeom(cart)
-	natoms := len(names)
-	ncoords := len(coords)
-	mol := symm.ReadXYZ(strings.NewReader(cart))
-	gen := BuildCartPoints(prog, queue, "pts/inp", names, coords, mol)
-	Drain(prog, queue, ncoords, E0, gen)
-	N3N := natoms * 3 // from spectro manual pg 12
-	other3 := N3N * (N3N + 1) * (N3N + 2) / 6
-	other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24
-	PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(prog.GetDir(), "fort.15"))
-	PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(), "fort.30"))
-	PrintFortFile(fc4, natoms, other4, filepath.Join(prog.GetDir(), "fort.40"))
-	var buf bytes.Buffer
-	for i := range coords {
-		if i%3 == 0 && i > 0 {
-			fmt.Fprint(&buf, "\n")
+	tests := []struct {
+		name   string
+		infile string
+		want   []float64
+	}{
+		{
+			name:   "h2o",
+			infile: "tests/cart/cart.in",
+			want:   []float64{3753.2, 3656.5, 1598.5},
+		},
+	}
+	for _, test := range tests {
+		prog, _, _ := initialize(test.infile)
+		prog.FormatCart(Conf.Str(Geometry))
+		cart := prog.GetGeom()
+		queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+		E0 := prog.Run(none, queue)
+		names, coords := XYZGeom(cart)
+		natoms := len(names)
+		ncoords := len(coords)
+		mol := symm.ReadXYZ(strings.NewReader(cart))
+		gen := BuildCartPoints(prog, queue, "pts/inp", names, coords, mol)
+		Drain(prog, queue, ncoords, E0, gen)
+		N3N := natoms * 3 // from spectro manual pg 12
+		other3 := N3N * (N3N + 1) * (N3N + 2) / 6
+		other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24
+		PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(prog.GetDir(), "fort.15"))
+		PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(), "fort.30"))
+		PrintFortFile(fc4, natoms, other4, filepath.Join(prog.GetDir(), "fort.40"))
+		var buf bytes.Buffer
+		for i := range coords {
+			if i%3 == 0 && i > 0 {
+				fmt.Fprint(&buf, "\n")
+			}
+			fmt.Fprintf(&buf, " %.10f", coords[i]/angbohr)
 		}
-		fmt.Fprintf(&buf, " %.10f", coords[i]/angbohr)
-	}
-	specin := filepath.Join(prog.GetDir(), "spectro.in")
-	spec, err := spectro.Load(specin)
-	if err != nil {
-		errExit(err, "loading spectro input")
-	}
-	spec.FormatGeom(names, buf.String())
-	spec.WriteInput(specin)
-	err = spec.DoSpectro(prog.GetDir())
-	if err != nil {
-		errExit(err, "running spectro")
-	}
-	res := summarize.SpectroFile(filepath.Join(prog.GetDir(), "spectro2.out"))
-	want := []float64{3753.2, 3656.5, 1598.5}
-	if !compfloat(res.Corr, want, 1e-1) {
-		t.Errorf("got %v, wanted %v\n", res.Corr, want)
+		specin := filepath.Join(prog.GetDir(), "spectro.in")
+		spec, err := spectro.Load(specin)
+		if err != nil {
+			errExit(err, "loading spectro input")
+		}
+		spec.FormatGeom(names, buf.String())
+		spec.WriteInput(specin)
+		err = spec.DoSpectro(prog.GetDir())
+		if err != nil {
+			errExit(err, "running spectro")
+		}
+		res := summarize.SpectroFile(filepath.Join(prog.GetDir(), "spectro2.out"))
+		if !compfloat(res.Corr, test.want, 1e-1) {
+			t.Errorf("got %v, wanted %v\n", res.Corr, test.want)
+		}
 	}
 }
 
