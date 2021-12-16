@@ -554,8 +554,11 @@ func TestDerivative(t *testing.T) {
 	dir := t.TempDir()
 	tmp := Conf
 	Global.JobNum = 0
+	tmpSym := *nosym
+	*nosym = false
 	defer func() {
 		Conf = tmp
+		*nosym = tmpSym
 	}()
 	tests := []struct {
 		names  []string
@@ -726,9 +729,12 @@ func TestBuildCartPoints(t *testing.T) {
 	qsub = "qsub/qsub"
 	// test to make sure we get the right number of points
 	tmp := Conf
+	tmpsym := *nosym
+	*nosym = false
 	defer func() {
 		qsub = "qsub"
 		Conf = tmp
+		*nosym = tmpsym
 	}()
 	Conf.Set(Deltas, []float64{
 		0.005, 0.005, 0.005,
@@ -778,7 +784,10 @@ func TestGradDerivative(t *testing.T) {
 	dir := t.TempDir()
 	tmp := Conf
 	glob := Global
+	tmpsym := *nosym
+	*nosym = false
 	defer func() {
+		*nosym = tmpsym
 		Conf = tmp
 		Global = glob
 		fc3 = t3
@@ -849,7 +858,10 @@ func TestBuildGradPoints(t *testing.T) {
 	qsub = "qsub/qsub"
 	// test to make sure we get the right number of points
 	tmp := Conf
+	tmpsym := *nosym
+	*nosym = false
 	defer func() {
+		*nosym = tmpsym
 		qsub = "qsub"
 		Conf = tmp
 	}()

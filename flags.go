@@ -43,6 +43,7 @@ var (
 	memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 	nodel      = flag.Bool("nodel", false, "don't delete used output files")
 	nomatch    = flag.Bool("nomatch", false, "SICs: use the input geometry directly in intder")
+	nosym      = flag.Bool("nosym", false, "disable the use of symmetry relationships")
 	overwrite  = flag.Bool("o", false, "overwrite existing inp directory")
 	pts        = flag.Bool("pts", false, "start by running pts on optimized geometry from opt")
 	read       = flag.Bool("r", false, "read reference energy from pts/inp/ref.out")

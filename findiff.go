@@ -26,6 +26,9 @@ func Make1D(mol symm.Molecule, i int) []ProtoCalc {
 // OOP returns whether the coordinate i is out of the plane defined by
 // mol.Main
 func OOP(i int, mol symm.Molecule) bool {
+	if *nosym {
+		return false
+	}
 	ix := i - 1
 	if len(mol.Planes) < 1 {
 		return false
