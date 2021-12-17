@@ -188,11 +188,21 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 }
 
 func Make4D_3_1(i, j, k, l int, scale float64, mol symm.Molecule) []ProtoCalc {
-	// if OOP(i, mol) || OOP(l, mol) {
-	// 	return []ProtoCalc{
-	// 		None,
-	// 	}
-	// }
+	switch {
+	case OOP(i, mol) && OOP(l, mol):
+		return []ProtoCalc{
+			{2, HashName(), []int{i, i, i, l}, []int{i, i, i, l}, scale},
+			{-6, HashName(), []int{i, l}, []int{i, i, i, l}, scale},
+			{-2, HashName(), []int{-i, -i, -i, l}, []int{i, i, i, l}, scale},
+			{6, HashName(), []int{i, -l}, []int{i, i, i, l}, scale},
+		}
+	case OOP(i, mol):
+		fallthrough
+	case OOP(l, mol):
+		return []ProtoCalc{
+			None,
+		}
+	}
 	return []ProtoCalc{
 		{1, HashName(), []int{i, i, i, l}, []int{i, i, i, l}, scale},
 		{-3, HashName(), []int{i, l}, []int{i, i, i, l}, scale},
