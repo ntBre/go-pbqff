@@ -369,11 +369,42 @@ func Make4D(mol symm.Molecule, i, j, k, l int) []ProtoCalc {
 
 	// all different
 	case i != j && i != k && i != l && j != k && j != l && k != l:
-		// if OOP(i, mol) || OOP(j, mol) || OOP(k, mol) || OOP(l, mol) {
-		// 	return []ProtoCalc{
-		// 		None,
-		// 	}
-		// }
+		switch {
+		// all OOP
+		case OOP(i, mol) && OOP(j, mol) && OOP(k, mol) && OOP(l, mol):
+			return []ProtoCalc{
+				{2, HashName(), []int{i, j, k, l}, []int{i, j, k, l}, scale},
+				{-2, HashName(), []int{i, -j, k, l}, []int{i, j, k, l}, scale},
+				{-2, HashName(), []int{-i, j, k, l}, []int{i, j, k, l}, scale},
+				{2, HashName(), []int{-i, -j, k, l}, []int{i, j, k, l}, scale},
+				{2, HashName(), []int{-i, j, -k, l}, []int{i, j, k, l}, scale},
+				{2, HashName(), []int{i, -j, -k, l}, []int{i, j, k, l}, scale},
+				{-2, HashName(), []int{-i, -j, -k, l}, []int{i, j, k, l}, scale},
+				{-2, HashName(), []int{i, j, -k, l}, []int{i, j, k, l}, scale},
+			}
+
+		// 3 OOP
+		case OOP(i, mol) && OOP(j, mol) && OOP(k, mol):
+		case OOP(i, mol) && OOP(j, mol) && OOP(l, mol):
+		case OOP(i, mol) && OOP(k, mol) && OOP(l, mol):
+		case OOP(j, mol) && OOP(k, mol) && OOP(l, mol):
+
+		// 2 OOP
+		case OOP(i, mol) && OOP(j, mol):
+		case OOP(i, mol) && OOP(k, mol):
+		case OOP(i, mol) && OOP(l, mol):
+
+		case OOP(j, mol) && OOP(k, mol):
+		case OOP(j, mol) && OOP(l, mol):
+
+		case OOP(k, mol) && OOP(l, mol):
+
+		// 1 OOP
+		case OOP(i, mol) || OOP(j, mol) || OOP(k, mol) || OOP(l, mol):
+			return []ProtoCalc{
+				None,
+			}
+		}
 		return []ProtoCalc{
 			{1, HashName(), []int{i, j, k, l}, []int{i, j, k, l}, scale},
 			{-1, HashName(), []int{i, -j, k, l}, []int{i, j, k, l}, scale},
