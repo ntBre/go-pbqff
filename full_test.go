@@ -81,6 +81,7 @@ func TestCart(t *testing.T) {
 	*test = true
 	qsub = "qsub/qsub"
 	temp := Conf
+	tmpsym := *nosym
 	defer func() {
 		flags = 0
 		Conf = temp
@@ -90,28 +91,38 @@ func TestCart(t *testing.T) {
 		fc2 = *new([]CountFloat)
 		fc3 = *new([]CountFloat)
 		fc4 = *new([]CountFloat)
+		*nosym = tmpsym
 	}()
 	tests := []struct {
 		name   string
 		infile string
 		want   []float64
+		nosym  bool
 	}{
 		{
 			name:   "h2o",
 			infile: "tests/cart/h2o/cart.in",
 			want:   []float64{3753.2, 3656.5, 1598.5},
+			nosym:  false,
 		},
-		// {
-		// 	name:   "h2co",
-		// 	infile: "tests/cart/h2co/test.in",
-		// 	want: []float64{
-		// 		2826.6, 2778.4, 1747.8,
-		// 		1499.4, 1246.8, 1167.0,
-		// 	},
-		// },
+		{
+			name:   "h2co",
+			infile: "tests/cart/h2co/test.in",
+			want: []float64{
+				2826.6, 2778.4, 1747.8,
+				1499.4, 1246.8, 1167.0,
+			},
+			nosym: true,
+		},
 	}
 	for _, test := range tests {
+		*nosym = test.nosym
+		e2d = *new([]CountFloat)
+		fc2 = *new([]CountFloat)
+		fc3 = *new([]CountFloat)
+		fc4 = *new([]CountFloat)
 		Conf = NewConfig()
+		submitted = 0
 		prog, _, _ := initialize(test.infile)
 		prog.FormatCart(Conf.Str(Geometry))
 		cart := prog.GetGeom()

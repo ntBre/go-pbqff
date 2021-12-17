@@ -227,13 +227,8 @@ ATOM NO.               A              B              C              W
    INTEGER MEMORY REQUIRED -      92 Word   ALLOCATED - 3500000 Word
 
 
-   REAL MEMORY REQUIRED    -******** Word   ALLOCATED -******** Word
+   REAL MEMORY REQUIRED    -   33348 Word   ALLOCATED -******** Word
 
-
- NOT ENOUGH CORE !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
- PRESENT MACHINE SIZE :175000000
- NEED AT LEAST (REAL*8) :793646112
   *** FILE           15  IS IN SPECTRO 1.x FORMAT ***
 
 

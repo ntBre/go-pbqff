@@ -15,4 +15,5 @@ flags=noopt
 sleepint=1
 joblimit=1024
 chunksize=256
+checkint=5000
 spectro=../../../bin/spectro
