@@ -112,7 +112,7 @@ func TestCart(t *testing.T) {
 				2826.6, 2778.4, 1747.8,
 				1499.4, 1246.8, 1167.0,
 			},
-			nosym: true,
+			nosym: false,
 		},
 	}
 	for _, test := range tests {

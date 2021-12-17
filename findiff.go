@@ -14,12 +14,17 @@ func OOP(i int, mol symm.Molecule) bool {
 	if *nosym {
 		return false
 	}
+	// coordinate index of the ith coordinate
+	// i%3 = 0 => X
+	// i%3 = 1 => Y
+	// i%3 = 2 => Z
 	ix := i - 1
 	if len(mol.Planes) < 1 {
 		return false
 	}
+	// axis out of the main plane
 	ax := int(mol.Planes[0].Not())
-	if ix == 0 && ax == 0 || ax != 0 && ix%ax == 0 {
+	if ix%3 == ax {
 		return true
 	}
 	return false

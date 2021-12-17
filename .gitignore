@@ -10,3 +10,4 @@
 /tests/**/spectro2.in
 /tests/sic/freqs/
 /pbqff.test
+/tests/**/fort.*
