@@ -1,0 +1,197 @@
+#!/bin/sh
+#PBS -N CH2Opts
+#PBS -S /bin/bash
+#PBS -j oe
+#PBS -o tests/cart/h2co/pts/inp/main28.pbs.out
+#PBS -W umask=022
+#PBS -l walltime=5000:00:00
+#PBS -l ncpus=1
+#PBS -l mem=8gb
+
+module load pbspro molpro
+
+export WORKDIR=$PBS_O_WORKDIR
+export TMPDIR=/tmp/$USER/$PBS_JOBID
+cd $WORKDIR
+mkdir -p $TMPDIR
+
+date
+hostname
+
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012347.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012349.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012350.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012352.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012353.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012355.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012356.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012358.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012359.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012360.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012361.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012362.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012367.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012368.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012369.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012370.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012371.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012372.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012373.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012375.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012376.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012378.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012379.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012381.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012382.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012384.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012385.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012387.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012388.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012390.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012391.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012393.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012394.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012396.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012397.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012399.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012400.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012402.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012403.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012405.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012406.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012408.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012409.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012411.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012412.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012414.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012415.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012417.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012418.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012420.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012421.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012423.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012424.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012426.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012427.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012429.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012430.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012432.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012433.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012434.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012435.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012436.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012441.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012442.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012443.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012444.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012445.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012446.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012447.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012449.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012450.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012452.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012453.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012455.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012456.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012458.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012459.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012461.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012462.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012464.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012465.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012467.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012468.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012470.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012471.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012473.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012474.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012476.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012477.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012479.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012480.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012482.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012483.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012485.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012486.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012488.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012489.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012491.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012492.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012494.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012495.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012497.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012498.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012500.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012501.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012503.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012504.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012506.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012507.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012509.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012510.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012512.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012513.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012515.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012516.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012518.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012519.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012520.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012521.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012522.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012527.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012528.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012529.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012530.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012531.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012532.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012533.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012535.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012536.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012538.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012539.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012541.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012542.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012544.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012545.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012547.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012548.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012550.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012551.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012553.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012554.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012556.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012557.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012559.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012560.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012562.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012563.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012565.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012566.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012568.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012569.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012571.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012572.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012574.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012575.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012577.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012578.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012580.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012581.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012583.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012584.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012586.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012587.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012589.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012590.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012592.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012593.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012595.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012596.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012598.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012599.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012601.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012602.inp --no-xml-output
+molpro -t 1 tests/cart/h2co/pts/inp/job.0000012604.inp --no-xml-output
+date
+
+rm -rf $TMPDIR

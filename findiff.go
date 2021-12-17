@@ -8,21 +8,6 @@ var (
 	None = ProtoCalc{0, "E0", []int{}, []int{}, 1}
 )
 
-// Make1D makes the Job slices for finite differences first
-// derivative force constants
-func Make1D(mol symm.Molecule, i int) []ProtoCalc {
-	scale := angbohr / (2 * Conf.FlSlice(Deltas)[i-1])
-	if OOP(i, mol) {
-		return []ProtoCalc{
-			{0, "E0", []int{i}, []int{}, scale},
-		}
-	}
-	return []ProtoCalc{
-		{1, HashName(), []int{i}, []int{i}, scale},
-		{-1, HashName(), []int{-i}, []int{i}, scale},
-	}
-}
-
 // OOP returns whether the coordinate i is out of the plane defined by
 // mol.Main
 func OOP(i int, mol symm.Molecule) bool {
@@ -38,6 +23,21 @@ func OOP(i int, mol symm.Molecule) bool {
 		return true
 	}
 	return false
+}
+
+// Make1D makes the Job slices for finite differences first
+// derivative force constants
+func Make1D(mol symm.Molecule, i int) []ProtoCalc {
+	scale := angbohr / (2 * Conf.FlSlice(Deltas)[i-1])
+	if OOP(i, mol) {
+		return []ProtoCalc{
+			{0, "E0", []int{i}, []int{}, scale},
+		}
+	}
+	return []ProtoCalc{
+		{1, HashName(), []int{i}, []int{i}, scale},
+		{-1, HashName(), []int{-i}, []int{i}, scale},
+	}
 }
 
 // Make2D makes the Job slices for finite differences second

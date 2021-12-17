@@ -35,9 +35,9 @@ func main() {
 		line := scanner.Text()
 		if strings.Contains(line, "molpro") &&
 			!strings.Contains(line, "module") {
+			// line of the form "molpro -t 1 filename"
 			fields := strings.Fields(line)
-			cmd := exec.Command(molpro, fields[1:]...)
-			cmd.Run()
+			Molpro(fields[3])
 		} else if strings.Contains(line, "parallel") {
 			fields := strings.Fields(line)
 			i := 0

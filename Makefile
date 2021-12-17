@@ -1,5 +1,3 @@
-.PHONY: tests docs qsub molpro
-
 ifeq ($(SHORT),1)
 TESTFLAGS := -v
 else
@@ -7,10 +5,7 @@ TESTFLAGS := -v -short
 endif
 
 qsub/qsub: qsub/*.go
-	go build -o qsub/qsub qsub/*.go
-
-molpro/molpro: molpro/*.go
-	go build -o molpro/molpro molpro/*.go
+	go build -o $@ $^
 
 experiment:
 	go build . && scp -C pbqff 'woods:.'
@@ -30,10 +25,10 @@ beta: pbqff
 alpha: pbqff
 	scp -C pbqff 'woods:Programs/pbqff/alpha/.'
 
-test: qsub molpro
+test: qsub/qsub
 	go test . $(TESTFLAGS)
 
-bench: qsub molpro
+bench: qsub
 	go test . $(TESTFLAGS) -bench 'CheckLog|CheckProg|ReadOut'
 
 docs:

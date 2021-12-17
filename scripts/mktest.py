@@ -3,6 +3,7 @@
 import glob
 import io
 import json
+from sys import argv
 
 
 def parse(filename):
@@ -23,7 +24,10 @@ def parse(filename):
 
 
 if __name__ == "__main__":
-    jobs = glob.glob("job*.out")
+    job_glob = "job*.out"
+    if argv[1] != "":
+        job_glob = argv[1]
+    jobs = glob.glob(job_glob)
     d = {}
     for job in jobs:
         g, e = parse(job)

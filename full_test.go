@@ -81,7 +81,6 @@ func TestCart(t *testing.T) {
 	*test = true
 	qsub = "qsub/qsub"
 	temp := Conf
-	Conf = NewConfig()
 	defer func() {
 		flags = 0
 		Conf = temp
@@ -99,11 +98,20 @@ func TestCart(t *testing.T) {
 	}{
 		{
 			name:   "h2o",
-			infile: "tests/cart/cart.in",
+			infile: "tests/cart/h2o/cart.in",
 			want:   []float64{3753.2, 3656.5, 1598.5},
 		},
+		// {
+		// 	name:   "h2co",
+		// 	infile: "tests/cart/h2co/test.in",
+		// 	want: []float64{
+		// 		2826.6, 2778.4, 1747.8,
+		// 		1499.4, 1246.8, 1167.0,
+		// 	},
+		// },
 	}
 	for _, test := range tests {
+		Conf = NewConfig()
 		prog, _, _ := initialize(test.infile)
 		prog.FormatCart(Conf.Str(Geometry))
 		cart := prog.GetGeom()
