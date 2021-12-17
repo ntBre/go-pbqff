@@ -309,6 +309,19 @@ func Make4D_2_2(i, j, k, l int, scale float64, mol symm.Molecule) []ProtoCalc {
 	}
 }
 
+func Make4D_1_1_1_1(i, j, k, l int, scale float64) []ProtoCalc {
+	return []ProtoCalc{
+		{2, HashName(), []int{i, j, k, l}, []int{i, j, k, l}, scale},
+		{2, HashName(), []int{i, -j, -k, l}, []int{i, j, k, l}, scale},
+		{2, HashName(), []int{i, -j, k, -l}, []int{i, j, k, l}, scale},
+		{2, HashName(), []int{i, j, -k, -l}, []int{i, j, k, l}, scale},
+		{-2, HashName(), []int{i, -j, k, l}, []int{i, j, k, l}, scale},
+		{-2, HashName(), []int{i, j, -k, l}, []int{i, j, k, l}, scale},
+		{-2, HashName(), []int{i, j, k, -l}, []int{i, j, k, l}, scale},
+		{-2, HashName(), []int{i, -j, -k, -l}, []int{i, j, k, l}, scale},
+	}
+}
+
 // Make4D makes the ProtoCalc slices for finite differences fourth
 // derivative force constants
 func Make4D(mol symm.Molecule, i, j, k, l int) []ProtoCalc {
@@ -385,19 +398,29 @@ func Make4D(mol symm.Molecule, i, j, k, l int) []ProtoCalc {
 
 		// 3 OOP
 		case OOP(i, mol) && OOP(j, mol) && OOP(k, mol):
+			fallthrough
 		case OOP(i, mol) && OOP(j, mol) && OOP(l, mol):
+			fallthrough
 		case OOP(i, mol) && OOP(k, mol) && OOP(l, mol):
+			fallthrough
 		case OOP(j, mol) && OOP(k, mol) && OOP(l, mol):
+			return []ProtoCalc{
+				None,
+			}
 
 		// 2 OOP
 		case OOP(i, mol) && OOP(j, mol):
+			return Make4D_1_1_1_1(i, j, k, l, scale)
 		case OOP(i, mol) && OOP(k, mol):
+			return Make4D_1_1_1_1(i, k, j, l, scale)
 		case OOP(i, mol) && OOP(l, mol):
-
+			return Make4D_1_1_1_1(i, l, j, k, scale)
 		case OOP(j, mol) && OOP(k, mol):
+			return Make4D_1_1_1_1(j, k, i, l, scale)
 		case OOP(j, mol) && OOP(l, mol):
-
+			return Make4D_1_1_1_1(j, l, i, k, scale)
 		case OOP(k, mol) && OOP(l, mol):
+			return Make4D_1_1_1_1(k, l, i, j, scale)
 
 		// 1 OOP
 		case OOP(i, mol) || OOP(j, mol) || OOP(k, mol) || OOP(l, mol):
