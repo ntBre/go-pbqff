@@ -142,11 +142,36 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 	case j == k && i != j:
 		return Make3D_2_1(j, k, i, scale, mol)
 	case i != j && i != k && j != k:
-		// if OOP(i, mol) || OOP(j, mol) || OOP(k, mol) {
-		// 	return []ProtoCalc{
-		// 		None,
-		// 	}
-		// }
+		switch {
+		case OOP(i, mol) && OOP(j, mol) && OOP(k, mol):
+			return []ProtoCalc{
+				None,
+			}
+		case OOP(i, mol) && OOP(j, mol):
+			fallthrough
+		case OOP(i, mol) && OOP(k, mol):
+			return []ProtoCalc{
+				{2, HashName(), []int{i, j, k}, []int{i, j, k}, scale},
+				{-2, HashName(), []int{i, -j, k}, []int{i, j, k}, scale},
+				{-2, HashName(), []int{i, j, -k}, []int{i, j, k}, scale},
+				{2, HashName(), []int{i, -j, -k}, []int{i, j, k}, scale},
+			}
+		case OOP(j, mol) && OOP(k, mol):
+			return []ProtoCalc{
+				{2, HashName(), []int{i, j, k}, []int{i, j, k}, scale},
+				{-2, HashName(), []int{i, -j, k}, []int{i, j, k}, scale},
+				{2, HashName(), []int{-i, -j, k}, []int{i, j, k}, scale},
+				{-2, HashName(), []int{-i, j, k}, []int{i, j, k}, scale},
+			}
+		case OOP(i, mol):
+			fallthrough
+		case OOP(j, mol):
+			fallthrough
+		case OOP(k, mol):
+			return []ProtoCalc{
+				None,
+			}
+		}
 		return []ProtoCalc{
 			{1, HashName(), []int{i, j, k}, []int{i, j, k}, scale},
 			{-1, HashName(), []int{i, -j, k}, []int{i, j, k}, scale},
