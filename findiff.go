@@ -88,6 +88,32 @@ func Make2D(mol symm.Molecule, i, j int) []ProtoCalc {
 	}
 }
 
+// Make3D_2_1 handles the case where i == j and i != k
+func Make3D_2_1(i, j, k int, scale float64, mol symm.Molecule) []ProtoCalc {
+	// E(+i+i+k) - 2*E(+k) + E(-i-i+k) - E(+i+i-k) + 2*E(-k) - E(-i-i-k) / (2d)^3
+	switch {
+	case OOP(k, mol):
+		return []ProtoCalc{
+			None,
+		}
+	case OOP(i, mol):
+		return []ProtoCalc{
+			{2, HashName(), []int{i, i, k}, []int{i, i, k}, scale},
+			{-2, HashName(), []int{k}, []int{i, i, k}, scale},
+			{-2, HashName(), []int{i, i, -k}, []int{i, i, k}, scale},
+			{2, HashName(), []int{-k}, []int{i, i, k}, scale},
+		}
+	}
+	return []ProtoCalc{
+		{1, HashName(), []int{i, i, k}, []int{i, i, k}, scale},
+		{-2, HashName(), []int{k}, []int{i, i, k}, scale},
+		{1, HashName(), []int{-i, -i, k}, []int{i, i, k}, scale},
+		{-1, HashName(), []int{i, i, -k}, []int{i, i, k}, scale},
+		{2, HashName(), []int{-k}, []int{i, i, k}, scale},
+		{-1, HashName(), []int{-i, -i, -k}, []int{i, i, k}, scale},
+	}
+}
+
 // Make3D makes the ProtoCalc slices for finite differences third
 // derivative force constants
 func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
@@ -97,10 +123,10 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 			Conf.FlSlice(Deltas)[k-1])
 	switch {
 	case i == j && i == k:
-		// E(+i+i+i) - 3*E(i) + 3*E(-i) -E(-i-i-i) / (2d)^3
+		// E(+i+i+i) - 3*E(+i) + 3*E(-i) - E(-i-i-i) / (2d)^3
 		if OOP(i, mol) {
 			return []ProtoCalc{
-				{0, "E0", []int{i, j, k}, []int{}, scale},
+				None,
 			}
 		}
 		return []ProtoCalc{
@@ -110,74 +136,17 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 			{-1, HashName(), []int{-i, -i, -i}, []int{i, i, i}, scale},
 		}
 	case i == j && i != k:
-		if OOP(i, mol) {
-			return []ProtoCalc{
-				{2, HashName(), []int{i, i, k}, []int{i, i, k}, scale},
-				{-2, HashName(), []int{k}, []int{i, i, k}, scale},
-				{-2, HashName(), []int{i, i, -k}, []int{i, i, k}, scale},
-				{2, HashName(), []int{-k}, []int{i, i, k}, scale},
-			}
-		} else if OOP(k, mol) {
-			return []ProtoCalc{
-				{0, "E0", []int{i, j, k}, []int{}, scale},
-			}
-		}
-		return []ProtoCalc{
-			{1, HashName(), []int{i, i, k}, []int{i, i, k}, scale},
-			{-2, HashName(), []int{k}, []int{i, i, k}, scale},
-			{1, HashName(), []int{-i, -i, k}, []int{i, i, k}, scale},
-			{-1, HashName(), []int{i, i, -k}, []int{i, i, k}, scale},
-			{2, HashName(), []int{-k}, []int{i, i, k}, scale},
-			{-1, HashName(), []int{-i, -i, -k}, []int{i, i, k}, scale},
-		}
+		return Make3D_2_1(i, j, k, scale, mol)
 	case i == k && i != j:
-		if OOP(i, mol) {
-			return []ProtoCalc{
-				{2, HashName(), []int{i, i, j}, []int{i, i, j}, scale},
-				{-2, HashName(), []int{j}, []int{i, i, j}, scale},
-				{-2, HashName(), []int{i, i, -j}, []int{i, i, j}, scale},
-				{2, HashName(), []int{-j}, []int{i, i, j}, scale},
-			}
-		} else if OOP(j, mol) {
-			return []ProtoCalc{
-				{0, "E0", []int{i, j, k}, []int{}, scale},
-			}
-		}
-		return []ProtoCalc{
-			{1, HashName(), []int{i, i, j}, []int{i, i, j}, scale},
-			{-2, HashName(), []int{j}, []int{i, i, j}, scale},
-			{1, HashName(), []int{-i, -i, j}, []int{i, i, j}, scale},
-			{-1, HashName(), []int{i, i, -j}, []int{i, i, j}, scale},
-			{2, HashName(), []int{-j}, []int{i, i, j}, scale},
-			{-1, HashName(), []int{-i, -i, -j}, []int{i, i, j}, scale},
-		}
+		return Make3D_2_1(i, k, j, scale, mol)
 	case j == k && i != j:
-		if OOP(j, mol) {
-			return []ProtoCalc{
-				{2, HashName(), []int{j, j, i}, []int{j, j, i}, scale},
-				{-2, HashName(), []int{i}, []int{j, j, i}, scale},
-				{-2, HashName(), []int{j, j, -i}, []int{j, j, i}, scale},
-				{2, HashName(), []int{-i}, []int{j, j, i}, scale},
-			}
-		} else if OOP(i, mol) {
-			return []ProtoCalc{
-				{0, "E0", []int{i, j, k}, []int{}, scale},
-			}
-		}
-		return []ProtoCalc{
-			{1, HashName(), []int{j, j, i}, []int{j, j, i}, scale},
-			{-2, HashName(), []int{i}, []int{j, j, i}, scale},
-			{1, HashName(), []int{-j, -j, i}, []int{j, j, i}, scale},
-			{-1, HashName(), []int{j, j, -i}, []int{j, j, i}, scale},
-			{2, HashName(), []int{-i}, []int{j, j, i}, scale},
-			{-1, HashName(), []int{-j, -j, -i}, []int{j, j, i}, scale},
-		}
+		return Make3D_2_1(j, k, i, scale, mol)
 	case i != j && i != k && j != k:
-		if OOP(i, mol) || OOP(j, mol) || OOP(k, mol) {
-			return []ProtoCalc{
-				None,
-			}
-		}
+		// if OOP(i, mol) || OOP(j, mol) || OOP(k, mol) {
+		// 	return []ProtoCalc{
+		// 		None,
+		// 	}
+		// }
 		return []ProtoCalc{
 			{1, HashName(), []int{i, j, k}, []int{i, j, k}, scale},
 			{-1, HashName(), []int{i, -j, k}, []int{i, j, k}, scale},
@@ -190,6 +159,59 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 		}
 	default:
 		panic("No cases matched")
+	}
+}
+
+func Make4D_3_1(i, j, k, l int, scale float64, mol symm.Molecule) []ProtoCalc {
+	if OOP(i, mol) || OOP(l, mol) {
+		return []ProtoCalc{
+			None,
+		}
+	}
+	return []ProtoCalc{
+		{1, HashName(), []int{i, i, i, l}, []int{i, i, i, l}, scale},
+		{-3, HashName(), []int{i, l}, []int{i, i, i, l}, scale},
+		{3, HashName(), []int{-i, l}, []int{i, i, i, l}, scale},
+		{-1, HashName(), []int{-i, -i, -i, l}, []int{i, i, i, l}, scale},
+		{-1, HashName(), []int{i, i, i, -l}, []int{i, i, i, l}, scale},
+		{3, HashName(), []int{i, -l}, []int{i, i, i, l}, scale},
+		{-3, HashName(), []int{-i, -l}, []int{i, i, i, l}, scale},
+		{1, HashName(), []int{-i, -i, -i, -l}, []int{i, i, i, l}, scale},
+	}
+}
+
+func Make4D_2_1_1(i, j, k, l int, scale float64, mol symm.Molecule) []ProtoCalc {
+	switch {
+	// if this is true, it doesn't matter if i is OOP
+	case OOP(l, mol) || OOP(k, mol):
+		return []ProtoCalc{
+			None,
+		}
+	case OOP(i, mol):
+		return []ProtoCalc{
+			{2, HashName(), []int{i, i, k, l}, []int{i, i, k, l}, scale},
+			{-2, HashName(), []int{i, i, -k, l}, []int{i, i, k, l}, scale},
+			{-2, HashName(), []int{i, i, k, -l}, []int{i, i, k, l}, scale},
+			{2, HashName(), []int{i, i, -k, -l}, []int{i, i, k, l}, scale},
+			{-2, HashName(), []int{k, l}, []int{i, i, k, l}, scale},
+			{2, HashName(), []int{-k, l}, []int{i, i, k, l}, scale},
+			{2, HashName(), []int{k, -l}, []int{i, i, k, l}, scale},
+			{-2, HashName(), []int{-k, -l}, []int{i, i, k, l}, scale},
+		}
+	}
+	return []ProtoCalc{
+		{1, HashName(), []int{i, i, k, l}, []int{i, i, k, l}, scale},
+		{-2, HashName(), []int{k, l}, []int{i, i, k, l}, scale},
+		{1, HashName(), []int{-i, -i, k, l}, []int{i, i, k, l}, scale},
+		{-1, HashName(), []int{i, i, -k, l}, []int{i, i, k, l}, scale},
+		{2, HashName(), []int{-k, l}, []int{i, i, k, l}, scale},
+		{-1, HashName(), []int{-i, -i, -k, l}, []int{i, i, k, l}, scale},
+		{-1, HashName(), []int{i, i, k, -l}, []int{i, i, k, l}, scale},
+		{2, HashName(), []int{k, -l}, []int{i, i, k, l}, scale},
+		{-1, HashName(), []int{-i, -i, k, -l}, []int{i, i, k, l}, scale},
+		{1, HashName(), []int{i, i, -k, -l}, []int{i, i, k, l}, scale},
+		{-2, HashName(), []int{-k, -l}, []int{i, i, k, l}, scale},
+		{1, HashName(), []int{-i, -i, -k, -l}, []int{i, i, k, l}, scale},
 	}
 }
 
@@ -218,272 +240,31 @@ func Make4D(mol symm.Molecule, i, j, k, l int) []ProtoCalc {
 			{-4, HashName(), []int{-i, -i}, []int{i, i, i, i}, scale},
 			{1, HashName(), []int{-i, -i, -i, -i}, []int{i, i, i, i}, scale},
 		}
+
 	// 3 and 1
 	case i == j && i == k && i != l:
-		// check i and l
-		if OOP(i, mol) || OOP(l, mol) {
-			return []ProtoCalc{
-				None,
-			}
-		}
-		return []ProtoCalc{
-			{1, HashName(), []int{i, i, i, l}, []int{i, i, i, l}, scale},
-			{-3, HashName(), []int{i, l}, []int{i, i, i, l}, scale},
-			{3, HashName(), []int{-i, l}, []int{i, i, i, l}, scale},
-			{-1, HashName(), []int{-i, -i, -i, l}, []int{i, i, i, l}, scale},
-			{-1, HashName(), []int{i, i, i, -l}, []int{i, i, i, l}, scale},
-			{3, HashName(), []int{i, -l}, []int{i, i, i, l}, scale},
-			{-3, HashName(), []int{-i, -l}, []int{i, i, i, l}, scale},
-			{1, HashName(), []int{-i, -i, -i, -l}, []int{i, i, i, l}, scale},
-		}
+		return Make4D_3_1(i, j, k, l, scale, mol)
 	case i == j && i == l && i != k:
-		if OOP(i, mol) || OOP(k, mol) {
-			return []ProtoCalc{
-				None,
-			}
-		}
-		return []ProtoCalc{
-			{1, HashName(), []int{i, i, i, k}, []int{i, i, i, k}, scale},
-			{-3, HashName(), []int{i, k}, []int{i, i, i, k}, scale},
-			{3, HashName(), []int{-i, k}, []int{i, i, i, k}, scale},
-			{-1, HashName(), []int{-i, -i, -i, k}, []int{i, i, i, k}, scale},
-			{-1, HashName(), []int{i, i, i, -k}, []int{i, i, i, k}, scale},
-			{3, HashName(), []int{i, -k}, []int{i, i, i, k}, scale},
-			{-3, HashName(), []int{-i, -k}, []int{i, i, i, k}, scale},
-			{1, HashName(), []int{-i, -i, -i, -k}, []int{i, i, i, k}, scale},
-		}
+		return Make4D_3_1(i, j, l, k, scale, mol)
 	case i == k && i == l && i != j:
-		if OOP(i, mol) || OOP(j, mol) {
-			return []ProtoCalc{
-				None,
-			}
-		}
-		return []ProtoCalc{
-			{1, HashName(), []int{i, i, i, j}, []int{i, i, i, j}, scale},
-			{-3, HashName(), []int{i, j}, []int{i, i, i, j}, scale},
-			{3, HashName(), []int{-i, j}, []int{i, i, i, j}, scale},
-			{-1, HashName(), []int{-i, -i, -i, j}, []int{i, i, i, j}, scale},
-			{-1, HashName(), []int{i, i, i, -j}, []int{i, i, i, j}, scale},
-			{3, HashName(), []int{i, -j}, []int{i, i, i, j}, scale},
-			{-3, HashName(), []int{-i, -j}, []int{i, i, i, j}, scale},
-			{1, HashName(), []int{-i, -i, -i, -j}, []int{i, i, i, j}, scale},
-		}
+		return Make4D_3_1(i, k, l, j, scale, mol)
 	case j == k && j == l && j != i:
-		if OOP(i, mol) || OOP(j, mol) {
-			return []ProtoCalc{
-				None,
-			}
-		}
-		return []ProtoCalc{
-			{1, HashName(), []int{j, j, j, i}, []int{j, j, j, i}, scale},
-			{-3, HashName(), []int{j, i}, []int{j, j, j, i}, scale},
-			{3, HashName(), []int{-j, i}, []int{j, j, j, i}, scale},
-			{-1, HashName(), []int{-j, -j, -j, i}, []int{j, j, j, i}, scale},
-			{-1, HashName(), []int{j, j, j, -i}, []int{j, j, j, i}, scale},
-			{3, HashName(), []int{j, -i}, []int{j, j, j, i}, scale},
-			{-3, HashName(), []int{-j, -i}, []int{j, j, j, i}, scale},
-			{1, HashName(), []int{-j, -j, -j, -i}, []int{j, j, j, i}, scale},
-		}
+		return Make4D_3_1(j, k, l, i, scale, mol)
+
 	// 2 and 1 and 1
 	case i == j && i != k && i != l && k != l:
-		// x -> i, y -> k, z -> l
-		switch {
-		// if this is true, it doesn't matter if i is OOP
-		case OOP(l, mol) || OOP(k, mol):
-			return []ProtoCalc{
-				None,
-			}
-		case OOP(i, mol):
-			return []ProtoCalc{
-				{2, HashName(), []int{i, i, k, l}, []int{i, i, k, l}, scale},
-				{-2, HashName(), []int{i, i, -k, l}, []int{i, i, k, l}, scale},
-				{-2, HashName(), []int{i, i, k, -l}, []int{i, i, k, l}, scale},
-				{2, HashName(), []int{i, i, -k, -l}, []int{i, i, k, l}, scale},
-				{-2, HashName(), []int{k, l}, []int{i, i, k, l}, scale},
-				{2, HashName(), []int{-k, l}, []int{i, i, k, l}, scale},
-				{2, HashName(), []int{k, -l}, []int{i, i, k, l}, scale},
-				{-2, HashName(), []int{-k, -l}, []int{i, i, k, l}, scale},
-			}
-		}
-		return []ProtoCalc{
-			{1, HashName(), []int{i, i, k, l}, []int{i, i, k, l}, scale},
-			{-2, HashName(), []int{k, l}, []int{i, i, k, l}, scale},
-			{1, HashName(), []int{-i, -i, k, l}, []int{i, i, k, l}, scale},
-			{-1, HashName(), []int{i, i, -k, l}, []int{i, i, k, l}, scale},
-			{2, HashName(), []int{-k, l}, []int{i, i, k, l}, scale},
-			{-1, HashName(), []int{-i, -i, -k, l}, []int{i, i, k, l}, scale},
-			{-1, HashName(), []int{i, i, k, -l}, []int{i, i, k, l}, scale},
-			{2, HashName(), []int{k, -l}, []int{i, i, k, l}, scale},
-			{-1, HashName(), []int{-i, -i, k, -l}, []int{i, i, k, l}, scale},
-			{1, HashName(), []int{i, i, -k, -l}, []int{i, i, k, l}, scale},
-			{-2, HashName(), []int{-k, -l}, []int{i, i, k, l}, scale},
-			{1, HashName(), []int{-i, -i, -k, -l}, []int{i, i, k, l}, scale},
-		}
+		return Make4D_2_1_1(i, j, k, l, scale, mol)
 	case i == k && i != j && i != l && j != l:
-		// x -> i, y -> j, z -> l
-		switch {
-		case OOP(l, mol) || OOP(j, mol):
-			return []ProtoCalc{
-				None,
-			}
-		case OOP(i, mol):
-			return []ProtoCalc{
-				{-2, HashName(), []int{j, l}, []int{i, i, j, l}, scale},
-				{2, HashName(), []int{-j, l}, []int{i, i, j, l}, scale},
-				{2, HashName(), []int{i, i, j, l}, []int{i, i, j, l}, scale},
-				{-2, HashName(), []int{i, i, -j, l}, []int{i, i, j, l}, scale},
-				{-2, HashName(), []int{i, i, j, -l}, []int{i, i, j, l}, scale},
-				{2, HashName(), []int{i, i, -j, -l}, []int{i, i, j, l}, scale},
-				{2, HashName(), []int{j, -l}, []int{i, i, j, l}, scale},
-				{-2, HashName(), []int{-j, -l}, []int{i, i, j, l}, scale},
-			}
-		}
-		return []ProtoCalc{
-			{1, HashName(), []int{i, i, j, l}, []int{i, i, j, l}, scale},
-			{-2, HashName(), []int{j, l}, []int{i, i, j, l}, scale},
-			{1, HashName(), []int{-i, -i, j, l}, []int{i, i, j, l}, scale},
-			{-1, HashName(), []int{i, i, -j, l}, []int{i, i, j, l}, scale},
-			{2, HashName(), []int{-j, l}, []int{i, i, j, l}, scale},
-			{-1, HashName(), []int{-i, -i, -j, l}, []int{i, i, j, l}, scale},
-			{-1, HashName(), []int{i, i, j, -l}, []int{i, i, j, l}, scale},
-			{2, HashName(), []int{j, -l}, []int{i, i, j, l}, scale},
-			{-1, HashName(), []int{-i, -i, j, -l}, []int{i, i, j, l}, scale},
-			{1, HashName(), []int{i, i, -j, -l}, []int{i, i, j, l}, scale},
-			{-2, HashName(), []int{-j, -l}, []int{i, i, j, l}, scale},
-			{1, HashName(), []int{-i, -i, -j, -l}, []int{i, i, j, l}, scale},
-		}
+		return Make4D_2_1_1(i, k, j, l, scale, mol)
 	case i == l && i != j && i != k && j != k:
-		// x -> i, y -> k, z -> j
-		switch {
-		case OOP(j, mol) || OOP(k, mol):
-			return []ProtoCalc{
-				None,
-			}
-		case OOP(i, mol):
-			return []ProtoCalc{
-				{-2, HashName(), []int{k, j}, []int{i, i, k, j}, scale},
-				{2, HashName(), []int{-k, j}, []int{i, i, k, j}, scale},
-				{2, HashName(), []int{i, i, k, j}, []int{i, i, k, j}, scale},
-				{-2, HashName(), []int{i, i, -k, j}, []int{i, i, k, j}, scale},
-				{-2, HashName(), []int{i, i, k, -j}, []int{i, i, k, j}, scale},
-				{2, HashName(), []int{i, i, -k, -j}, []int{i, i, k, j}, scale},
-				{2, HashName(), []int{k, -j}, []int{i, i, k, j}, scale},
-				{-2, HashName(), []int{-k, -j}, []int{i, i, k, j}, scale},
-			}
-		}
-		return []ProtoCalc{
-			{1, HashName(), []int{i, i, k, j}, []int{i, i, k, j}, scale},
-			{-2, HashName(), []int{k, j}, []int{i, i, k, j}, scale},
-			{1, HashName(), []int{-i, -i, k, j}, []int{i, i, k, j}, scale},
-			{-1, HashName(), []int{i, i, -k, j}, []int{i, i, k, j}, scale},
-			{2, HashName(), []int{-k, j}, []int{i, i, k, j}, scale},
-			{-1, HashName(), []int{-i, -i, -k, j}, []int{i, i, k, j}, scale},
-			{-1, HashName(), []int{i, i, k, -j}, []int{i, i, k, j}, scale},
-			{2, HashName(), []int{k, -j}, []int{i, i, k, j}, scale},
-			{-1, HashName(), []int{-i, -i, k, -j}, []int{i, i, k, j}, scale},
-			{1, HashName(), []int{i, i, -k, -j}, []int{i, i, k, j}, scale},
-			{-2, HashName(), []int{-k, -j}, []int{i, i, k, j}, scale},
-			{1, HashName(), []int{-i, -i, -k, -j}, []int{i, i, k, j}, scale},
-		}
+		return Make4D_2_1_1(i, l, j, k, scale, mol)
 	case j == k && j != i && j != l && i != l:
-		// x -> j, y -> i, z -> l
-		switch {
-		case OOP(i, mol) || OOP(l, mol):
-			return []ProtoCalc{
-				None,
-			}
-		case OOP(j, mol):
-			return []ProtoCalc{
-				{-2, HashName(), []int{i, l}, []int{j, j, i, l}, scale},
-				{2, HashName(), []int{-i, l}, []int{j, j, i, l}, scale},
-				{2, HashName(), []int{j, j, i, l}, []int{j, j, i, l}, scale},
-				{-2, HashName(), []int{j, j, -i, l}, []int{j, j, i, l}, scale},
-				{-2, HashName(), []int{j, j, i, -l}, []int{j, j, i, l}, scale},
-				{2, HashName(), []int{j, j, -i, -l}, []int{j, j, i, l}, scale},
-				{2, HashName(), []int{i, -l}, []int{j, j, i, l}, scale},
-				{-2, HashName(), []int{-i, -l}, []int{j, j, i, l}, scale},
-			}
-		}
-		return []ProtoCalc{
-			{1, HashName(), []int{j, j, i, l}, []int{j, j, i, l}, scale},
-			{-2, HashName(), []int{i, l}, []int{j, j, i, l}, scale},
-			{1, HashName(), []int{-j, -j, i, l}, []int{j, j, i, l}, scale},
-			{-1, HashName(), []int{j, j, -i, l}, []int{j, j, i, l}, scale},
-			{2, HashName(), []int{-i, l}, []int{j, j, i, l}, scale},
-			{-1, HashName(), []int{-j, -j, -i, l}, []int{j, j, i, l}, scale},
-			{-1, HashName(), []int{j, j, i, -l}, []int{j, j, i, l}, scale},
-			{2, HashName(), []int{i, -l}, []int{j, j, i, l}, scale},
-			{-1, HashName(), []int{-j, -j, i, -l}, []int{j, j, i, l}, scale},
-			{1, HashName(), []int{j, j, -i, -l}, []int{j, j, i, l}, scale},
-			{-2, HashName(), []int{-i, -l}, []int{j, j, i, l}, scale},
-			{1, HashName(), []int{-j, -j, -i, -l}, []int{j, j, i, l}, scale},
-		}
+		return Make4D_2_1_1(j, k, i, l, scale, mol)
 	case j == l && j != i && j != k && i != k:
-		// x -> j, y -> i, z -> k
-		switch {
-		case OOP(i, mol) || OOP(k, mol):
-			return []ProtoCalc{
-				None,
-			}
-		case OOP(j, mol):
-			return []ProtoCalc{
-				{-2, HashName(), []int{i, k}, []int{j, j, i, k}, scale},
-				{2, HashName(), []int{-i, k}, []int{j, j, i, k}, scale},
-				{2, HashName(), []int{j, j, i, k}, []int{j, j, i, k}, scale},
-				{-2, HashName(), []int{j, j, -i, k}, []int{j, j, i, k}, scale},
-				{-2, HashName(), []int{j, j, i, -k}, []int{j, j, i, k}, scale},
-				{2, HashName(), []int{j, j, -i, -k}, []int{j, j, i, k}, scale},
-				{2, HashName(), []int{i, -k}, []int{j, j, i, k}, scale},
-				{-2, HashName(), []int{-i, -k}, []int{j, j, i, k}, scale},
-			}
-		}
-		return []ProtoCalc{
-			{1, HashName(), []int{j, j, i, k}, []int{j, j, i, k}, scale},
-			{-2, HashName(), []int{i, k}, []int{j, j, i, k}, scale},
-			{1, HashName(), []int{-j, -j, i, k}, []int{j, j, i, k}, scale},
-			{-1, HashName(), []int{j, j, -i, k}, []int{j, j, i, k}, scale},
-			{2, HashName(), []int{-i, k}, []int{j, j, i, k}, scale},
-			{-1, HashName(), []int{-j, -j, -i, k}, []int{j, j, i, k}, scale},
-			{-1, HashName(), []int{j, j, i, -k}, []int{j, j, i, k}, scale},
-			{2, HashName(), []int{i, -k}, []int{j, j, i, k}, scale},
-			{-1, HashName(), []int{-j, -j, i, -k}, []int{j, j, i, k}, scale},
-			{1, HashName(), []int{j, j, -i, -k}, []int{j, j, i, k}, scale},
-			{-2, HashName(), []int{-i, -k}, []int{j, j, i, k}, scale},
-			{1, HashName(), []int{-j, -j, -i, -k}, []int{j, j, i, k}, scale},
-		}
+		return Make4D_2_1_1(j, l, i, k, scale, mol)
 	case k == l && k != i && k != j && i != j:
-		// x -> k, y -> i, z -> j
-		switch {
-		case OOP(i, mol) || OOP(j, mol):
-			return []ProtoCalc{
-				None,
-			}
-		case OOP(k, mol):
-			return []ProtoCalc{
-				{-2, HashName(), []int{i, j}, []int{k, k, i, j}, scale},
-				{2, HashName(), []int{-i, j}, []int{k, k, i, j}, scale},
-				{2, HashName(), []int{k, k, i, j}, []int{k, k, i, j}, scale},
-				{-2, HashName(), []int{k, k, -i, j}, []int{k, k, i, j}, scale},
-				{-2, HashName(), []int{k, k, i, -j}, []int{k, k, i, j}, scale},
-				{2, HashName(), []int{k, k, -i, -j}, []int{k, k, i, j}, scale},
-				{2, HashName(), []int{i, -j}, []int{k, k, i, j}, scale},
-				{-2, HashName(), []int{-i, -j}, []int{k, k, i, j}, scale},
-			}
-		}
-		return []ProtoCalc{
-			{1, HashName(), []int{k, k, i, j}, []int{k, k, i, j}, scale},
-			{-2, HashName(), []int{i, j}, []int{k, k, i, j}, scale},
-			{1, HashName(), []int{-k, -k, i, j}, []int{k, k, i, j}, scale},
-			{-1, HashName(), []int{k, k, -i, j}, []int{k, k, i, j}, scale},
-			{2, HashName(), []int{-i, j}, []int{k, k, i, j}, scale},
-			{-1, HashName(), []int{-k, -k, -i, j}, []int{k, k, i, j}, scale},
-			{-1, HashName(), []int{k, k, i, -j}, []int{k, k, i, j}, scale},
-			{2, HashName(), []int{i, -j}, []int{k, k, i, j}, scale},
-			{-1, HashName(), []int{-k, -k, i, -j}, []int{k, k, i, j}, scale},
-			{1, HashName(), []int{k, k, -i, -j}, []int{k, k, i, j}, scale},
-			{-2, HashName(), []int{-i, -j}, []int{k, k, i, j}, scale},
-			{1, HashName(), []int{-k, -k, -i, -j}, []int{k, k, i, j}, scale},
-		}
+		return Make4D_2_1_1(k, l, i, j, scale, mol)
+
 	// 2 and 2
 	case i == j && k == l && i != k:
 		switch {

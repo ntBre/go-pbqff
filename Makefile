@@ -1,7 +1,7 @@
 ifeq ($(SHORT),1)
-TESTFLAGS := -v
+TESTFLAGS :=
 else
-TESTFLAGS := -v -short
+TESTFLAGS := -short
 endif
 
 qsub/qsub: qsub/*.go
@@ -26,7 +26,7 @@ alpha: pbqff
 	scp -C pbqff 'woods:Programs/pbqff/alpha/.'
 
 test: qsub/qsub
-	go test . $(TESTFLAGS)
+	go test . $(TESTFLAGS) $(FLAGS)
 
 bench: qsub
 	go test . $(TESTFLAGS) -bench 'CheckLog|CheckProg|ReadOut'
