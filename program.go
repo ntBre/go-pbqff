@@ -298,6 +298,21 @@ func Derivative(prog Program, dir string, names []string,
 		}
 		if len(p.Steps) == 2 && ndims == 2 {
 			ranger := E2dIndex(ncoords, p.Steps...)
+			switch {
+			case p.Steps[0] == p.Steps[1] && OOP(p.Steps[0], mol):
+				ranger = append(ranger,
+					E2dIndex(ncoords, -p.Steps[0], -p.Steps[0])...)
+			case OOP(p.Steps[0], mol) && OOP(p.Steps[1], mol):
+				ranger = append(ranger,
+					E2dIndex(ncoords, -p.Steps[0], -p.Steps[1])...)
+			case OOP(p.Steps[0], mol) || OOP(p.Steps[1], mol):
+				ranger = append(ranger,
+					E2dIndex(ncoords, p.Steps[0], -p.Steps[1])...)
+				ranger = append(ranger,
+					E2dIndex(ncoords, -p.Steps[0], p.Steps[1])...)
+				ranger = append(ranger,
+					E2dIndex(ncoords, -p.Steps[0], -p.Steps[1])...)
+			}
 			for _, v := range ranger {
 				// also have to append to e2d, but
 				// count is always 1 there

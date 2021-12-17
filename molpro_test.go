@@ -588,6 +588,11 @@ func TestDerivative(t *testing.T) {
 							Slice: &e2d,
 							Index: 0,
 						},
+						{
+							Coeff: 1,
+							Slice: &e2d,
+							Index: 171,
+						},
 					},
 					Scale: angbohr * angbohr / 4,
 					Coords: []float64{
@@ -630,10 +635,16 @@ func TestDerivative(t *testing.T) {
 		if !reflect.DeepEqual(calcs, test.calcs) {
 			fmt.Println("mismatch got and want:")
 			fmt.Println("got:")
-			byts, _ := json.MarshalIndent(&calcs, "", "\t")
+			byts, err := json.MarshalIndent(&calcs, "", "\t")
+			if err != nil {
+				panic(err)
+			}
 			fmt.Println(string(byts))
 			fmt.Println("wanted:")
-			byts, _ = json.MarshalIndent(&test.calcs, "", "\t")
+			byts, err = json.MarshalIndent(&test.calcs, "", "\t")
+			if err != nil {
+				panic(err)
+			}
 			fmt.Println(string(byts))
 			t.Error()
 		}
