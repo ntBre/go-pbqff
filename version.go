@@ -1,7 +1,7 @@
 package main
 
 const (
-      VERSION = "b2f189f51c76b10d87f3aa7606d64d5bb5ac205f"
-      COMP_TIME = "Thu Dec 16, 2021 at 20:18:33"
+      VERSION = "4e28dfdbe168f30badada8c46f811603ffa5d533"
+      COMP_TIME = "Fri Dec 17, 2021 at 14:13:35"
 )
 
