@@ -114,6 +114,15 @@ func TestCart(t *testing.T) {
 			},
 			nosym: false,
 		},
+		{
+			name:   "nh3",
+			infile: "tests/cart/nh3/test.in",
+			want: []float64{
+				3435.8, 3435.7, 3341.7,
+				1628.3, 1628.0, 979.6,
+			},
+			nosym: true,
+		},
 	}
 	for _, test := range tests {
 		*nosym = test.nosym

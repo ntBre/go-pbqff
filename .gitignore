@@ -3,7 +3,7 @@
 /profiling/
 /qsub/qsub
 *~
-/tests/*/*.json
+/tests/**/*.json
 /tests/**/fort.*
 /tests/**/pts
 /tests/**/spectro*.out

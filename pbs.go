@@ -77,7 +77,8 @@ func (p PBS) Submit(filename string) (jobid string) {
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
 	for i := maxRetries; i >= 0 && err != nil; i-- {
-		fmt.Printf("Submit: having trouble submitting %s with %v\n", filename, err)
+		fmt.Printf("Submit: having trouble submitting %s with %v\n",
+			filename, err)
 		time.Sleep(time.Second * time.Duration(maxTime>>i))
 		cmd := exec.Command(qsub, "-f", filename)
 		cmd.Stderr = os.Stderr
