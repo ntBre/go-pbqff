@@ -1,0 +1,18 @@
+program=cart
+queueType=maple
+geomType=xyz
+geometry={
+4
+CCSD(T)-F12/CC-PVTZ-F12  ENERGY=-56.49980278
+H          0.9372476886        0.3147300674        0.0000000000
+N         -0.0000081497       -0.0679517874        0.0000000000
+H         -0.4685672185        0.3147763140       -0.8117053085
+H         -0.4685672185        0.3147763140        0.8117053085
+}
+deriv=4
+flags=noopt
+sleepint=1
+joblimit=1024
+chunksize=256
+checkint=5000
+spectro=../../../bin/spectro
