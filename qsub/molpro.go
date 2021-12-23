@@ -2,8 +2,6 @@ package main
 
 import (
 	"bufio"
-	_ "embed"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -21,50 +19,14 @@ type Calc struct {
 	Gradient []float64
 }
 
-//go:embed cart.json
-var cart []byte
-
-//go:embed sic.json
-var sic []byte
-
-//go:embed grad.json
-var grad []byte
-
-//go:embed h2co_test.json
-var h2co []byte
-
-//go:embed nh3_test.json
-var nh3 []byte
-
 var geoms = make(map[string]Calc)
 
 func init() {
-	err := json.Unmarshal(cart, &geoms)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error unmarshalling cart json")
-		os.Exit(2)
-	}
-	// Unmarshal reuses the map, keeping old entries
-	err = json.Unmarshal(sic, &geoms)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error unmarshalling sic json")
-		os.Exit(2)
-	}
-	err = json.Unmarshal(h2co, &geoms)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error unmarshalling h2co json")
-		os.Exit(2)
-	}
-	err = json.Unmarshal(nh3, &geoms)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error unmarshalling nh3 json")
-		os.Exit(2)
-	}
-	// grad last in case there's overlap we want the gradient too
-	err = json.Unmarshal(grad, &geoms)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error unmarshalling json")
-		os.Exit(2)
+	// grad last in case of overlap
+	for _, m := range []map[string]Calc{sic, cart, h2co, nh3, grad} {
+		for k, v := range m {
+			geoms[k] = v
+		}
 	}
 }
 
