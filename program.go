@@ -63,6 +63,8 @@ func BuildPoints(p Program, q Queue, filename string, atomNames []string,
 				if li == len(lines)-1 {
 					fmt.Fprintf(&buf, "%s %s\n", atomNames[ind], line)
 				}
+				// TODO fix this like I did for the
+				// Cartesians
 				for len(cenergies) <= geom {
 					cenergies = append(cenergies, CountFloat{Count: 0})
 				}
@@ -287,9 +289,6 @@ func Derivative(prog Program, dir string, names []string,
 			Coords: coords,
 		}
 		for _, v := range Index(ncoords, false, p.Index...) {
-			for len(*target) <= v {
-				*target = append(*target, CountFloat{Val: 0, Count: 0})
-			}
 			if !(*target)[v].Loaded {
 				(*target)[v].Count = len(protos)
 			}
@@ -314,11 +313,6 @@ func Derivative(prog Program, dir string, names []string,
 					E2dIndex(ncoords, -p.Steps[0], -p.Steps[1])...)
 			}
 			for _, v := range ranger {
-				// also have to append to e2d, but
-				// count is always 1 there
-				for len(e2d) <= v {
-					e2d = append(e2d, CountFloat{Val: 0, Count: 1})
-				}
 				// if it was loaded, the count is
 				// already 0 from the checkpoint
 				if !e2d[v].Loaded {
@@ -410,9 +404,6 @@ func GradDerivative(prog Program, dir string, names []string,
 				Slice: target,
 				Index: index,
 			})
-			for len(*target) <= index {
-				*target = append(*target, CountFloat{})
-			}
 			// every time this index is added as a target,
 			// increment its count
 			if !(*target)[index].Loaded {

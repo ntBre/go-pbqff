@@ -88,9 +88,6 @@ func TestCart(t *testing.T) {
 		*test = false
 		qsub = "qsub"
 		submitted = 0
-		fc2 = *new([]CountFloat)
-		fc3 = *new([]CountFloat)
-		fc4 = *new([]CountFloat)
 		*nosym = tmpsym
 	}()
 	tests := []struct {
@@ -126,10 +123,6 @@ func TestCart(t *testing.T) {
 	}
 	for _, test := range tests {
 		*nosym = test.nosym
-		e2d = *new([]CountFloat)
-		fc2 = *new([]CountFloat)
-		fc3 = *new([]CountFloat)
-		fc4 = *new([]CountFloat)
 		Conf = NewConfig()
 		submitted = 0
 		prog, _, _ := initialize(test.infile)
@@ -139,13 +132,11 @@ func TestCart(t *testing.T) {
 		E0 := prog.Run(none, queue)
 		names, coords := XYZGeom(cart)
 		natoms := len(names)
+		other3, other4 := initArrays(natoms)
 		ncoords := len(coords)
 		mol := symm.ReadXYZ(strings.NewReader(cart))
 		gen := BuildCartPoints(prog, queue, "pts/inp", names, coords, mol)
 		Drain(prog, queue, ncoords, E0, gen)
-		N3N := natoms * 3 // from spectro manual pg 12
-		other3 := N3N * (N3N + 1) * (N3N + 2) / 6
-		other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24
 		PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(prog.GetDir(), "fort.15"))
 		PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(), "fort.30"))
 		PrintFortFile(fc4, natoms, other4, filepath.Join(prog.GetDir(), "fort.40"))
@@ -195,14 +186,12 @@ func TestGrad(t *testing.T) {
 	E0 := 0.0
 	names, coords := XYZGeom(cart)
 	natoms := len(names)
+	other3, other4 := initArrays(natoms)
 	ncoords := len(coords)
 	queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
 	mol := symm.ReadXYZ(strings.NewReader(cart))
 	gen := BuildGradPoints(prog, queue, "pts/inp", names, coords, mol)
 	Drain(prog, queue, ncoords, E0, gen)
-	N3N := natoms * 3 // from spectro manual pg 12
-	other3 := N3N * (N3N + 1) * (N3N + 2) / 6
-	other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24
 	PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(prog.GetDir(), "fort.15"))
 	PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(), "fort.30"))
 	PrintFortFile(fc4, natoms, other4, filepath.Join(prog.GetDir(), "fort.40"))

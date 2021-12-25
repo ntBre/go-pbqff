@@ -627,6 +627,7 @@ func TestDerivative(t *testing.T) {
 		for i := range test.coords {
 			deltas[i] = 1.0
 		}
+		initArrays(3 * len(test.coords))
 		Conf.Set(Deltas, deltas)
 		mol := symm.ReadXYZ(strings.NewReader(ZipXYZ(test.names, test.coords)))
 		calcs := Derivative(prog, dir, test.names, test.coords,
@@ -763,7 +764,7 @@ func TestBuildCartPoints(t *testing.T) {
 	defer func() {
 		fc2, fc3, fc4 = t2, t3, t4
 	}()
-	fc2, fc3, fc4 = *new([]CountFloat), *new([]CountFloat), *new([]CountFloat)
+	initArrays(len(coords))
 	want := 2983
 	mp := new(Molpro)
 	dir := t.TempDir()
@@ -892,7 +893,7 @@ func TestBuildGradPoints(t *testing.T) {
 	defer func() {
 		fc2, fc3, fc4 = t2, t3, t4
 	}()
-	fc2, fc3, fc4 = *new([]CountFloat), *new([]CountFloat), *new([]CountFloat)
+	initArrays(len(coords))
 	want := 704
 	mp := new(Molpro)
 	cart := ZipXYZ(names, coords)

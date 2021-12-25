@@ -559,6 +559,21 @@ func PrintFortFile(fc []CountFloat, natoms, other int, filename string) int {
 	return len(fc)
 }
 
+// initArrays initializes the global force constant and second
+// derivative arrays to the right size based on the number of
+// atoms. The formulas for the dimensions of the arrays are from the
+// SPECTRO manual on page 12
+func initArrays(natoms int) (int, int) {
+	N3N := natoms * 3
+	other3 := N3N * (N3N + 1) * (N3N + 2) / 6
+	other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24
+	fc2 = make([]CountFloat, N3N*N3N)
+	fc3 = make([]CountFloat, other3)
+	fc4 = make([]CountFloat, other4)
+	e2d = make([]CountFloat, 4*N3N*N3N)
+	return other3, other4
+}
+
 func main() {
 	StartCPU = GetCPU()
 	defer CatchPanic()
@@ -655,23 +670,29 @@ func main() {
 
 	var gen func() ([]Calc, bool)
 
+	switch {
+	case DoSIC() && *irdy == "":
+		names = intder.ConvertCart(cart)
+	case DoSIC():
+		names = strings.Fields(*irdy)
+	default:
+		names, coords = XYZGeom(cart)
+	}
+	natoms = len(names)
+	other3, other4 := initArrays(natoms)
+
 	if DoSIC() {
-		if *irdy == "" {
-			names = intder.ConvertCart(cart)
-		} else {
-			names = strings.Fields(*irdy)
-		}
 		intder.WritePts("pts/intder.in")
 		RunIntder("pts/intder")
 		gen = BuildPoints(prog, queue, "pts/file07", names, true)
 	} else {
-		names, coords = XYZGeom(cart)
-		natoms = len(names)
 		ncoords = len(coords)
 		if DoCart() {
-			gen = BuildCartPoints(prog, queue, "pts/inp", names, coords, mol)
+			gen = BuildCartPoints(prog, queue, "pts/inp", names,
+				coords, mol)
 		} else if DoGrad() {
-			gen = BuildGradPoints(prog, queue, "pts/inp", names, coords, mol)
+			gen = BuildGradPoints(prog, queue, "pts/inp", names,
+				coords, mol)
 		}
 	}
 
@@ -711,11 +732,9 @@ func main() {
 		if mpHarm == nil || len(mpHarm) < len(res.Harm) {
 			mpHarm = make([]float64, spec.Nfreqs)
 		}
-		Summarize(os.Stdout, res.ZPT, mpHarm, intderHarms, res.Harm, res.Fund, res.Corr)
+		Summarize(os.Stdout, res.ZPT, mpHarm, intderHarms, res.Harm,
+			res.Fund, res.Corr)
 	} else {
-		N3N := natoms * 3 // from spectro manual pg 12
-		other3 := N3N * (N3N + 1) * (N3N + 2) / 6
-		other4 := N3N * (N3N + 1) * (N3N + 2) * (N3N + 3) / 24
 		PrintFortFile(fc2, natoms, 6*natoms, "fort.15")
 		if Conf.Int(Deriv) > 2 {
 			PrintFortFile(fc3, natoms, other3, "fort.30")
