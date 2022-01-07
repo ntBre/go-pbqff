@@ -48,6 +48,7 @@ var (
 	pts        = flag.Bool("pts", false, "start by running pts on optimized geometry from opt")
 	read       = flag.Bool("r", false, "read reference energy from pts/inp/ref.out")
 	test       = flag.Bool("test", false, "shorten wait for signal")
+	version    = flag.Bool("version", false, "print the version and exit")
 )
 
 var stackDump = func() {
