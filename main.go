@@ -575,14 +575,14 @@ func initArrays(natoms int) (int, int) {
 }
 
 func main() {
-	if *version {
-		fmt.Printf("pbqff version: %s\ncompiled at %s\n", VERSION, COMP_TIME)
-		os.Exit(0)
-	}
 	StartCPU = GetCPU()
 	defer CatchPanic()
 	go CatchKill()
 	args := ParseFlags()
+	if *version {
+		fmt.Printf("pbqff version: %s\ncompiled at %s\n", VERSION, COMP_TIME)
+		os.Exit(0)
+	}
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "pbqff: no input file supplied\n")
 		os.Exit(1)
