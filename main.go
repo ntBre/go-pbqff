@@ -439,10 +439,6 @@ func RunFreqs(intder *Intder, anp *Anpass) {
 }
 
 func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
-	if *version {
-		fmt.Printf("pbqff version: %s\ncompiled at %s\n", VERSION, COMP_TIME)
-		os.Exit(0)
-	}
 	if !*test {
 		DupOutErr(infile)
 	}
@@ -579,6 +575,10 @@ func initArrays(natoms int) (int, int) {
 }
 
 func main() {
+	if *version {
+		fmt.Printf("pbqff version: %s\ncompiled at %s\n", VERSION, COMP_TIME)
+		os.Exit(0)
+	}
 	StartCPU = GetCPU()
 	defer CatchPanic()
 	go CatchKill()
