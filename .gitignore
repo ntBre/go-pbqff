@@ -12,3 +12,4 @@
 /pbqff.test
 /tests/**/fort.*
 /tests/cart/h2co/rot.dat
+/version.go
