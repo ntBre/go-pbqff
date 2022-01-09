@@ -25,7 +25,7 @@ beta: pbqff
 alpha: pbqff
 	scp -C pbqff 'woods:Programs/pbqff/alpha/.'
 
-test: qsub/qsub
+test: qsub/qsub version.go
 	go test . $(TESTFLAGS) $(FLAGS)
 
 bench: qsub
@@ -44,9 +44,11 @@ clean:
 	rm -rf tests/sic/opt tests/sic/freq tests/sic/freqs tests/sic/pts
 	rm -rf tests/cart/fort.* tests/cart/spectro.out
 
-pbqff: *.go
-	./scripts/version.pl
+pbqff: *.go version.go
 	go build .
+
+version.go: .git
+	./scripts/version.pl
 
 eland: pbqff
 	scp -C pbqff 'eland:programs/pbqff/.'
