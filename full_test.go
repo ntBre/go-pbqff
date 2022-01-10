@@ -94,12 +94,14 @@ func TestCart(t *testing.T) {
 		name   string
 		infile string
 		want   []float64
+		harm   []float64
 		nosym  bool
 	}{
 		{
 			name:   "h2o",
 			infile: "tests/cart/h2o/cart.in",
 			want:   []float64{3753.2, 3656.5, 1598.5},
+			harm:   []float64{3943.690, 3833.702, 1650.933},
 			nosym:  false,
 		},
 		{
@@ -108,6 +110,10 @@ func TestCart(t *testing.T) {
 			want: []float64{
 				2826.6, 2778.4, 1747.8,
 				1499.4, 1246.8, 1167.0,
+			},
+			harm: []float64{
+				3004.590, 2932.596, 1778.656,
+				1534.098, 1269.765, 1186.913,
 			},
 			nosym: false,
 		},
@@ -118,7 +124,11 @@ func TestCart(t *testing.T) {
 				3435.8, 3435.7, 3341.7,
 				1628.3, 1628.0, 979.6,
 			},
-			nosym: true,
+			harm: []float64{
+				3610.420, 3610.299, 3478.498,
+				1675.554, 1675.300, 1056.025,
+			},
+			nosym: false,
 		},
 	}
 	for _, test := range tests {
@@ -159,8 +169,12 @@ func TestCart(t *testing.T) {
 			errExit(err, "running spectro")
 		}
 		res := summarize.SpectroFile(filepath.Join(prog.GetDir(), "spectro2.out"))
+		if !compfloat(res.Harm, test.harm, 1e-1) {
+			t.Errorf("harm: got %v, wanted %v\n", res.Harm, test.harm)
+		}
+		// TODO also test rots for cubic fc accuracy
 		if !compfloat(res.Corr, test.want, 1e-1) {
-			t.Errorf("got %v, wanted %v\n", res.Corr, test.want)
+			t.Errorf("fund: got %v, wanted %v\n", res.Corr, test.want)
 		}
 	}
 }

@@ -19,6 +19,8 @@ github.com/ntBre/anpass v0.0.0-20211013203935-8bd9043b79df h1:jD6xFgGTAK8VJcI3Iv
 github.com/ntBre/anpass v0.0.0-20211013203935-8bd9043b79df/go.mod h1:bCkUBINywnNClqXwsnfNPPj7V7w0j+NgQh2NkwHZ3NA=
 github.com/ntBre/chemutils v0.0.0-20211110195811-52cc9b72579c h1:YfiIG02pD6xZEsX9+Ot7OgW+uZVYGmoJKs98LeXuPlc=
 github.com/ntBre/chemutils v0.0.0-20211110195811-52cc9b72579c/go.mod h1:Hj3n1YUp0EzvT27FmnO7c1XdfB5Gi3f8cdawtBZJy40=
+github.com/ntBre/chemutils v0.0.0-20220110200615-5e21b250c202 h1:MTKnpHXjiTEDnZetcZFgLQ7fwxHQf3rGFFQBCTJxA9g=
+github.com/ntBre/chemutils v0.0.0-20220110200615-5e21b250c202/go.mod h1:Hj3n1YUp0EzvT27FmnO7c1XdfB5Gi3f8cdawtBZJy40=
 github.com/phpdave11/gofpdf v1.4.2/go.mod h1:zpO6xFn9yxo3YLyMvW8HcKWVdbNqgIfOOp2dXMnm1mY=
 github.com/phpdave11/gofpdi v1.0.12/go.mod h1:vBmVV0Do6hSBHC8uKUQ71JGW+ZGQq74llk/7bXwjDoI=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
