@@ -1,3 +1,5 @@
+SHORT=0
+FLAGS=-v -failfast
 ifeq ($(SHORT),1)
 TESTFLAGS :=
 else

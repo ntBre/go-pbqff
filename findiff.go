@@ -103,12 +103,19 @@ func Make2D(mol symm.Molecule, i, j int) []ProtoCalc {
 }
 
 // Make3D_2_1 handles the case where i == j and i != k
-func Make3D_2_1(i, j, k int, scale float64, mol symm.Molecule) []ProtoCalc {
+func Make3D_2_1(i, _, k int, scale float64, mol symm.Molecule) []ProtoCalc {
 	// E(+i+i+k) - 2*E(+k) + E(-i-i+k) - E(+i+i-k) + 2*E(-k) - E(-i-i-k) / (2d)^3
 	switch {
 	case mol.IsC2v() && OOP(k, mol):
 		return []ProtoCalc{
 			None,
+		}
+	case mol.IsCs() && OOP(k, mol):
+		return []ProtoCalc{
+			{1, HashName(), []int{i, i, k}, []int{i, i, k}, scale},
+			{1, HashName(), []int{-i, -i, k}, []int{i, i, k}, scale},
+			{-1, HashName(), []int{i, i, -k}, []int{i, i, k}, scale},
+			{-1, HashName(), []int{-i, -i, -k}, []int{i, i, k}, scale},
 		}
 	case mol.IsC2v() && OOP(i, mol):
 		return []ProtoCalc{
@@ -136,9 +143,10 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 			Conf.FlSlice(Deltas)[j-1] *
 			Conf.FlSlice(Deltas)[k-1])
 	switch {
+	// all same
 	case i == j && i == k:
 		// E(+i+i+i) - 3*E(+i) + 3*E(-i) - E(-i-i-i) / (2d)^3
-		if mol.IsC2v() && OOP(i, mol) {
+		if OOP(i, mol) {
 			return []ProtoCalc{
 				None,
 			}
@@ -149,27 +157,30 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 			{3, HashName(), []int{-i}, []int{i, i, i}, scale},
 			{-1, HashName(), []int{-i, -i, -i}, []int{i, i, i}, scale},
 		}
+	// 2 and 1
 	case i == j && i != k:
 		return Make3D_2_1(i, j, k, scale, mol)
 	case i == k && i != j:
 		return Make3D_2_1(i, k, j, scale, mol)
 	case j == k && i != j:
 		return Make3D_2_1(j, k, i, scale, mol)
+	// all different
 	case i != j && i != k && j != k:
 		switch {
-		case mol.IsC2v() && OOP(i, mol) && OOP(j, mol) && OOP(k, mol):
+		// i j k -> 3 choose 3
+		case OOP(i, mol) && OOP(j, mol) && OOP(k, mol):
 			return []ProtoCalc{
 				None,
 			}
-		case mol.IsC2v() && OOP(i, mol) && OOP(j, mol):
-			fallthrough
-		case mol.IsC2v() && OOP(i, mol) && OOP(k, mol):
+		// i j | i k -> 3 choose 2, combined with below
+		case mol.IsC2v() && OOP(i, mol) && (OOP(j, mol) || OOP(k, mol)):
 			return []ProtoCalc{
 				{2, HashName(), []int{i, j, k}, []int{i, j, k}, scale},
 				{-2, HashName(), []int{i, -j, k}, []int{i, j, k}, scale},
 				{-2, HashName(), []int{i, j, -k}, []int{i, j, k}, scale},
 				{2, HashName(), []int{i, -j, -k}, []int{i, j, k}, scale},
 			}
+		// j k
 		case mol.IsC2v() && OOP(j, mol) && OOP(k, mol):
 			return []ProtoCalc{
 				{2, HashName(), []int{i, j, k}, []int{i, j, k}, scale},
@@ -177,29 +188,10 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 				{2, HashName(), []int{-i, -j, k}, []int{i, j, k}, scale},
 				{-2, HashName(), []int{-i, j, k}, []int{i, j, k}, scale},
 			}
-		case mol.IsC2v() && OOP(i, mol):
-			fallthrough
-		case mol.IsC2v() && OOP(j, mol):
-			fallthrough
-		case mol.IsC2v() && OOP(k, mol):
+		// i | j | k -> 3 choose 1
+		case mol.IsC2v() && (OOP(i, mol) || OOP(j, mol) || OOP(k, mol)):
 			return []ProtoCalc{
 				None,
-			}
-			// Not sure if this is as good as it gets
-		case mol.IsCs() && OOP(i, mol):
-			fallthrough
-		case mol.IsCs() && OOP(j, mol):
-			fallthrough
-		case mol.IsCs() && OOP(k, mol):
-			return []ProtoCalc{
-				{1, HashName(), []int{i, j, k}, []int{i, j, k}, scale},
-				{-1, HashName(), []int{i, -j, k}, []int{i, j, k}, scale},
-				{-1, HashName(), []int{-i, j, k}, []int{i, j, k}, scale},
-				{1, HashName(), []int{-i, -j, k}, []int{i, j, k}, scale},
-				{-1, HashName(), []int{i, j, -k}, []int{i, j, k}, scale},
-				{1, HashName(), []int{i, -j, -k}, []int{i, j, k}, scale},
-				{1, HashName(), []int{-i, j, -k}, []int{i, j, k}, scale},
-				{-1, HashName(), []int{-i, -j, -k}, []int{i, j, k}, scale},
 			}
 		}
 		return []ProtoCalc{
@@ -219,7 +211,7 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 
 func Make4D_3_1(i, j, k, l int, scale float64, mol symm.Molecule) []ProtoCalc {
 	switch {
-	case mol.IsC2v() && OOP(i, mol) && OOP(l, mol):
+	case OOP(i, mol) && OOP(l, mol):
 		return []ProtoCalc{
 			{2, HashName(), []int{i, i, i, l}, []int{i, i, i, l}, scale},
 			{-6, HashName(), []int{i, l}, []int{i, i, i, l}, scale},
