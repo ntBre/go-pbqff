@@ -98,26 +98,26 @@ func TestCart(t *testing.T) {
 		rots   []float64
 		nosym  bool
 	}{
-		// {
-		// 	name:   "h2o",
-		// 	infile: "tests/cart/h2o/cart.in",
-		// 	want:   []float64{3753.2, 3656.5, 1598.5},
-		// 	harm:   []float64{3943.690, 3833.702, 1650.933},
-		// 	nosym:  false,
-		// },
-		// {
-		// 	name:   "h2co",
-		// 	infile: "tests/cart/h2co/test.in",
-		// 	want: []float64{
-		// 		2826.6, 2778.4, 1747.8,
-		// 		1499.4, 1246.8, 1167.0,
-		// 	},
-		// 	harm: []float64{
-		// 		3004.590, 2932.596, 1778.656,
-		// 		1534.098, 1269.765, 1186.913,
-		// 	},
-		// 	nosym: false,
-		// },
+		{
+			name:   "h2o",
+			infile: "tests/cart/h2o/cart.in",
+			want:   []float64{3753.2, 3656.5, 1598.5},
+			harm:   []float64{3943.690, 3833.702, 1650.933},
+			nosym:  false,
+		},
+		{
+			name:   "h2co",
+			infile: "tests/cart/h2co/test.in",
+			want: []float64{
+				2826.6, 2778.4, 1747.8,
+				1499.4, 1246.8, 1167.0,
+			},
+			harm: []float64{
+				3004.590, 2932.596, 1778.656,
+				1534.098, 1269.765, 1186.913,
+			},
+			nosym: false,
+		},
 		{
 			name:   "nh3",
 			infile: "tests/cart/nh3/test.in",
