@@ -201,7 +201,7 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 	}
 }
 
-func Make4D_3_1(i, j, k, l int, scale float64, mol symm.Molecule) []ProtoCalc {
+func Make4D_3_1(i, _, _, l int, scale float64, mol symm.Molecule) []ProtoCalc {
 	switch {
 	case OOP(i, mol) && OOP(l, mol):
 		return []ProtoCalc{
@@ -225,9 +225,9 @@ func Make4D_3_1(i, j, k, l int, scale float64, mol symm.Molecule) []ProtoCalc {
 	}
 }
 
-func Make4D_2_1_1(i, j, k, l int, scale float64, mol symm.Molecule) []ProtoCalc {
+func Make4D_2_1_1(i, _, k, l int, scale float64, mol symm.Molecule) []ProtoCalc {
 	switch {
-	case mol.IsC2v() && OOP(i, mol) && OOP(l, mol) && OOP(k, mol):
+	case OOP(i, mol) && OOP(l, mol) && OOP(k, mol):
 		return []ProtoCalc{
 			{2, HashName(), []int{i, i, k, l}, []int{i, i, k, l}, scale},
 			{-4, HashName(), []int{k, l}, []int{i, i, k, l}, scale},
