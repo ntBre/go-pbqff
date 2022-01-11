@@ -784,6 +784,7 @@ func TestBuildCartPoints(t *testing.T) {
 		got = append(got, hold...)
 	}
 	if lgot := len(got); lgot != want {
+		fmt.Println(mol.Group)
 		t.Errorf("got %d, wanted %d calcs\n", lgot, want)
 	}
 }

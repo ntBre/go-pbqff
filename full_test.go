@@ -103,6 +103,7 @@ func TestCart(t *testing.T) {
 			infile: "tests/cart/h2o/cart.in",
 			want:   []float64{3753.2, 3656.5, 1598.5},
 			harm:   []float64{3943.690, 3833.702, 1650.933},
+			rots:   []float64{14.50450, 9.26320, 27.65578},
 			nosym:  false,
 		},
 		{
@@ -115,6 +116,9 @@ func TestCart(t *testing.T) {
 			harm: []float64{
 				3004.590, 2932.596, 1778.656,
 				1534.098, 1269.765, 1186.913,
+			},
+			rots: []float64{
+				1.29151, 1.13102, 9.39885,
 			},
 			nosym: false,
 		},
@@ -135,7 +139,7 @@ func TestCart(t *testing.T) {
 			nosym: false,
 		},
 	}
-	for _, test := range tests {
+	for _, test := range tests[2:] {
 		*nosym = test.nosym
 		Conf = NewConfig()
 		submitted = 0
@@ -182,6 +186,7 @@ func TestCart(t *testing.T) {
 				test.name, res.Rots[0], test.rots)
 		}
 		if !compfloat(res.Corr, test.want, 1e-1) {
+			fmt.Println("non-corr: ", res.Fund)
 			t.Errorf("%s fund: got\n%v, wanted\n%v\n",
 				test.name, res.Corr, test.want)
 		}
