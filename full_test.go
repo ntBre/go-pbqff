@@ -128,7 +128,7 @@ func TestCart(t *testing.T) {
 				3610.420, 3610.299, 3478.498,
 				1675.554, 1675.300, 1056.025,
 			},
-			nosym: true,
+			nosym: false,
 		},
 	}
 	for _, test := range tests {
@@ -170,11 +170,13 @@ func TestCart(t *testing.T) {
 		}
 		res := summarize.SpectroFile(filepath.Join(prog.GetDir(), "spectro2.out"))
 		if !compfloat(res.Harm, test.harm, 1e-1) {
-			t.Errorf("harm: got %v, wanted %v\n", res.Harm, test.harm)
+			t.Errorf("%s harm: got\n%v, wanted\n%v\n",
+				test.name, res.Harm, test.harm)
 		}
 		// TODO also test rots for cubic fc accuracy
 		if !compfloat(res.Corr, test.want, 1e-1) {
-			t.Errorf("fund: got %v, wanted %v\n", res.Corr, test.want)
+			t.Errorf("%s fund: got\n%v, wanted\n%v\n",
+				test.name, res.Corr, test.want)
 		}
 	}
 }

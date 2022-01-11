@@ -1,6 +1,8 @@
 package main
 
 import (
+	"math"
+
 	symm "github.com/ntBre/chemutils/symmetry"
 )
 
@@ -24,10 +26,20 @@ func OOP(i int, mol symm.Molecule) bool {
 	}
 	// axis out of the main plane
 	ax := int(mol.Planes[0].Not())
-	if ix%3 == ax {
-		return true
+	if ix%3 != ax {
+		return false
 	}
-	return false
+	if !On(mol.Planes[0], mol.Atoms[ix/3]) {
+		return false
+	}
+	return true
+}
+
+func On(plane symm.Plane, atom symm.Atom) bool {
+	if math.Abs(atom.Coord[plane.Not()]) > 1e-10 {
+		return false
+	}
+	return true
 }
 
 // Make1D makes the Job slices for finite differences first
@@ -54,7 +66,8 @@ func Make2D(mol symm.Molecule, i, j int) []ProtoCalc {
 	switch {
 	case i == j:
 		// E(+i+i) - 2*E(0) + E(-i-i) / (2d)^2
-		if OOP(i, mol) {
+		switch {
+		case OOP(i, mol):
 			return []ProtoCalc{
 				{2, HashName(), []int{i, i}, []int{i, i}, scale},
 				{-2, "E0", []int{}, []int{i, i}, scale},
@@ -67,12 +80,13 @@ func Make2D(mol symm.Molecule, i, j int) []ProtoCalc {
 		}
 	case i != j:
 		// E(+i+j) - E(+i-j) - E(-i+j) + E(-i-j) / (2d)^2
-		if OOP(i, mol) && OOP(j, mol) {
+		switch {
+		case OOP(i, mol) && OOP(j, mol):
 			return []ProtoCalc{
 				{2, HashName(), []int{i, j}, []int{i, j}, scale},
 				{-2, HashName(), []int{i, -j}, []int{i, j}, scale},
 			}
-		} else if OOP(i, mol) || OOP(j, mol) {
+		case mol.IsC2v() && (OOP(i, mol) || OOP(j, mol)):
 			return []ProtoCalc{
 				{0, "E0", []int{i, j}, []int{}, scale},
 			}

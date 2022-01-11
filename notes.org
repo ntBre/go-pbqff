@@ -1,3 +1,9 @@
+* Point counts with symmetry
+  | Molecule | With | Without | Reduction |
+  |----------+------+---------+-----------|
+  | H2O      | 2182 |    5784 |       62% |
+  | H2CO     | 6240 |   16904 |       63% |
+
 * main logic
 if DoOpt
    format geometry as molpro zmat

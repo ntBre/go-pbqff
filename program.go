@@ -297,6 +297,10 @@ func Derivative(prog Program, dir string, names []string,
 		}
 		if len(p.Steps) == 2 && ndims == 2 {
 			ranger := E2dIndex(ncoords, p.Steps...)
+			// TODO I really don't like having to do this
+			// OOP check again. it would be nice to keep
+			// all of that logic in one place, namely in
+			// findiff since that's where most of it is
 			switch {
 			case p.Steps[0] == p.Steps[1] && OOP(p.Steps[0], mol):
 				ranger = append(ranger,
@@ -304,7 +308,7 @@ func Derivative(prog Program, dir string, names []string,
 			case OOP(p.Steps[0], mol) && OOP(p.Steps[1], mol):
 				ranger = append(ranger,
 					E2dIndex(ncoords, -p.Steps[0], -p.Steps[1])...)
-			case OOP(p.Steps[0], mol) || OOP(p.Steps[1], mol):
+			case mol.IsC2v() && (OOP(p.Steps[0], mol) || OOP(p.Steps[1], mol)):
 				ranger = append(ranger,
 					E2dIndex(ncoords, p.Steps[0], -p.Steps[1])...)
 				ranger = append(ranger,
