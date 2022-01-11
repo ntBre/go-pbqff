@@ -111,7 +111,6 @@ var (
 	fc2 []CountFloat
 	fc3 []CountFloat
 	fc4 []CountFloat
-	e2d []CountFloat
 )
 
 // SIC array
@@ -220,11 +219,9 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 			} else if job.Result != 0 {
 				energy = job.Result
 				success = true
-			} else if job.Src != nil {
-				if job.Src.Len() > job.Src.Index && job.Src.Value() != 0 {
-					energy = job.Src.Value()
-					success = true
-				}
+			} else if job.Src != nil && job.Src.Status == Done {
+				energy = job.Src.Value
+				success = true
 			} else if energy, t, gradients,
 				err = prog.ReadOut(job.Name + OutExt); err == nil {
 				success = true
@@ -264,6 +261,10 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 				}
 			}
 			if success {
+				if job.Src != nil && job.Src.Status == NotCalculated {
+					job.Src.Status = Done
+					job.Src.Value = energy
+				}
 				points[nJobs-1], points[i] = points[i], points[nJobs-1]
 				nJobs--
 				points = points[:nJobs]
@@ -571,7 +572,6 @@ func initArrays(natoms int) (int, int) {
 	fc2 = make([]CountFloat, N3N*N3N)
 	fc3 = make([]CountFloat, other3)
 	fc4 = make([]CountFloat, other4)
-	e2d = make([]CountFloat, 4*N3N*N3N)
 	return other3, other4
 }
 
@@ -772,9 +772,6 @@ func main() {
 				fmt.Println(err)
 			}
 		}
-	}
-	if *debug {
-		PrettyPrint(e2d)
 	}
 	fmt.Printf("total CPU time used: %.3f s\n", float64(GetCPU()-StartCPU)/1e9)
 	if *memprofile != "" {

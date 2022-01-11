@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	arrs   = []*[]CountFloat{&e2d, &fc2, &fc3, &fc4}
-	fnames = []string{"e2d.json", "fc2.json", "fc3.json", "fc4.json"}
+	arrs   = []*[]CountFloat{&fc2, &fc3, &fc4}
+	fnames = []string{"fc2.json", "fc3.json", "fc4.json"}
 )
 
 // MakeCheckpoint makes a checkpoint

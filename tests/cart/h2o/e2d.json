@@ -40,14 +40,14 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369829733835,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": -76.369823153998,
@@ -85,7 +85,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369829999968,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -130,7 +130,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369815628951,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -142,7 +142,7 @@
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": -76.369833978347,
@@ -175,7 +175,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369810322576,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -220,7 +220,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369818826017,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -237,7 +237,7 @@
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": -76.369829644368,
@@ -265,7 +265,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369821166888,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -310,7 +310,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369829644368,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -332,7 +332,7 @@
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": -76.369808959442,
@@ -355,7 +355,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369830089915,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -400,7 +400,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369775953437,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -427,7 +427,7 @@
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": -76.369788939501,
@@ -445,7 +445,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.36982300552,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -490,7 +490,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369830003312,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -522,7 +522,7 @@
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": -76.369819424704,
@@ -535,7 +535,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369789069314,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -575,12 +575,12 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369823153998,
+		"Val": 0,
 		"Count": 0,
-		"Loaded": true
+		"Loaded": false
 	},
 	{
-		"Val": -76.369829656253,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -617,15 +617,15 @@
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
-	},
-	{
-		"Val": -76.369822628675,
-		"Count": 0,
 		"Loaded": true
 	},
 	{
-		"Val": -76.369830079306,
+		"Val": 0,
+		"Count": 0,
+		"Loaded": false
+	},
+	{
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -660,17 +660,17 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369823153998,
+		"Val": 0,
 		"Count": 0,
-		"Loaded": true
+		"Loaded": false
 	},
 	{
-		"Val": -76.369772384914,
+		"Val": 0,
 		"Count": 0,
-		"Loaded": true
+		"Loaded": false
 	},
 	{
-		"Val": -76.369834276457,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -705,106 +705,6 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369823153998,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": false
-	},
-	{
-		"Val": -76.369791833181,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369829733835,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369815628951,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369818826017,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369829644368,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369775953437,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369830003312,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369829656253,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369834276457,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369800524079,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369829733835,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369810387371,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369821166888,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369829644368,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369822974716,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369788595563,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369829656254,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369792496767,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
 		"Val": 0,
 		"Count": 0,
 		"Loaded": false
@@ -812,7 +712,107 @@
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
 	},
 	{
 		"Val": -76.369822628675,
@@ -850,7 +850,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369829733835,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -895,7 +895,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369829999968,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -907,7 +907,7 @@
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": -76.369834276456,
@@ -940,7 +940,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369810387371,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -985,7 +985,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369816263354,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -1002,7 +1002,7 @@
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": -76.369830089915,
@@ -1030,7 +1030,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369821166888,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -1075,7 +1075,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369819351043,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -1097,7 +1097,7 @@
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": -76.369808959442,
@@ -1120,7 +1120,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369829644368,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -1165,7 +1165,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369830089915,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -1192,7 +1192,7 @@
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": -76.369787919586,
@@ -1210,7 +1210,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369822974716,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -1255,7 +1255,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369774919565,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -1287,7 +1287,7 @@
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": -76.36981875236,
@@ -1300,7 +1300,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369788595563,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -1345,7 +1345,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369829732372,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -1382,15 +1382,15 @@
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
-	},
-	{
-		"Val": -76.369823153998,
-		"Count": 0,
 		"Loaded": true
 	},
 	{
-		"Val": -76.369829656254,
+		"Val": 0,
+		"Count": 0,
+		"Loaded": false
+	},
+	{
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -1430,12 +1430,12 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369822628675,
+		"Val": 0,
 		"Count": 0,
-		"Loaded": true
+		"Loaded": false
 	},
 	{
-		"Val": -76.369830079306,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -1470,17 +1470,17 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369822628675,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
 		"Val": 0,
 		"Count": 0,
 		"Loaded": false
 	},
 	{
-		"Val": -76.369792496767,
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -1515,59 +1515,9 @@
 		"Loaded": true
 	},
 	{
-		"Val": -76.369822628675,
+		"Val": 0,
 		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369773086014,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369833978347,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369829999968,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369810322576,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369821166888,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369830089915,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.36982300552,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369789069314,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369830079306,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -76.369791833181,
-		"Count": 0,
-		"Loaded": true
+		"Loaded": false
 	},
 	{
 		"Val": 0,
@@ -1575,47 +1525,97 @@
 		"Loaded": false
 	},
 	{
-		"Val": -76.369829999968,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
 	{
-		"Val": -76.369816263354,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
 	{
-		"Val": -76.369819351043,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
 	{
-		"Val": -76.369830089915,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
 	{
-		"Val": -76.369774919565,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
 	{
-		"Val": -76.369829732372,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
 	{
-		"Val": -76.369830079306,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
 	{
-		"Val": -76.369833978347,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
 	{
-		"Val": -76.369800777422,
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	}

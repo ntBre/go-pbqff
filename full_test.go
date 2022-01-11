@@ -2,10 +2,8 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"math"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -77,24 +75,6 @@ func compfloat(a, b []float64, eps float64) (int, float64, bool) {
 	return 0, 0, true
 }
 
-func dumpE2d(filename string) {
-	data, err := json.MarshalIndent(&e2d, "", "\t")
-	if err != nil {
-		panic(err)
-	}
-	os.WriteFile(filename, data, 0755)
-}
-
-func loadE2d(filename string) []CountFloat {
-	arr := make([]CountFloat, 0)
-	lines, _ := os.ReadFile(filename)
-	err := json.Unmarshal(lines, &arr)
-	if err != nil {
-		panic(err)
-	}
-	return arr
-}
-
 func TestCart(t *testing.T) {
 	if !testing.Short() {
 		t.Skip()
@@ -117,7 +97,6 @@ func TestCart(t *testing.T) {
 		want   []float64
 		harm   []float64
 		rots   []float64 // vib. avg. rots
-		e2d    []CountFloat
 		nosym  bool
 	}{
 		{
@@ -126,7 +105,6 @@ func TestCart(t *testing.T) {
 			want:   []float64{3753.2, 3656.5, 1598.5},
 			harm:   []float64{3943.690, 3833.702, 1650.933},
 			rots:   []float64{14.50450, 9.26320, 27.65578},
-			e2d:    loadE2d("testfiles/read/h2o.e2d.json"),
 			nosym:  false,
 		},
 		{
@@ -141,7 +119,6 @@ func TestCart(t *testing.T) {
 				1534.098, 1269.765, 1186.913,
 			},
 			rots:  []float64{1.29151, 1.13102, 9.39885},
-			e2d:   loadE2d("testfiles/read/h2co.e2d.json"),
 			nosym: false,
 		},
 		{
@@ -156,7 +133,6 @@ func TestCart(t *testing.T) {
 				1675.554, 1675.300, 1056.025,
 			},
 			rots:  []float64{9.89037, 6.22602, 9.88998},
-			e2d:   loadE2d("testfiles/read/nh3.e2d.json"),
 			nosym: false,
 		},
 	}
@@ -202,14 +178,6 @@ func TestCart(t *testing.T) {
 			t.Errorf("%s harm: got\n%v, wanted\n%v\n"+
 				"%dth element differs by %f\n",
 				test.name, res.Harm, test.harm,
-				i, v)
-		}
-		if i, v, ok := compfloat(
-			FloatsFromCountFloats(e2d),
-			FloatsFromCountFloats(test.e2d),
-			1e-12); !ok {
-			t.Errorf("e2d mismatch\n"+
-				"%dth element differs by %f\n",
 				i, v)
 		}
 		if i, v, ok := compfloat(res.Rots[0], test.rots, 1e-5); !ok {

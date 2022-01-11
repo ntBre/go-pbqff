@@ -18,7 +18,7 @@ type Calc struct {
 	SubFile  string
 	ChunkNum int
 	Resub    *Calc
-	Src      *Source
+	Src      *Energy
 	Scale    float64
 }
 
@@ -46,13 +46,12 @@ func (c *CountFloat) Add(t Target, scale float64, plus float64) {
 	c.Val += plus
 	c.Count--
 	if c.Count < 0 {
-		fmt.Fprintf(os.Stderr, "e2d: %p\n", &e2d)
 		fmt.Fprintf(os.Stderr, "fc2: %p\n", &fc2)
 		fmt.Fprintf(os.Stderr, "fc3: %p\n", &fc3)
 		fmt.Fprintf(os.Stderr, "fc4: %p\n", &fc4)
 		fmt.Fprintf(os.Stderr, "too many additions to %p\n", t.Slice)
 		panic("added to CountFloat too many times")
-	} else if c.Count == 0 && t.Slice != &e2d {
+	} else if c.Count == 0 {
 		c.Val *= scale
 	}
 }
@@ -67,20 +66,6 @@ func FloatsFromCountFloats(cfs []CountFloat) (floats []float64) {
 		floats = append(floats, cf.Val)
 	}
 	return
-}
-
-// A Source is CountFloat slice and an index in that slice
-type Source struct {
-	Slice *[]CountFloat
-	Index int
-}
-
-// Len returns the length of s's underlying slice
-func (s *Source) Len() int { return len(*s.Slice) }
-
-// Value returns s's underlying value
-func (s *Source) Value() float64 {
-	return (*s.Slice)[s.Index].Val
 }
 
 // Target combines a coefficient, target array, and the index into

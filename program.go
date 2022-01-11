@@ -263,26 +263,24 @@ func Derivative(prog Program, dir string, names []string,
 	var (
 		protos []ProtoCalc
 		target *[]CountFloat
-		ndims  int
 	)
 	ncoords := len(coords)
 	switch {
 	case k == 0 && l == 0:
 		protos = Make2D(mol, i, j)
 		target = &fc2
-		ndims = 2
 	case l == 0:
 		protos = Make3D(mol, i, j, k)
 		target = &fc3
-		ndims = 3
 	default:
 		protos = Make4D(mol, i, j, k, l)
 		target = &fc4
-		ndims = 4
 	}
 	for _, p := range protos {
 		coords := Step(coords, p.Steps...)
-		prog.FormatCart(ZipXYZ(names, coords))
+		geom := ZipXYZ(names, coords)
+		prog.FormatCart(geom)
+		_, status, value := Table.Lookup(geom)
 		temp := Calc{
 			Name:   filepath.Join(dir, p.Name),
 			Scale:  p.Scale,
@@ -295,47 +293,24 @@ func Derivative(prog Program, dir string, names []string,
 			temp.Targets = append(temp.Targets,
 				Target{Coeff: p.Coeff, Slice: target, Index: v})
 		}
-		if len(p.Steps) == 2 && ndims == 2 {
-			ranger := E2dIndex(ncoords, p.Steps...)
-			// TODO I really don't like having to do this
-			// OOP check again. it would be nice to keep
-			// all of that logic in one place, namely in
-			// findiff since that's where most of it is
-			switch {
-			case p.Steps[0] == p.Steps[1] && OOP(p.Steps[0], mol):
-				ranger = append(ranger,
-					E2dIndex(ncoords, -p.Steps[0], -p.Steps[0])...)
-			case OOP(p.Steps[0], mol) && OOP(p.Steps[1], mol):
-				ranger = append(ranger,
-					E2dIndex(ncoords, -p.Steps[0], -p.Steps[1])...)
-			case mol.IsC2v() && (OOP(p.Steps[0], mol) || OOP(p.Steps[1], mol)):
-				ranger = append(ranger,
-					E2dIndex(ncoords, p.Steps[0], -p.Steps[1])...)
-				ranger = append(ranger,
-					E2dIndex(ncoords, -p.Steps[0], p.Steps[1])...)
-				ranger = append(ranger,
-					E2dIndex(ncoords, -p.Steps[0], -p.Steps[1])...)
-			}
-			for _, v := range ranger {
-				// if it was loaded, the count is
-				// already 0 from the checkpoint
-				if !e2d[v].Loaded {
-					e2d[v].Count = 1
-				}
-				temp.Targets = append(temp.Targets,
-					Target{Coeff: 1, Slice: &e2d, Index: v})
-			}
-		} else if len(p.Steps) == 2 && ndims == 4 {
-			// either take fourth derivative from finished
-			// e2d point or promise a source for later
-			if id := E2dIndex(ncoords, p.Steps...)[0]; len(e2d) > id &&
-				e2d[id].Val != 0 {
-				temp.Result = e2d[id].Val
-			} else {
-				temp.Src = &Source{&e2d, id}
-			}
+		switch status {
+		// returned status is still NotPresent, even without
+		// New
+		case NotPresent:
+			// add it to map for later lookup, set status
+			// to NotCalculated
+			temp.Src = Table.At(geom)
+		case NotCalculated:
+			// can be used as a Source but not a raw value
+			temp.Src = Table.At(geom)
+			temp.noRun = true
+		case Done:
+			// use directly as a value
+			temp.Result = value
 			temp.noRun = true
 		}
+		// TODO move this to where I set them in the first place
+
 		// if target was loaded, remove it from list of targets
 		// then only submit if len(Targets) > 0
 		for t := 0; t < len(temp.Targets); {
