@@ -1,10 +1,14 @@
 package main
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
 
 func TestTaylor(t *testing.T) {
 	tmp := Conf.At(IntderCmd)
-	Conf.Set(IntderCmd, "/home/brent/gopath/pbqff/bin/intder")
+	path, _ := filepath.Abs("bin/intder")
+	Conf.Set(IntderCmd, path)
 	defer func() {
 		Conf.Set(IntderCmd, tmp)
 	}()
