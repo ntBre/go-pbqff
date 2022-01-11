@@ -106,11 +106,11 @@ func Make2D(mol symm.Molecule, i, j int) []ProtoCalc {
 func Make3D_2_1(i, j, k int, scale float64, mol symm.Molecule) []ProtoCalc {
 	// E(+i+i+k) - 2*E(+k) + E(-i-i+k) - E(+i+i-k) + 2*E(-k) - E(-i-i-k) / (2d)^3
 	switch {
-	case OOP(k, mol):
+	case mol.IsC2v() && OOP(k, mol):
 		return []ProtoCalc{
 			None,
 		}
-	case OOP(i, mol):
+	case mol.IsC2v() && OOP(i, mol):
 		return []ProtoCalc{
 			{2, HashName(), []int{i, i, k}, []int{i, i, k}, scale},
 			{-2, HashName(), []int{k}, []int{i, i, k}, scale},
@@ -138,7 +138,7 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 	switch {
 	case i == j && i == k:
 		// E(+i+i+i) - 3*E(+i) + 3*E(-i) - E(-i-i-i) / (2d)^3
-		if OOP(i, mol) {
+		if mol.IsC2v() && OOP(i, mol) {
 			return []ProtoCalc{
 				None,
 			}
@@ -157,31 +157,31 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 		return Make3D_2_1(j, k, i, scale, mol)
 	case i != j && i != k && j != k:
 		switch {
-		case OOP(i, mol) && OOP(j, mol) && OOP(k, mol):
+		case mol.IsC2v() && OOP(i, mol) && OOP(j, mol) && OOP(k, mol):
 			return []ProtoCalc{
 				None,
 			}
-		case OOP(i, mol) && OOP(j, mol):
+		case mol.IsC2v() && OOP(i, mol) && OOP(j, mol):
 			fallthrough
-		case OOP(i, mol) && OOP(k, mol):
+		case mol.IsC2v() && OOP(i, mol) && OOP(k, mol):
 			return []ProtoCalc{
 				{2, HashName(), []int{i, j, k}, []int{i, j, k}, scale},
 				{-2, HashName(), []int{i, -j, k}, []int{i, j, k}, scale},
 				{-2, HashName(), []int{i, j, -k}, []int{i, j, k}, scale},
 				{2, HashName(), []int{i, -j, -k}, []int{i, j, k}, scale},
 			}
-		case OOP(j, mol) && OOP(k, mol):
+		case mol.IsC2v() && OOP(j, mol) && OOP(k, mol):
 			return []ProtoCalc{
 				{2, HashName(), []int{i, j, k}, []int{i, j, k}, scale},
 				{-2, HashName(), []int{i, -j, k}, []int{i, j, k}, scale},
 				{2, HashName(), []int{-i, -j, k}, []int{i, j, k}, scale},
 				{-2, HashName(), []int{-i, j, k}, []int{i, j, k}, scale},
 			}
-		case OOP(i, mol):
+		case mol.IsC2v() && OOP(i, mol):
 			fallthrough
-		case OOP(j, mol):
+		case mol.IsC2v() && OOP(j, mol):
 			fallthrough
-		case OOP(k, mol):
+		case mol.IsC2v() && OOP(k, mol):
 			return []ProtoCalc{
 				None,
 			}
