@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"math"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -57,21 +59,40 @@ func TestSIC(t *testing.T) {
 	res := summarize.SpectroFile(
 		filepath.Join("tests/sic/", "freqs", "spectro2.out"))
 	want := []float64{3753.2, 3656.5, 1598.8}
-	if !compfloat(res.Corr, want, 1e-1) {
+	if _, _, ok := compfloat(res.Corr, want, 1e-1); !ok {
 		t.Errorf("got %v, wanted %v\n", res.Corr, want)
 	}
 }
 
-func compfloat(a, b []float64, eps float64) bool {
+func compfloat(a, b []float64, eps float64) (int, float64, bool) {
 	if len(a) != len(b) {
-		return false
+		return 0, 0, false
 	}
 	for i := range a {
-		if math.Abs(a[i]-b[i]) > eps {
-			return false
+		diff := a[i] - b[i]
+		if math.Abs(diff) > eps {
+			return i, diff, false
 		}
 	}
-	return true
+	return 0, 0, true
+}
+
+func dumpE2d(filename string) {
+	data, err := json.MarshalIndent(&e2d, "", "\t")
+	if err != nil {
+		panic(err)
+	}
+	os.WriteFile(filename, data, 0755)
+}
+
+func loadE2d(filename string) []CountFloat {
+	arr := make([]CountFloat, 0)
+	lines, _ := os.ReadFile(filename)
+	err := json.Unmarshal(lines, &arr)
+	if err != nil {
+		panic(err)
+	}
+	return arr
 }
 
 func TestCart(t *testing.T) {
@@ -95,7 +116,8 @@ func TestCart(t *testing.T) {
 		infile string
 		want   []float64
 		harm   []float64
-		rots   []float64
+		rots   []float64 // vib. avg. rots
+		e2d    []CountFloat
 		nosym  bool
 	}{
 		{
@@ -104,6 +126,7 @@ func TestCart(t *testing.T) {
 			want:   []float64{3753.2, 3656.5, 1598.5},
 			harm:   []float64{3943.690, 3833.702, 1650.933},
 			rots:   []float64{14.50450, 9.26320, 27.65578},
+			e2d:    loadE2d("testfiles/read/h2o.e2d.json"),
 			nosym:  false,
 		},
 		{
@@ -117,9 +140,8 @@ func TestCart(t *testing.T) {
 				3004.590, 2932.596, 1778.656,
 				1534.098, 1269.765, 1186.913,
 			},
-			rots: []float64{
-				1.29151, 1.13102, 9.39885,
-			},
+			rots:  []float64{1.29151, 1.13102, 9.39885},
+			e2d:   loadE2d("testfiles/read/h2co.e2d.json"),
 			nosym: false,
 		},
 		{
@@ -133,9 +155,8 @@ func TestCart(t *testing.T) {
 				3610.420, 3610.299, 3478.498,
 				1675.554, 1675.300, 1056.025,
 			},
-			rots: []float64{
-				9.88998, 6.22602, 9.89037,
-			},
+			rots:  []float64{9.89037, 6.22602, 9.88998},
+			e2d:   loadE2d("testfiles/read/nh3.e2d.json"),
 			nosym: false,
 		},
 	}
@@ -177,18 +198,31 @@ func TestCart(t *testing.T) {
 			errExit(err, "running spectro")
 		}
 		res := summarize.SpectroFile(filepath.Join(prog.GetDir(), "spectro2.out"))
-		if !compfloat(res.Harm, test.harm, 1e-1) {
-			t.Errorf("%s harm: got\n%v, wanted\n%v\n",
-				test.name, res.Harm, test.harm)
+		if i, v, ok := compfloat(res.Harm, test.harm, 1e-1); !ok {
+			t.Errorf("%s harm: got\n%v, wanted\n%v\n"+
+				"%dth element differs by %f\n",
+				test.name, res.Harm, test.harm,
+				i, v)
 		}
-		if !compfloat(res.Rots[0], test.rots, 4e-4) {
-			t.Errorf("%s rots: got\n%v, wanted\n%v\n",
-				test.name, res.Rots[0], test.rots)
+		if i, v, ok := compfloat(
+			FloatsFromCountFloats(e2d),
+			FloatsFromCountFloats(test.e2d),
+			1e-12); !ok {
+			t.Errorf("e2d mismatch\n"+
+				"%dth element differs by %f\n",
+				i, v)
 		}
-		if !compfloat(res.Corr, test.want, 1e-1) {
-			fmt.Println("non-corr: ", res.Fund)
-			t.Errorf("%s fund: got\n%v, wanted\n%v\n",
-				test.name, res.Corr, test.want)
+		if i, v, ok := compfloat(res.Rots[0], test.rots, 1e-5); !ok {
+			t.Errorf("%s rots: got\n%v, wanted\n%v\n"+
+				"%dth element differs by %f\n",
+				test.name, res.Rots[0], test.rots,
+				i, v)
+		}
+		if i, v, ok := compfloat(res.Corr, test.want, 1e-1); !ok {
+			t.Errorf("%s fund: got\n%v, wanted\n%v\n"+
+				"%dth element differs by %f\n",
+				test.name, res.Corr, test.want,
+				i, v)
 		}
 	}
 }
@@ -243,7 +277,7 @@ func TestGrad(t *testing.T) {
 	}
 	res := summarize.SpectroFile(filepath.Join(prog.GetDir(), "spectro2.out"))
 	want := []float64{3739.1, 3651.1, 1579.4}
-	if !compfloat(res.Corr, want, 1e-1) {
+	if _, _, ok := compfloat(res.Corr, want, 1e-1); !ok {
 		t.Errorf("got %v, wanted %v\n", res.Corr, want)
 	}
 }
