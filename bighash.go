@@ -109,8 +109,7 @@ func Normalize(mol symm.Molecule, names []string, coords []float64, step []int) 
 	case symm.C2v:
 		// σv, σv, C₂
 		ret = append(ret, add(coords, doReflect(old, names, fstep, mol.Planes[0])))
-		// TODO something wrong with this one
-		// ret = append(ret, add(coords, doReflect(old, names, fstep, mol.Planes[1])))
+		ret = append(ret, add(coords, doReflect(old, names, fstep, mol.Planes[1])))
 		// TODO implement this one
 		// ret = append(ret, symm.Coords(symm.Rotate(old, 180.0, mol.Axes[0])))
 	}
@@ -133,9 +132,12 @@ func doReflect(old []symm.Atom, names []string, fstep []float64, plane symm.Plan
 }
 
 // nh3 without Normalize 16640
+// with Normalize         8612
 
-// h2o without Normalize 5640 ish
+// h2o without Normalize 5640
 // with one plane        3464
+// with two plane        1780
 
 // h2co without Normalize 16640
 // with one plane         10144
+// with two plane          5252

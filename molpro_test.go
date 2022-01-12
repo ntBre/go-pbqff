@@ -624,20 +624,7 @@ func TestDerivative(t *testing.T) {
 			test.dims[0], test.dims[1], test.dims[2], test.dims[3],
 			mol)
 		if !reflect.DeepEqual(calcs, test.calcs) {
-			fmt.Println("mismatch got and want:")
-			// fmt.Println("got:")
-			// byts, err := json.MarshalIndent(&calcs, "", "\t")
-			// if err != nil {
-			// 	panic(err)
-			// }
-			// fmt.Println(string(byts))
-			// fmt.Println("wanted:")
-			// byts, err = json.MarshalIndent(&test.calcs, "", "\t")
-			// if err != nil {
-			// 	panic(err)
-			// }
-			// fmt.Println(string(byts))
-			t.Error()
+			t.Errorf("got %v, wanted %v\n", calcs, test.calcs)
 		}
 	}
 }
