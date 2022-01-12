@@ -903,31 +903,6 @@ func TestBuildGradPoints(t *testing.T) {
 	}
 }
 
-func TestE2dIndex(t *testing.T) {
-	tests := []struct {
-		ncoords int
-		ids     []int
-		want    []int
-	}{
-		{9, []int{1, 1}, []int{0}},
-		{9, []int{1, 2}, []int{1, 18}},
-		{9, []int{1, 8}, []int{7, 126}},
-		{9, []int{2, 2}, []int{19}},
-		{9, []int{1, -9}, []int{17, 306}},
-		{9, []int{-9, -9}, []int{323}},
-		{6, []int{1, 1}, []int{0}},
-		{6, []int{-1, -1}, []int{78}},
-	}
-	for _, test := range tests {
-		got := E2dIndex(test.ncoords, test.ids...)
-		want := test.want
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("E2dIndex(%d, %v): got %v, wanted %v\n",
-				test.ncoords, test.ids, got, want)
-		}
-	}
-}
-
 // only tests one possibility
 func TestIndex(t *testing.T) {
 	tests := []struct {
