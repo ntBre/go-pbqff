@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -182,6 +183,11 @@ func ZipXYZ(names []string, coords []float64) string {
 	} else if len(coords)%3 != 0 {
 		panic("ZipXYZ: coords not divisible by 3")
 	}
+	for i, c := range coords {
+		if math.Abs(c) < 1e-10 {
+			coords[i] = 0
+		}
+	}
 	for i := range names {
 		fmt.Fprintf(&buf, "%s %.10f %.10f %.10f\n",
 			names[i], coords[3*i], coords[3*i+1], coords[3*i+2])
@@ -196,7 +202,7 @@ func Step(coords []float64, steps ...int) []float64 {
 	for _, v := range steps {
 		if v < 0 {
 			v = -1 * v
-			c[v-1] = c[v-1] - Conf.FlSlice(Deltas)[v-1]
+			c[v-1] -= Conf.FlSlice(Deltas)[v-1]
 		} else {
 			c[v-1] += Conf.FlSlice(Deltas)[v-1]
 		}

@@ -277,10 +277,9 @@ func Derivative(prog Program, dir string, names []string,
 		target = &fc4
 	}
 	for _, p := range protos {
+		energy := Table.Lookup(mol, names, coords, p.Steps)
 		coords := Step(coords, p.Steps...)
-		geom := ZipXYZ(names, coords)
-		prog.FormatCart(geom)
-		_, status, value := Table.Lookup(geom)
+		prog.FormatCart(ZipXYZ(names, coords))
 		temp := Calc{
 			Name:   filepath.Join(dir, p.Name),
 			Scale:  p.Scale,
@@ -293,20 +292,21 @@ func Derivative(prog Program, dir string, names []string,
 					Target{Coeff: p.Coeff, Slice: target, Index: v})
 			}
 		}
-		switch status {
+		switch energy.Status {
 		// returned status is still NotPresent, even without
 		// New
 		case NotPresent:
 			// add it to map for later lookup, set status
 			// to NotCalculated
-			temp.Src = Table.At(geom)
+			temp.Src = energy
+			energy.Status = NotCalculated
 		case NotCalculated:
 			// can be used as a Source but not a raw value
-			temp.Src = Table.At(geom)
+			temp.Src = energy
 			temp.noRun = true
 		case Done:
 			// use directly as a value
-			temp.Result = value
+			temp.Result = energy.Value
 			temp.noRun = true
 		}
 		// only submit if there's at least one target
