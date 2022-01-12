@@ -289,9 +289,9 @@ func Derivative(prog Program, dir string, names []string,
 		for _, v := range Index(ncoords, false, p.Index...) {
 			if !(*target)[v].Loaded {
 				(*target)[v].Count = len(protos)
+				temp.Targets = append(temp.Targets,
+					Target{Coeff: p.Coeff, Slice: target, Index: v})
 			}
-			temp.Targets = append(temp.Targets,
-				Target{Coeff: p.Coeff, Slice: target, Index: v})
 		}
 		switch status {
 		// returned status is still NotPresent, even without
@@ -309,18 +309,7 @@ func Derivative(prog Program, dir string, names []string,
 			temp.Result = value
 			temp.noRun = true
 		}
-		// TODO move this to where I set them in the first place
-
-		// if target was loaded, remove it from list of targets
-		// then only submit if len(Targets) > 0
-		for t := 0; t < len(temp.Targets); {
-			targ := temp.Targets[t]
-			if (*targ.Slice)[targ.Index].Loaded {
-				temp.Targets = append(temp.Targets[:t], temp.Targets[t+1:]...)
-			} else {
-				t++
-			}
-		}
+		// only submit if there's at least one target
 		if len(temp.Targets) > 0 {
 			fname := filepath.Join(dir, p.Name+".inp")
 			if strings.Contains(p.Name, "E0") {
