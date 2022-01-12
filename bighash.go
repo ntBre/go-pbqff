@@ -105,40 +105,31 @@ func Normalize(mol symm.Molecule, names []string, coords []float64, step []int) 
 	switch mol.Group {
 	case symm.Cs:
 		// σh
-
-		// DONE take original coordinates
-		// perform symmetry operation
-		new := symm.Reflect(old, mol.Planes[0])
-		// detect buddies between original and transformed
-		buddies := DetectBuddies(old, new)
-		// apply step to buddy
-		// applying the step to buddy involves:
-		// 1) separating step into pieces for each atom
-		pieces := Partition(fstep)
-		// 2) swapping the pieces between buddies
-		newPieces := make([][]float64, len(pieces))
-		for i, piece := range pieces {
-			newPieces[buddies[i]] = piece
-		}
-		// 3) rejoin the pieces
-		newStep := make([]float64, 0, 3*len(pieces))
-		for _, piece := range newPieces {
-			newStep = append(newStep, piece...)
-		}
-		// 4) perform the symmetry operation on the new step
-		newStep = symm.Coords(symm.Reflect(toAtoms(names, newStep), mol.Planes[0]))
-		// 5) applying the step
-		ret = append(ret, add(coords, newStep))
-		// TODO repeat this process for each symmetry
-		// operation - going to need to abstract this somehow
-
+		ret = append(ret, add(coords, doReflect(old, names, fstep, mol.Planes[0])))
 	case symm.C2v:
 		// σv, σv, C₂
-		// ret = append(ret, symm.Coords(symm.Reflect(old, mol.Planes[0])))
-		// ret = append(ret, symm.Coords(symm.Reflect(old, mol.Planes[1])))
+		ret = append(ret, add(coords, doReflect(old, names, fstep, mol.Planes[0])))
+		// TODO something wrong with this one
+		// ret = append(ret, add(coords, doReflect(old, names, fstep, mol.Planes[1])))
+		// TODO implement this one
 		// ret = append(ret, symm.Coords(symm.Rotate(old, 180.0, mol.Axes[0])))
 	}
 	return append(ret, Step(coords, step...))
+}
+
+func doReflect(old []symm.Atom, names []string, fstep []float64, plane symm.Plane) []float64 {
+	new := symm.Reflect(old, plane)
+	buddies := DetectBuddies(old, new)
+	pieces := Partition(fstep)
+	newPieces := make([][]float64, len(pieces))
+	for i, piece := range pieces {
+		newPieces[buddies[i]] = piece
+	}
+	newStep := make([]float64, 0, 3*len(pieces))
+	for _, piece := range newPieces {
+		newStep = append(newStep, piece...)
+	}
+	return symm.Coords(symm.Reflect(toAtoms(names, newStep), plane))
 }
 
 // nh3 without Normalize 16640

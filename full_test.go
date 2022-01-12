@@ -136,7 +136,7 @@ func TestCart(t *testing.T) {
 			nosym: false,
 		},
 	}
-	for _, test := range tests[2:] {
+	for _, test := range tests[0:] {
 		*nosym = test.nosym
 		Conf = NewConfig()
 		submitted = 0

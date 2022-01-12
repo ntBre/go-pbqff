@@ -42,7 +42,7 @@
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": 0,
@@ -85,9 +85,9 @@
 		"Loaded": true
 	},
 	{
-		"Val": 0,
+		"Val": -0.031313796161405595,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": 0,
@@ -105,7 +105,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -2.7856116361341153e-9,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -130,9 +130,9 @@
 		"Loaded": true
 	},
 	{
-		"Val": 0,
+		"Val": 0.011639992000839986,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": -0.00003077511900039415,
@@ -145,7 +145,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -2.7856116361341153e-9,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -160,12 +160,12 @@
 		"Loaded": true
 	},
 	{
-		"Val": 2.7856116361341153e-9,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
 	{
-		"Val": -0.00003077790461203028,
+		"Val": -0.00003077511900039415,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -220,7 +220,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": 0,
+		"Val": 0.2663274186515074,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -240,7 +240,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": 2.7856116361341153e-9,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -265,7 +265,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": 0,
+		"Val": -0.22982169975798397,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -285,7 +285,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -0.00003077790461203028,
+		"Val": -0.00003077511900039415,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -355,27 +355,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": false
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": false
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": false
-	},
-	{
-		"Val": 0,
+		"Val": -0.23501356645951343,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -385,7 +365,12 @@
 		"Loaded": true
 	},
 	{
-		"Val": 0,
+		"Val": -0.031313796161405595,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0.011639992000839986,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -395,12 +380,27 @@
 		"Loaded": true
 	},
 	{
-		"Val": 0,
+		"Val": 0.2663274186515074,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": -0.22982169975798397,
 		"Count": 0,
 		"Loaded": true
 	},
 	{
 		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": -0.23501356645951343,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0.21818269342592422,
 		"Count": 0,
 		"Loaded": true
 	}
