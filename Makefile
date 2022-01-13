@@ -13,7 +13,7 @@ experiment:
 	go build . && scp -C pbqff 'woods:.'
 
 cover:
-	go test . -v -coverprofile=/tmp/pbqff.out; go tool cover -html /tmp/pbqff.out
+	go test . -v -short -coverprofile=/tmp/pbqff.out; go tool cover -html /tmp/pbqff.out
 
 profcart:
 	go test . -v -short -run '^TestCart$$' -cpuprofile=/tmp/cart.prof
