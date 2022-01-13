@@ -9,8 +9,8 @@ endif
 qsub/qsub: qsub/*.go
 	go build -o $@ $^
 
-experiment:
-	go build . && scp -C pbqff 'woods:.'
+experiment: pbqff
+	scp -C pbqff 'woods:.'
 
 cover:
 	go test . -v -short -coverprofile=/tmp/pbqff.out; go tool cover -html /tmp/pbqff.out

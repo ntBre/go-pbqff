@@ -8,7 +8,7 @@ require (
 )
 
 // for local testing of both together
-// replace	github.com/ntBre/chemutils => /home/brent/gopath/chemutils
-replace	github.com/ntBre/chemutils => /home/brent/Projects/chemutils
+replace	github.com/ntBre/chemutils => /home/brent/gopath/chemutils
+// replace	github.com/ntBre/chemutils => /home/brent/Projects/chemutils
 
 require gonum.org/v1/gonum v0.9.3 // indirect
