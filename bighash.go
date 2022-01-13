@@ -147,5 +147,5 @@ func doReflect(old []symm.Atom, names []string, fstep []float64, plane symm.Plan
 // gradient old version 1237
 // gradient new version 1320
 
-// I guess the gradients are already quite economical in terms of
-// points, or this approach just isn't good for them
+// I would have to keep gradients in the *Energy values for the
+// gradients to benefit

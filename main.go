@@ -572,6 +572,7 @@ func initArrays(natoms int) (int, int) {
 	fc2 = make([]CountFloat, N3N*N3N)
 	fc3 = make([]CountFloat, other3)
 	fc4 = make([]CountFloat, other4)
+	Table = make(BigHash)
 	return other3, other4
 }
 
