@@ -108,12 +108,28 @@ func Normalize(mol symm.Molecule, names []string, coords []float64, step []int) 
 		ret = append(ret, add(coords, doReflect(old, names, fstep, mol.Planes[0])))
 	case symm.C2v:
 		// σv, σv, C₂
-		ret = append(ret, add(coords, doReflect(old, names, fstep, mol.Planes[0])))
 		ret = append(ret, add(coords, doReflect(old, names, fstep, mol.Planes[1])))
-		// TODO implement this one
-		// ret = append(ret, symm.Coords(symm.Rotate(old, 180.0, mol.Axes[0])))
+		ret = append(ret, add(coords, doReflect(old, names, fstep, mol.Planes[0])))
+		ret = append(ret, add(coords, doC2(old, names, fstep, mol.Axes[0])))
 	}
 	return append(ret, Step(coords, step...))
+}
+
+func doC2(old []symm.Atom, names []string, fstep []float64, axis symm.Axis) []float64 {
+	new := symm.Rotate(old, 180.0, axis)
+	// begin same as doReflect
+	buddies := DetectBuddies(old, new)
+	pieces := Partition(fstep)
+	newPieces := make([][]float64, len(pieces))
+	for i, piece := range pieces {
+		newPieces[buddies[i]] = piece
+	}
+	newStep := make([]float64, 0, 3*len(pieces))
+	for _, piece := range newPieces {
+		newStep = append(newStep, piece...)
+	}
+	// end same as doReflect
+	return symm.Coords(symm.Rotate(toAtoms(names, newStep), 180.0, axis))
 }
 
 func doReflect(old []symm.Atom, names []string, fstep []float64, plane symm.Plane) []float64 {
