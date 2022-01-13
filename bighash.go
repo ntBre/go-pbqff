@@ -115,9 +115,7 @@ func Normalize(mol symm.Molecule, names []string, coords []float64, step []int) 
 	return append(ret, Step(coords, step...))
 }
 
-func doC2(old []symm.Atom, names []string, fstep []float64, axis symm.Axis) []float64 {
-	new := symm.Rotate(old, 180.0, axis)
-	// begin same as doReflect
+func newStep(old, new []symm.Atom, fstep []float64) []float64 {
 	buddies := DetectBuddies(old, new)
 	pieces := Partition(fstep)
 	newPieces := make([][]float64, len(pieces))
@@ -128,23 +126,17 @@ func doC2(old []symm.Atom, names []string, fstep []float64, axis symm.Axis) []fl
 	for _, piece := range newPieces {
 		newStep = append(newStep, piece...)
 	}
-	// end same as doReflect
-	return symm.Coords(symm.Rotate(toAtoms(names, newStep), 180.0, axis))
+	return newStep
+}
+
+func doC2(old []symm.Atom, names []string, fstep []float64, axis symm.Axis) []float64 {
+	step := newStep(old, symm.Rotate(old, 180.0, axis), fstep)
+	return symm.Coords(symm.Rotate(toAtoms(names, step), 180.0, axis))
 }
 
 func doReflect(old []symm.Atom, names []string, fstep []float64, plane symm.Plane) []float64 {
-	new := symm.Reflect(old, plane)
-	buddies := DetectBuddies(old, new)
-	pieces := Partition(fstep)
-	newPieces := make([][]float64, len(pieces))
-	for i, piece := range pieces {
-		newPieces[buddies[i]] = piece
-	}
-	newStep := make([]float64, 0, 3*len(pieces))
-	for _, piece := range newPieces {
-		newStep = append(newStep, piece...)
-	}
-	return symm.Coords(symm.Reflect(toAtoms(names, newStep), plane))
+	step := newStep(old, symm.Reflect(old, plane), fstep)
+	return symm.Coords(symm.Reflect(toAtoms(names, step), plane))
 }
 
 // nh3 without Normalize 16640
