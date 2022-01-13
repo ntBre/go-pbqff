@@ -137,7 +137,15 @@ func doReflect(old []symm.Atom, names []string, fstep []float64, plane symm.Plan
 // h2o without Normalize 5640
 // with one plane        3464
 // with two plane        1780
+// old version           2182
 
 // h2co without Normalize 16640
 // with one plane         10144
 // with two plane          5252
+// old version             6242
+
+// gradient old version 1237
+// gradient new version 1320
+
+// I guess the gradients are already quite economical in terms of
+// points, or this approach just isn't good for them
