@@ -461,6 +461,9 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	}
 	dir := filepath.Dir(infile)
 	ParseInfile(infile)
+	if *checkpoint {
+		LoadCheckpoint()
+	}
 	spectro.Command = Conf.Str(SpectroCmd)
 	nc := Conf.Int(Ncoords)
 	switch {

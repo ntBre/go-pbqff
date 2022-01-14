@@ -75,9 +75,6 @@ func ParseFlags() []string {
 	default:
 		flags = OPT | PTS | FREQS
 	}
-	if *checkpoint {
-		LoadCheckpoint()
-	}
 	if *debugStack {
 		stackDump = func() {
 			fmt.Fprintf(os.Stderr, "\n\n%d goroutines:\n",
