@@ -22,6 +22,26 @@ type Calc struct {
 	Scale    float64
 }
 
+func (c Calc) String() string {
+	return fmt.Sprintf(`{
+  Name:    %s,
+  Coords:  %f,
+  Targets: %v,
+  Result:  %f,
+  JobID:   %s,
+  ResubID: %s,
+  noRun:   %v,
+  SubFile: %s,
+  ChunkNum: %d,
+  Resub:    %p,
+  Src:      %p,
+  Scale:    %f,
+}
+`, c.Name, c.Coords, c.Targets, c.Result, c.JobID, c.ResubID,
+		c.noRun, c.SubFile, c.ChunkNum, c.Resub, c.Src, c.Scale,
+	)
+}
+
 // ProtoCalc is a precursor to a Calc with information for setting up
 // the Calc itself
 type ProtoCalc struct {
