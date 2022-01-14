@@ -38,14 +38,16 @@ func MakeCheckpoint(dir string) {
 }
 
 // LoadCheckpoint restores the result arrays from a checkpoint
-func LoadCheckpoint() {
+func LoadCheckpoint(dir string) {
 	if DoSIC() {
 		arrs = []*[]CountFloat{&cenergies}
 		fnames = []string{"chk.json"}
 
 	}
 	for a := range arrs {
-		lines, _ := os.ReadFile(fnames[a])
+		lines, _ := os.ReadFile(
+			filepath.Join(dir, fnames[a]),
+		)
 		err := json.Unmarshal(lines, arrs[a])
 		if err != nil {
 			errExit(err, fmt.Sprintf("loading %s for checkpoint", fnames[a]))

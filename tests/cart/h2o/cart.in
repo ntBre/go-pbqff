@@ -16,6 +16,6 @@ sleepint=1
 joblimit=1024
 chunksize=256
 numjobs=8
-checkint=3000
+checkint=1000
 spectro=../../../bin/spectro
 

@@ -249,3 +249,132 @@ func TestGrad(t *testing.T) {
 		t.Errorf("got %v, wanted %v\n", res.Corr, want)
 	}
 }
+
+// TestResub is a copy of TestCart, restricted back to the h2o test
+func TestResub(t *testing.T) {
+	if !testing.Short() {
+		t.Skip()
+	}
+	*test = true
+	qsub = "qsub/qsub"
+	temp := Conf
+	tmpsym := *nosym
+	tmpchk := *checkpoint
+	defer func() {
+		flags = 0
+		Conf = temp
+		*test = false
+		qsub = "qsub"
+		submitted = 0
+		*nosym = tmpsym
+		*checkpoint = tmpchk
+	}()
+	tests := []struct {
+		name   string
+		infile string
+		want   []float64
+		harm   []float64
+		rots   []float64 // vib. avg. rots
+		nosym  bool
+	}{
+		{
+			name:   "h2o",
+			infile: "tests/cart/h2o/cart.in",
+			want:   []float64{3753.2, 3656.5, 1598.5},
+			harm:   []float64{3943.690, 3833.702, 1650.933},
+			rots:   []float64{14.50450, 9.26320, 27.65578},
+			nosym:  false,
+		},
+	}
+	for _, test := range tests {
+		*nosym = test.nosym
+		Conf = NewConfig()
+		submitted = 0
+		prog, _, _ := initialize(test.infile)
+		prog.FormatCart(Conf.Str(Geometry))
+		cart := prog.GetGeom()
+		queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+		E0 := prog.Run(none, queue)
+		names, coords := XYZGeom(cart)
+		natoms := len(names)
+		initArrays(natoms)
+		ncoords := len(coords)
+		mol := symm.ReadXYZ(strings.NewReader(cart))
+		basegen := BuildCartPoints(prog, queue, "pts/inp", names, coords, mol)
+		counter := 24
+		gen := func() ([]Calc, bool) {
+			counter--
+			if counter == 0 {
+				panic("counter hit 0")
+			}
+			return basegen()
+		}
+		// TODO catch this panic and resubmit - reset
+		// everything above here and call Drain again
+		defer func() {
+			if r := recover(); r != nil {
+				if r != "counter hit 0" {
+					panic("wrong panic caught")
+				}
+				fmt.Printf("caught the panic %q, resubmitting\n", r)
+				*checkpoint = true
+				*nosym = test.nosym
+				Conf = NewConfig()
+				submitted = 0
+				prog, _, _ := initialize(test.infile)
+				prog.FormatCart(Conf.Str(Geometry))
+				cart := prog.GetGeom()
+				queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+				E0 := prog.Run(none, queue)
+				names, coords := XYZGeom(cart)
+				natoms := len(names)
+				other3, other4 := initArrays(natoms)
+				ncoords := len(coords)
+				mol := symm.ReadXYZ(strings.NewReader(cart))
+				gen := BuildCartPoints(prog, queue, "pts/inp", names, coords, mol)
+				Drain(prog, queue, ncoords, E0, gen)
+				PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(prog.GetDir(), "fort.15"))
+				PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(), "fort.30"))
+				PrintFortFile(fc4, natoms, other4, filepath.Join(prog.GetDir(), "fort.40"))
+				var buf bytes.Buffer
+				for i := range coords {
+					if i%3 == 0 && i > 0 {
+						fmt.Fprint(&buf, "\n")
+					}
+					fmt.Fprintf(&buf, " %.10f", coords[i]/angbohr)
+				}
+				specin := filepath.Join(prog.GetDir(), "spectro.in")
+				spec, err := spectro.Load(specin)
+				if err != nil {
+					errExit(err, "loading spectro input")
+				}
+				spec.FormatGeom(names, buf.String())
+				spec.WriteInput(specin)
+				err = spec.DoSpectro(prog.GetDir())
+				if err != nil {
+					errExit(err, "running spectro")
+				}
+				res := summarize.SpectroFile(filepath.Join(prog.GetDir(), "spectro2.out"))
+				if i, v, ok := compfloat(res.Harm, test.harm, 1e-1); !ok {
+					t.Errorf("%s harm: got\n%v, wanted\n%v\n"+
+						"%dth element differs by %f\n",
+						test.name, res.Harm, test.harm,
+						i, v)
+				}
+				if i, v, ok := compfloat(res.Rots[0], test.rots, 1e-5); !ok {
+					t.Errorf("%s rots: got\n%v, wanted\n%v\n"+
+						"%dth element differs by %f\n",
+						test.name, res.Rots[0], test.rots,
+						i, v)
+				}
+				if i, v, ok := compfloat(res.Corr, test.want, 1e-1); !ok {
+					t.Errorf("%s fund: got\n%v, wanted\n%v\n"+
+						"%dth element differs by %f\n",
+						test.name, res.Corr, test.want,
+						i, v)
+				}
+			}
+		}()
+		Drain(prog, queue, ncoords, E0, gen)
+	}
+}

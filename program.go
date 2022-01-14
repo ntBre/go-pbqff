@@ -292,25 +292,25 @@ func Derivative(prog Program, dir string, names []string,
 					Target{Coeff: p.Coeff, Slice: target, Index: v})
 			}
 		}
-		switch energy.Status {
-		// returned status is still NotPresent, even without
-		// New
-		case NotPresent:
-			// add it to map for later lookup, set status
-			// to NotCalculated
-			temp.Src = energy
-			energy.Status = NotCalculated
-		case NotCalculated:
-			// can be used as a Source but not a raw value
-			temp.Src = energy
-			temp.noRun = true
-		case Done:
-			// use directly as a value
-			temp.Result = energy.Value
-			temp.noRun = true
-		}
-		// only submit if there's at least one target
 		if len(temp.Targets) > 0 {
+			switch energy.Status {
+			// returned status is still NotPresent, even without
+			// New
+			case NotPresent:
+				// add it to map for later lookup, set status
+				// to NotCalculated
+				temp.Src = energy
+				energy.Status = NotCalculated
+			case NotCalculated:
+				// can be used as a Source but not a raw value
+				temp.Src = energy
+				temp.noRun = true
+			case Done:
+				// use directly as a value
+				temp.Result = energy.Value
+				temp.noRun = true
+			}
+			// only submit if there's at least one target
 			fname := filepath.Join(dir, p.Name+".inp")
 			if strings.Contains(p.Name, "E0") {
 				temp.noRun = true
