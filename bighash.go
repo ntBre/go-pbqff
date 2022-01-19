@@ -76,9 +76,12 @@ func DetectBuddies(a, b []symm.Atom) []int {
 	ret := make([]int, len(a))
 	for i, atom := range a {
 		for j, btom := range b {
-			if symm.ApproxEqual(atom.Coord, btom.Coord) &&
-				atom.Label == btom.Label {
+			if atom.Label == btom.Label &&
+				symm.ApproxEqual(atom.Coord, btom.Coord) {
 				ret[i] = j
+				// Don't have to remove btom from b
+				// because DetectBuddies is only
+				// called when we know they exist
 				break
 			}
 		}
