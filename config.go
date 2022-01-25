@@ -175,9 +175,9 @@ func (c *Config) WhichProgram() {
 	case "cccr":
 		c.Set(EnergyLine, regexp.MustCompile(`^\s*CCCRE\s+=`))
 	case "cart", "gocart":
-		flags |= CART
+		CART = true
 	case "grad":
-		flags |= GRAD
+		GRAD = true
 	case "molpro", "", "sic": // default if not specified
 	default:
 		panic("unsupported option for keyword program")
@@ -343,7 +343,7 @@ func NewConfig() Config {
 			Extract: func(str string) interface{} {
 				switch str {
 				case "noopt":
-					flags = flags &^ OPT
+					OPT = false
 				default:
 					panic("unsupported option for keyword flag")
 				}

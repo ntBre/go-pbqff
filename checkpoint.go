@@ -14,7 +14,7 @@ var (
 
 // MakeCheckpoint makes a checkpoint
 func MakeCheckpoint(dir string) {
-	if DoSIC() {
+	if SIC {
 		arrs = []*[]CountFloat{&cenergies}
 		fnames = []string{"chk.json"}
 
@@ -39,7 +39,7 @@ func MakeCheckpoint(dir string) {
 
 // LoadCheckpoint restores the result arrays from a checkpoint
 func LoadCheckpoint(dir string) {
-	if DoSIC() {
+	if SIC {
 		arrs = []*[]CountFloat{&cenergies}
 		fnames = []string{"chk.json"}
 

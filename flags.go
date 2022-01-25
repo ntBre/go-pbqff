@@ -69,11 +69,14 @@ func ParseFlags() []string {
 	}
 	switch {
 	case *freqs:
-		flags = FREQS
+		 FREQS = true
 	case *pts:
-		flags = PTS | FREQS
+		PTS = true
+		FREQS = true
 	default:
-		flags = OPT | PTS | FREQS
+		OPT = true
+		PTS = true
+		FREQS = true
 	}
 	if *debugStack {
 		stackDump = func() {

@@ -39,33 +39,14 @@ import (
 )
 
 // Flags for the procedures to be run
-const (
-	OPT int = 1 << iota
-	PTS
-	CART
-	GRAD
-	FREQS
+var (
+	OPT   bool
+	PTS   bool
+	SIC   bool
+	CART  bool
+	GRAD  bool
+	FREQS bool
 )
-
-// I hate these
-
-// DoOpt is a helper function for checking whether the OPT flag is set
-func DoOpt() bool { return flags&OPT > 0 }
-
-// DoFreqs is a helper function for checking whether the FREQS flag is
-// set
-func DoFreqs() bool { return flags&FREQS > 0 }
-
-// DoCart is a helper function for checking whether the CART flag is
-// set
-func DoCart() bool { return flags&CART > 0 }
-
-// DoGrad is a helper function for checking whether the CART flag is
-// set
-func DoGrad() bool { return flags&GRAD > 0 }
-
-// DoSIC if neither CART or GRAD
-func DoSIC() bool { return flags&(CART|GRAD) == 0 }
 
 // Global variables
 var (
@@ -76,7 +57,6 @@ var (
 	paraCount        map[string]int
 	errMap           map[error]int
 	nocheck          bool
-	flags            int
 	submitted        int
 	StartCPU         int64
 	Conf             = NewConfig()
@@ -274,7 +254,7 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 					}
 					fmt.Fprintf(dumper, "%20.12f\n", energy)
 				}
-				if !DoGrad() {
+				if !GRAD {
 					for _, t := range job.Targets {
 						(*t.Slice)[t.Index].Add(t,
 							job.Scale, t.Coeff*energy)
@@ -467,13 +447,13 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	spectro.Command = Conf.Str(SpectroCmd)
 	nc := Conf.Int(Ncoords)
 	switch {
-	case DoCart():
+	case CART:
 		fmt.Printf("%d coords requires %d Cartesian points\n",
 			nc, CartPoints(nc))
 		if *count {
 			os.Exit(0)
 		}
-	case DoGrad():
+	case GRAD:
 		fmt.Printf("%d coords requires %d gradient points\n",
 			nc, GradPoints(nc))
 		if *count {
@@ -500,7 +480,7 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 		errExit(err, fmt.Sprintf("loading molpro input %q", mpName))
 	}
 	prog.SetDir(dir)
-	if DoSIC() {
+	if SIC {
 		intder, err = LoadIntder(filepath.Join(dir, "intder.in"))
 		if err != nil {
 			errExit(err, fmt.Sprintf("loading intder input %q", idName))
@@ -645,7 +625,7 @@ func main() {
 		}
 	}
 
-	if DoOpt() {
+	if OPT {
 		if Conf.Str(GeomType) != "zmat" {
 			panic("optimization requires a zmat geometry")
 		}
@@ -670,7 +650,7 @@ func main() {
 		}
 		cart = prog.GetGeom()
 		// only required for cartesians
-		if DoCart() {
+		if CART {
 			E0 = prog.Run(none, queue)
 		}
 	}
@@ -680,9 +660,9 @@ func main() {
 	var gen func() ([]Calc, bool)
 
 	switch {
-	case DoSIC() && *irdy == "":
+	case SIC && *irdy == "":
 		names = intder.ConvertCart(cart)
-	case DoSIC():
+	case SIC:
 		names = strings.Fields(*irdy)
 	default:
 		names, coords = XYZGeom(cart)
@@ -690,16 +670,16 @@ func main() {
 	natoms = len(names)
 	other3, other4 := initArrays(natoms)
 
-	if DoSIC() {
+	if SIC {
 		intder.WritePts("pts/intder.in")
 		RunIntder("pts/intder")
 		gen = BuildPoints(prog, queue, "pts/file07", names, true)
 	} else {
 		ncoords = len(coords)
-		if DoCart() {
+		if CART {
 			gen = BuildCartPoints(prog, queue, "pts/inp", names,
 				coords, mol)
-		} else if DoGrad() {
+		} else if GRAD {
 			gen = BuildGradPoints(prog, queue, "pts/inp", names,
 				coords, mol)
 		}
@@ -708,7 +688,7 @@ func main() {
 	min, _ = Drain(prog, queue, ncoords, E0, gen)
 	queueClear(ptsJobs)
 
-	if DoSIC() {
+	if SIC {
 		energies = FloatsFromCountFloats(cenergies)
 		f, err := os.Create(filepath.Join(prog.GetDir(), "rel.dat"))
 		if err != nil {

@@ -210,36 +210,6 @@ func TestGradPoints(t *testing.T) {
 	}
 }
 
-func TestDoSIC(t *testing.T) {
-	f := flags
-	defer func() {
-		flags = f
-	}()
-	tests := []struct {
-		msg   string
-		flags int
-		want  bool
-	}{
-		{"grad", GRAD, false},
-		{"opt grad", OPT | GRAD, false},
-		{"cart", CART, false},
-		{"opt", OPT, true},
-		{"opt cart", OPT | CART, false},
-		{"pts", PTS, true},
-		{"freqs", FREQS, true},
-		{"full SIC", OPT | PTS | FREQS, true},
-		{"zero", 0, true},
-	}
-	for _, test := range tests {
-		flags = 0
-		flags |= test.flags
-		if got := DoSIC(); got != test.want {
-			t.Errorf("DoSIC(%s): got %v, wanted %v\n",
-				test.msg, got, test.want)
-		}
-	}
-}
-
 type TestQueue struct {
 	SinglePt *template.Template
 	ChunkPts *template.Template

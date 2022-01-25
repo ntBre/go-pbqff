@@ -112,10 +112,13 @@ func ReadFile(filename string) (lines []string, err error) {
 // MakeDirs sets up the directory structure described by dirs
 func MakeDirs(root string) (err error) {
 	var dirs []string
-	if DoCart() || DoGrad() {
-		dirs = []string{"pts/inp"}
+	if OPT {
+		dirs = []string{"opt"}
+	}
+	if CART || GRAD {
+		dirs = append(dirs, "pts/inp")
 	} else {
-		dirs = []string{"opt", "freq", "pts", "freqs", "pts/inp"}
+		dirs = append(dirs, "freq", "pts", "freqs", "pts/inp")
 	}
 	for _, dir := range dirs {
 		filename := root + "/" + dir

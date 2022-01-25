@@ -21,8 +21,9 @@ func TestSIC(t *testing.T) {
 	qsub = "qsub/qsub"
 	temp := Conf
 	Conf = NewConfig()
+	SIC = true
 	defer func() {
-		flags = 0
+		SIC = false
 		Conf = temp
 		*test = false
 		qsub = "qsub"
@@ -84,7 +85,6 @@ func TestCart(t *testing.T) {
 	temp := Conf
 	tmpsym := *nosym
 	defer func() {
-		flags = 0
 		Conf = temp
 		*test = false
 		qsub = "qsub"
@@ -208,7 +208,6 @@ func TestGrad(t *testing.T) {
 		*test = false
 		qsub = "qsub"
 		submitted = 0
-		flags = 0
 	}()
 	prog, _, _ := initialize("tests/grad/grad.in")
 	prog.FormatCart(Conf.Str(Geometry))
@@ -261,7 +260,6 @@ func TestResub(t *testing.T) {
 	tmpsym := *nosym
 	tmpchk := *checkpoint
 	defer func() {
-		flags = 0
 		Conf = temp
 		*test = false
 		qsub = "qsub"
@@ -269,6 +267,7 @@ func TestResub(t *testing.T) {
 		*nosym = tmpsym
 		*checkpoint = tmpchk
 	}()
+	GRAD = false
 	tests := []struct {
 		name   string
 		infile string
