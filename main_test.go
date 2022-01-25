@@ -28,6 +28,10 @@ func TestGHAdd(t *testing.T) {
 }
 
 func TestMakeDirs(t *testing.T) {
+	OPT = true
+	defer func() {
+		OPT = false
+	}()
 	*overwrite = true
 	root := "testfiles"
 	got := MakeDirs(root)

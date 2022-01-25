@@ -113,12 +113,12 @@ func ReadFile(filename string) (lines []string, err error) {
 func MakeDirs(root string) (err error) {
 	var dirs []string
 	if OPT {
-		dirs = []string{"opt"}
+		dirs = []string{"opt", "freq"}
 	}
 	if CART || GRAD {
 		dirs = append(dirs, "pts/inp")
 	} else {
-		dirs = append(dirs, "freq", "pts", "freqs", "pts/inp")
+		dirs = append(dirs, "pts", "freqs", "pts/inp")
 	}
 	for _, dir := range dirs {
 		filename := root + "/" + dir
