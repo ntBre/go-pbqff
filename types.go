@@ -91,8 +91,8 @@ func FloatsFromCountFloats(cfs []CountFloat) (floats []float64) {
 // Target combines a coefficient, target array, and the index into
 // that array
 type Target struct {
-	Coeff float64
 	Slice *[]CountFloat
+	Coeff float64
 	Index int
 }
 

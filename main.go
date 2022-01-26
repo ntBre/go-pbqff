@@ -413,10 +413,7 @@ func RunFreqs(intder *Intder, anp *Anpass) {
 		errExit(err, "running spectro")
 	}
 	res := summarize.SpectroFile("spectro2.out")
-	var mpHarm []float64
-	if mpHarm == nil || len(mpHarm) < len(res.Harm) {
-		mpHarm = make([]float64, spec.Nfreqs)
-	}
+	mpHarm := make([]float64, spec.Nfreqs)
 	Summarize(os.Stdout, res.ZPT, mpHarm, intderHarms, res.Harm, res.Fund, res.Corr)
 }
 

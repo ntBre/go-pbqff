@@ -267,13 +267,13 @@ func Derivative(prog Program, dir string, names []string,
 	ncoords := len(coords)
 	switch {
 	case k == 0 && l == 0:
-		protos = Make2D(mol, i, j)
+		protos = Make2D(i, j)
 		target = &fc2
 	case l == 0:
-		protos = Make3D(mol, i, j, k)
+		protos = Make3D(i, j, k)
 		target = &fc3
 	default:
-		protos = Make4D(mol, i, j, k, l)
+		protos = Make4D(i, j, k, l)
 		target = &fc4
 	}
 	for _, p := range protos {
@@ -326,7 +326,7 @@ func Derivative(prog Program, dir string, names []string,
 
 // GradDerivative is the Derivative analog for Gradients
 func GradDerivative(prog Program, dir string, names []string,
-	coords []float64, i, j, k int, mol symm.Molecule) (calcs []Calc) {
+	coords []float64, i, j, k int, _ symm.Molecule) (calcs []Calc) {
 	ncoords := len(coords)
 	var (
 		protos []ProtoCalc
@@ -337,18 +337,18 @@ func GradDerivative(prog Program, dir string, names []string,
 	switch {
 	case j == 0 && k == 0:
 		// gradient second derivatives are just first derivatives and so on
-		protos = Make1D(mol, i)
+		protos = Make1D(i)
 		dimmax = ncoords
 		ndims = 1
 		target = &fc2
 	case k == 0:
 		// except E0 needs to be G(ref geom) == 0, handled this in Drain
-		protos = Make2D(mol, i, j)
+		protos = Make2D(i, j)
 		dimmax = j
 		ndims = 2
 		target = &fc3
 	default:
-		protos = Make3D(mol, i, j, k)
+		protos = Make3D(i, j, k)
 		dimmax = k
 		ndims = 3
 		target = &fc4
