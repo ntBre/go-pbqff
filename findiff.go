@@ -4,17 +4,13 @@ import (
 	symm "github.com/ntBre/chemutils/symmetry"
 )
 
-var (
-	None = []ProtoCalc{{0, "E0", []int{}, []int{}, 1}}
-)
-
 // Make1D makes the Job slices for finite differences first
 // derivative force constants
 func Make1D(mol symm.Molecule, i int) []ProtoCalc {
 	scale := angbohr / (2 * Conf.FlSlice(Deltas)[i-1])
 	return []ProtoCalc{
-		{1, HashName(), []int{i}, []int{i}, scale},
-		{-1, HashName(), []int{-i}, []int{i}, scale},
+		{Name: HashName(), Steps: []int{i}, Index: []int{i}, Coeff: 1, Scale: scale},
+		{Name: HashName(), Steps: []int{-i}, Index: []int{i}, Coeff: -1, Scale: scale},
 	}
 }
 
@@ -28,17 +24,17 @@ func Make2D(mol symm.Molecule, i, j int) []ProtoCalc {
 	case i == j:
 		// E(+i+i) - 2*E(0) + E(-i-i) / (2d)^2
 		return []ProtoCalc{
-			{1, HashName(), []int{i, i}, []int{i, i}, scale},
-			{-2, "E0", []int{}, []int{i, i}, scale},
-			{1, HashName(), []int{-i, -i}, []int{i, i}, scale},
+			{Name: HashName(), Steps: []int{i, i}, Index: []int{i, i}, Coeff: 1, Scale: scale},
+			{Coeff: -2, Name: "E0", Steps: []int{}, Index: []int{i, i}, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, -i}, Index: []int{i, i}, Coeff: 1, Scale: scale},
 		}
 	case i != j:
 		// E(+i+j) - E(+i-j) - E(-i+j) + E(-i-j) / (2d)^2
 		return []ProtoCalc{
-			{1, HashName(), []int{i, j}, []int{i, j}, scale},
-			{-1, HashName(), []int{i, -j}, []int{i, j}, scale},
-			{-1, HashName(), []int{-i, j}, []int{i, j}, scale},
-			{1, HashName(), []int{-i, -j}, []int{i, j}, scale},
+			{Name: HashName(), Steps: []int{i, j}, Index: []int{i, j}, Coeff: 1, Scale: scale},
+			{Name: HashName(), Steps: []int{i, -j}, Index: []int{i, j}, Coeff: -1, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, j}, Index: []int{i, j}, Coeff: -1, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, -j}, Index: []int{i, j}, Coeff: 1, Scale: scale},
 		}
 	default:
 		panic("No cases matched")
@@ -49,12 +45,12 @@ func Make2D(mol symm.Molecule, i, j int) []ProtoCalc {
 func Make3D_2_1(i, _, k int, scale float64, mol symm.Molecule) []ProtoCalc {
 	// E(+i+i+k) - 2*E(+k) + E(-i-i+k) - E(+i+i-k) + 2*E(-k) - E(-i-i-k) / (2d)^3
 	return []ProtoCalc{
-		{1, HashName(), []int{i, i, k}, []int{i, i, k}, scale},
-		{-2, HashName(), []int{k}, []int{i, i, k}, scale},
-		{1, HashName(), []int{-i, -i, k}, []int{i, i, k}, scale},
-		{-1, HashName(), []int{i, i, -k}, []int{i, i, k}, scale},
-		{2, HashName(), []int{-k}, []int{i, i, k}, scale},
-		{-1, HashName(), []int{-i, -i, -k}, []int{i, i, k}, scale},
+		{Name: HashName(), Steps: []int{i, i, k}, Index: []int{i, i, k}, Coeff: 1, Scale: scale},
+		{Name: HashName(), Steps: []int{k}, Index: []int{i, i, k}, Coeff: -2, Scale: scale},
+		{Name: HashName(), Steps: []int{-i, -i, k}, Index: []int{i, i, k}, Coeff: 1, Scale: scale},
+		{Name: HashName(), Steps: []int{i, i, -k}, Index: []int{i, i, k}, Coeff: -1, Scale: scale},
+		{Name: HashName(), Steps: []int{-k}, Index: []int{i, i, k}, Coeff: 2, Scale: scale},
+		{Name: HashName(), Steps: []int{-i, -i, -k}, Index: []int{i, i, k}, Coeff: -1, Scale: scale},
 	}
 }
 
@@ -70,10 +66,10 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 	case i == j && i == k:
 		// E(+i+i+i) - 3*E(+i) + 3*E(-i) - E(-i-i-i) / (2d)^3
 		return []ProtoCalc{
-			{1, HashName(), []int{i, i, i}, []int{i, i, i}, scale},
-			{-3, HashName(), []int{i}, []int{i, i, i}, scale},
-			{3, HashName(), []int{-i}, []int{i, i, i}, scale},
-			{-1, HashName(), []int{-i, -i, -i}, []int{i, i, i}, scale},
+			{Name: HashName(), Steps: []int{i, i, i}, Index: []int{i, i, i}, Coeff: 1, Scale: scale},
+			{Name: HashName(), Steps: []int{i}, Index: []int{i, i, i}, Coeff: -3, Scale: scale},
+			{Name: HashName(), Steps: []int{-i}, Index: []int{i, i, i}, Coeff: 3, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, -i, -i}, Index: []int{i, i, i}, Coeff: -1, Scale: scale},
 		}
 	// 2 and 1
 	case i == j && i != k:
@@ -85,14 +81,14 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 	// all different
 	case i != j && i != k && j != k:
 		return []ProtoCalc{
-			{1, HashName(), []int{i, j, k}, []int{i, j, k}, scale},
-			{-1, HashName(), []int{i, -j, k}, []int{i, j, k}, scale},
-			{-1, HashName(), []int{-i, j, k}, []int{i, j, k}, scale},
-			{1, HashName(), []int{-i, -j, k}, []int{i, j, k}, scale},
-			{-1, HashName(), []int{i, j, -k}, []int{i, j, k}, scale},
-			{1, HashName(), []int{i, -j, -k}, []int{i, j, k}, scale},
-			{1, HashName(), []int{-i, j, -k}, []int{i, j, k}, scale},
-			{-1, HashName(), []int{-i, -j, -k}, []int{i, j, k}, scale},
+			{Name: HashName(), Steps: []int{i, j, k}, Index: []int{i, j, k}, Coeff: 1, Scale: scale},
+			{Name: HashName(), Steps: []int{i, -j, k}, Index: []int{i, j, k}, Coeff: -1, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, j, k}, Index: []int{i, j, k}, Coeff: -1, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, -j, k}, Index: []int{i, j, k}, Coeff: 1, Scale: scale},
+			{Name: HashName(), Steps: []int{i, j, -k}, Index: []int{i, j, k}, Coeff: -1, Scale: scale},
+			{Name: HashName(), Steps: []int{i, -j, -k}, Index: []int{i, j, k}, Coeff: 1, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, j, -k}, Index: []int{i, j, k}, Coeff: 1, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, -j, -k}, Index: []int{i, j, k}, Coeff: -1, Scale: scale},
 		}
 	default:
 		panic("No cases matched")
@@ -101,58 +97,58 @@ func Make3D(mol symm.Molecule, i, j, k int) []ProtoCalc {
 
 func Make4D_3_1(i, _, _, l int, scale float64, mol symm.Molecule) []ProtoCalc {
 	return []ProtoCalc{
-		{1, HashName(), []int{i, i, i, l}, []int{i, i, i, l}, scale},
-		{-3, HashName(), []int{i, l}, []int{i, i, i, l}, scale},
-		{3, HashName(), []int{-i, l}, []int{i, i, i, l}, scale},
-		{-1, HashName(), []int{-i, -i, -i, l}, []int{i, i, i, l}, scale},
-		{-1, HashName(), []int{i, i, i, -l}, []int{i, i, i, l}, scale},
-		{3, HashName(), []int{i, -l}, []int{i, i, i, l}, scale},
-		{-3, HashName(), []int{-i, -l}, []int{i, i, i, l}, scale},
-		{1, HashName(), []int{-i, -i, -i, -l}, []int{i, i, i, l}, scale},
+		{Name: HashName(), Steps: []int{i, i, i, l}, Index: []int{i, i, i, l}, Coeff: 1, Scale: scale},
+		{Name: HashName(), Steps: []int{i, l}, Index: []int{i, i, i, l}, Coeff: -3, Scale: scale},
+		{Name: HashName(), Steps: []int{-i, l}, Index: []int{i, i, i, l}, Coeff: 3, Scale: scale},
+		{Name: HashName(), Steps: []int{-i, -i, -i, l}, Index: []int{i, i, i, l}, Coeff: -1, Scale: scale},
+		{Name: HashName(), Steps: []int{i, i, i, -l}, Index: []int{i, i, i, l}, Coeff: -1, Scale: scale},
+		{Name: HashName(), Steps: []int{i, -l}, Index: []int{i, i, i, l}, Coeff: 3, Scale: scale},
+		{Name: HashName(), Steps: []int{-i, -l}, Index: []int{i, i, i, l}, Coeff: -3, Scale: scale},
+		{Name: HashName(), Steps: []int{-i, -i, -i, -l}, Index: []int{i, i, i, l}, Coeff: 1, Scale: scale},
 	}
 }
 
 func Make4D_2_1_1(i, _, k, l int, scale float64, mol symm.Molecule) []ProtoCalc {
 	return []ProtoCalc{
-		{1, HashName(), []int{i, i, k, l}, []int{i, i, k, l}, scale},
-		{-2, HashName(), []int{k, l}, []int{i, i, k, l}, scale},
-		{1, HashName(), []int{-i, -i, k, l}, []int{i, i, k, l}, scale},
-		{-1, HashName(), []int{i, i, -k, l}, []int{i, i, k, l}, scale},
-		{2, HashName(), []int{-k, l}, []int{i, i, k, l}, scale},
-		{-1, HashName(), []int{-i, -i, -k, l}, []int{i, i, k, l}, scale},
-		{-1, HashName(), []int{i, i, k, -l}, []int{i, i, k, l}, scale},
-		{2, HashName(), []int{k, -l}, []int{i, i, k, l}, scale},
-		{-1, HashName(), []int{-i, -i, k, -l}, []int{i, i, k, l}, scale},
-		{1, HashName(), []int{i, i, -k, -l}, []int{i, i, k, l}, scale},
-		{-2, HashName(), []int{-k, -l}, []int{i, i, k, l}, scale},
-		{1, HashName(), []int{-i, -i, -k, -l}, []int{i, i, k, l}, scale},
+		{Name: HashName(), Steps: []int{i, i, k, l}, Index: []int{i, i, k, l}, Coeff: 1, Scale: scale},
+		{Name: HashName(), Steps: []int{k, l}, Index: []int{i, i, k, l}, Coeff: -2, Scale: scale},
+		{Name: HashName(), Steps: []int{-i, -i, k, l}, Index: []int{i, i, k, l}, Coeff: 1, Scale: scale},
+		{Name: HashName(), Steps: []int{i, i, -k, l}, Index: []int{i, i, k, l}, Coeff: -1, Scale: scale},
+		{Name: HashName(), Steps: []int{-k, l}, Index: []int{i, i, k, l}, Coeff: 2, Scale: scale},
+		{Name: HashName(), Steps: []int{-i, -i, -k, l}, Index: []int{i, i, k, l}, Coeff: -1, Scale: scale},
+		{Name: HashName(), Steps: []int{i, i, k, -l}, Index: []int{i, i, k, l}, Coeff: -1, Scale: scale},
+		{Name: HashName(), Steps: []int{k, -l}, Index: []int{i, i, k, l}, Coeff: 2, Scale: scale},
+		{Name: HashName(), Steps: []int{-i, -i, k, -l}, Index: []int{i, i, k, l}, Coeff: -1, Scale: scale},
+		{Name: HashName(), Steps: []int{i, i, -k, -l}, Index: []int{i, i, k, l}, Coeff: 1, Scale: scale},
+		{Name: HashName(), Steps: []int{-k, -l}, Index: []int{i, i, k, l}, Coeff: -2, Scale: scale},
+		{Name: HashName(), Steps: []int{-i, -i, -k, -l}, Index: []int{i, i, k, l}, Coeff: 1, Scale: scale},
 	}
 }
 
 func Make4D_2_2(i, j, k, l int, scale float64, mol symm.Molecule) []ProtoCalc {
 	return []ProtoCalc{
-		{1, HashName(), []int{i, i, k, k}, []int{i, i, k, k}, scale},
-		{1, HashName(), []int{-i, -i, -k, -k}, []int{i, i, k, k}, scale},
-		{1, HashName(), []int{-i, -i, k, k}, []int{i, i, k, k}, scale},
-		{1, HashName(), []int{i, i, -k, -k}, []int{i, i, k, k}, scale},
-		{-2, HashName(), []int{i, i}, []int{i, i, k, k}, scale},
-		{-2, HashName(), []int{k, k}, []int{i, i, k, k}, scale},
-		{-2, HashName(), []int{-i, -i}, []int{i, i, k, k}, scale},
-		{-2, HashName(), []int{-k, -k}, []int{i, i, k, k}, scale},
-		{4, "E0", []int{}, []int{i, i, k, k}, scale},
+		{Name: HashName(), Steps: []int{i, i, k, k}, Index: []int{i, i, k, k}, Coeff: 1, Scale: scale},
+		{Name: HashName(), Steps: []int{-i, -i, -k, -k}, Index: []int{i, i, k, k}, Coeff: 1, Scale: scale},
+		{Name: HashName(), Steps: []int{-i, -i, k, k}, Index: []int{i, i, k, k}, Coeff: 1, Scale: scale},
+		{Name: HashName(), Steps: []int{i, i, -k, -k}, Index: []int{i, i, k, k}, Coeff: 1, Scale: scale},
+		{Name: HashName(), Steps: []int{i, i}, Index: []int{i, i, k, k}, Coeff: -2, Scale: scale},
+		{Name: HashName(), Steps: []int{k, k}, Index: []int{i, i, k, k}, Coeff: -2, Scale: scale},
+		{Name: HashName(), Steps: []int{-i, -i}, Index: []int{i, i, k, k}, Coeff: -2, Scale: scale},
+		{Name: HashName(), Steps: []int{-k, -k}, Index: []int{i, i, k, k}, Coeff: -2, Scale: scale},
+		{Coeff: 4, Name: "E0", Steps: []int{}, Index: []int{i, i, k, k}, Scale: scale},
 	}
 }
 
 func Make4D_1_1_1_1(i, j, k, l int, scale float64) []ProtoCalc {
 	return []ProtoCalc{
-		{2, HashName(), []int{i, j, k, l}, []int{i, j, k, l}, scale},
-		{2, HashName(), []int{i, -j, -k, l}, []int{i, j, k, l}, scale},
-		{2, HashName(), []int{i, -j, k, -l}, []int{i, j, k, l}, scale},
-		{2, HashName(), []int{i, j, -k, -l}, []int{i, j, k, l}, scale},
-		{-2, HashName(), []int{i, -j, k, l}, []int{i, j, k, l}, scale},
-		{-2, HashName(), []int{i, j, -k, l}, []int{i, j, k, l}, scale},
-		{-2, HashName(), []int{i, j, k, -l}, []int{i, j, k, l}, scale},
-		{-2, HashName(), []int{i, -j, -k, -l}, []int{i, j, k, l}, scale},
+		{Name: HashName(), Steps: []int{i, j, k, l}, Index: []int{i, j, k, l}, Coeff: 2, Scale: scale},
+		{Name: HashName(), Steps: []int{i, -j, -k, l}, Index: []int{i, j, k, l}, Coeff: 2, Scale: scale},
+		{Name: HashName(), Steps: []int{i, -j, k, -l}, Index: []int{i, j, k, l}, Coeff: 2, Scale: scale},
+		{Name: HashName(), Steps: []int{i, j, -k, -l}, Index: []int{i, j, k, l}, Coeff: 2, Scale: scale},
+		{Name: HashName(), Steps: []int{i, -j, k, l}, Index: []int{i, j, k, l}, Coeff: -2, Scale: scale},
+		{Name: HashName(), Steps: []int{i, j, -k, l}, Index: []int{i, j, k, l}, Coeff: -2, Scale: scale},
+		{Name: HashName(), Steps: []int{i, j, k, -l}, Index: []int{i, j, k, l}, Coeff: -2, Scale: scale},
+		{Name: HashName(), Steps: []int{i, -j, -k, -l}, Index: []int{i, j, k, l}, Coeff: -2, Scale: scale},
 	}
 }
 
@@ -168,11 +164,11 @@ func Make4D(mol symm.Molecule, i, j, k, l int) []ProtoCalc {
 	// all the same
 	case i == j && i == k && i == l:
 		return []ProtoCalc{
-			{1, HashName(), []int{i, i, i, i}, []int{i, i, i, i}, scale},
-			{-4, HashName(), []int{i, i}, []int{i, i, i, i}, scale},
-			{6, "E0", []int{}, []int{i, i, i, i}, scale},
-			{-4, HashName(), []int{-i, -i}, []int{i, i, i, i}, scale},
-			{1, HashName(), []int{-i, -i, -i, -i}, []int{i, i, i, i}, scale},
+			{Name: HashName(), Steps: []int{i, i, i, i}, Index: []int{i, i, i, i}, Coeff: 1, Scale: scale},
+			{Name: HashName(), Steps: []int{i, i}, Index: []int{i, i, i, i}, Coeff: -4, Scale: scale},
+			{Coeff: 6, Name: "E0", Steps: []int{}, Index: []int{i, i, i, i}, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, -i}, Index: []int{i, i, i, i}, Coeff: -4, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, -i, -i, -i}, Index: []int{i, i, i, i}, Coeff: 1, Scale: scale},
 		}
 
 	// 3 and 1
@@ -210,22 +206,22 @@ func Make4D(mol symm.Molecule, i, j, k, l int) []ProtoCalc {
 	// all different
 	case i != j && i != k && i != l && j != k && j != l && k != l:
 		return []ProtoCalc{
-			{1, HashName(), []int{i, j, k, l}, []int{i, j, k, l}, scale},
-			{-1, HashName(), []int{i, -j, k, l}, []int{i, j, k, l}, scale},
-			{-1, HashName(), []int{-i, j, k, l}, []int{i, j, k, l}, scale},
-			{1, HashName(), []int{-i, -j, k, l}, []int{i, j, k, l}, scale},
-			{-1, HashName(), []int{i, j, -k, l}, []int{i, j, k, l}, scale},
-			{1, HashName(), []int{i, -j, -k, l}, []int{i, j, k, l}, scale},
-			{1, HashName(), []int{-i, j, -k, l}, []int{i, j, k, l}, scale},
-			{-1, HashName(), []int{-i, -j, -k, l}, []int{i, j, k, l}, scale},
-			{-1, HashName(), []int{i, j, k, -l}, []int{i, j, k, l}, scale},
-			{1, HashName(), []int{i, -j, k, -l}, []int{i, j, k, l}, scale},
-			{1, HashName(), []int{-i, j, k, -l}, []int{i, j, k, l}, scale},
-			{-1, HashName(), []int{-i, -j, k, -l}, []int{i, j, k, l}, scale},
-			{1, HashName(), []int{i, j, -k, -l}, []int{i, j, k, l}, scale},
-			{-1, HashName(), []int{i, -j, -k, -l}, []int{i, j, k, l}, scale},
-			{-1, HashName(), []int{-i, j, -k, -l}, []int{i, j, k, l}, scale},
-			{1, HashName(), []int{-i, -j, -k, -l}, []int{i, j, k, l}, scale},
+			{Name: HashName(), Steps: []int{i, j, k, l}, Index: []int{i, j, k, l}, Coeff: 1, Scale: scale},
+			{Name: HashName(), Steps: []int{i, -j, k, l}, Index: []int{i, j, k, l}, Coeff: -1, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, j, k, l}, Index: []int{i, j, k, l}, Coeff: -1, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, -j, k, l}, Index: []int{i, j, k, l}, Coeff: 1, Scale: scale},
+			{Name: HashName(), Steps: []int{i, j, -k, l}, Index: []int{i, j, k, l}, Coeff: -1, Scale: scale},
+			{Name: HashName(), Steps: []int{i, -j, -k, l}, Index: []int{i, j, k, l}, Coeff: 1, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, j, -k, l}, Index: []int{i, j, k, l}, Coeff: 1, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, -j, -k, l}, Index: []int{i, j, k, l}, Coeff: -1, Scale: scale},
+			{Name: HashName(), Steps: []int{i, j, k, -l}, Index: []int{i, j, k, l}, Coeff: -1, Scale: scale},
+			{Name: HashName(), Steps: []int{i, -j, k, -l}, Index: []int{i, j, k, l}, Coeff: 1, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, j, k, -l}, Index: []int{i, j, k, l}, Coeff: 1, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, -j, k, -l}, Index: []int{i, j, k, l}, Coeff: -1, Scale: scale},
+			{Name: HashName(), Steps: []int{i, j, -k, -l}, Index: []int{i, j, k, l}, Coeff: 1, Scale: scale},
+			{Name: HashName(), Steps: []int{i, -j, -k, -l}, Index: []int{i, j, k, l}, Coeff: -1, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, j, -k, -l}, Index: []int{i, j, k, l}, Coeff: -1, Scale: scale},
+			{Name: HashName(), Steps: []int{-i, -j, -k, -l}, Index: []int{i, j, k, l}, Coeff: 1, Scale: scale},
 		}
 	default:
 		panic("No cases matched")

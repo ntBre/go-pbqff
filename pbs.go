@@ -20,9 +20,9 @@ var (
 type Job struct {
 	Name     string
 	Filename string
-	Jobs     []string
 	Host     string
 	Queue    string
+	Jobs     []string
 	NumCPUs  int
 	PBSMem   int
 }

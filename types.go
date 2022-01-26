@@ -8,18 +8,18 @@ import (
 // Calc holds the name of a job to be run and its result's index in
 // the output array
 type Calc struct {
-	Name     string
-	Coords   []float64
-	Targets  []Target
-	Result   float64
-	JobID    string
-	ResubID  string
-	noRun    bool
-	SubFile  string
-	ChunkNum int
 	Resub    *Calc
 	Src      *Energy
+	Name     string
+	SubFile  string
+	ResubID  string
+	JobID    string
+	Targets  []Target
+	Coords   []float64
+	ChunkNum int
+	Result   float64
 	Scale    float64
+	noRun    bool
 }
 
 func (c Calc) String() string {
@@ -45,10 +45,10 @@ func (c Calc) String() string {
 // ProtoCalc is a precursor to a Calc with information for setting up
 // the Calc itself
 type ProtoCalc struct {
-	Coeff float64
 	Name  string
 	Steps []int
 	Index []int
+	Coeff float64
 	Scale float64
 }
 
