@@ -52,6 +52,7 @@ Al 1 AlX 2 90.0
 Al 1 AlX 2 90.0 3 180.0
 O  1 OX  2 XXO  3 90.0
 O  1 OX  2 XXO  4 90.0
+
 AlX = 0.85 Ang
 OX = 1.1 Ang
 XXO = 80.0 Deg`,
@@ -69,7 +70,7 @@ XXO = 80.0 Deg`,
 				PBSTmpl:        pbsMaple,
 				PBSMem:     8,
 				EnergyLine: regexp.MustCompile(`energy=`),
-				Ncoords:    6,
+				Ncoords:    7,
 				Package:    "molpro",
 			},
 		},
@@ -84,6 +85,7 @@ Al 1 AlX 2 90.0
 Al 1 AlX 2 90.0 3 180.0
 O  1 OX  2 XXO  3 90.0
 O  1 OX  2 XXO  4 90.0
+
 AlX = 0.85 Ang
 OX = 1.1 Ang
 XXO = 80.0 Deg`,
@@ -101,7 +103,7 @@ XXO = 80.0 Deg`,
 				PBSTmpl:        pbsMaple,
 				PBSMem:     8,
 				EnergyLine: regexp.MustCompile(`^\s*CCCRE\s+=`),
-				Ncoords:    6,
+				Ncoords:    7,
 				Package:    "molpro",
 			},
 		},

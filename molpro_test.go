@@ -442,19 +442,19 @@ func TestBuildPoints(t *testing.T) {
 	want := []Calc{
 		{
 			Name:    "testfiles/read/inp/NHHH.00000",
-			Targets: []Target{{1, &cenergies, 0}},
+			Targets: []Target{{Coeff: 1, Slice: &cenergies, Index: 0}},
 			SubFile: "testfiles/read/inp/main0.pbs",
 			JobID:   "1",
 			Scale:   1},
 		{
 			Name:    "testfiles/read/inp/NHHH.00001",
-			Targets: []Target{{1, &cenergies, 1}},
+			Targets: []Target{{Coeff: 1, Slice: &cenergies, Index: 1}},
 			SubFile: "testfiles/read/inp/main0.pbs",
 			JobID:   "1",
 			Scale:   1},
 		{
 			Name:    "testfiles/read/inp/NHHH.00002",
-			Targets: []Target{{1, &cenergies, 2}},
+			Targets: []Target{{Coeff: 1, Slice: &cenergies, Index: 2}},
 			SubFile: "testfiles/read/inp/main0.pbs",
 			JobID:   "1",
 			Scale:   1},

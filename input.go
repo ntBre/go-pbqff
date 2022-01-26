@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -28,29 +30,33 @@ func ProcessInput(line string) {
 // ParseInfile parses an input file specified by filename and stores
 // the results in the array Input
 func ParseInfile(filename string) {
-	lines, err := ReadFile(filename)
+	f, err := os.Open(filename)
+	defer f.Close()
 	if err != nil {
 		panic(err)
 	}
+	scanner := bufio.NewScanner(f)
 	var (
 		block   strings.Builder
 		inblock bool
+		line    string
 	)
-	for i := 0; i < len(lines); i++ {
+	for scanner.Scan() {
+		line = scanner.Text()
 		switch {
-		case lines[i][0] == '#': // comment
-		case strings.Contains(lines[i], "}"):
+		case len(line) > 0 && line[0] == '#': // comment
+		case strings.Contains(line, "}"):
 			inblock = false
 			ProcessInput(strings.TrimSpace(block.String()))
 			block.Reset()
-		case strings.Contains(lines[i], "{"):
-			keyword := strings.SplitN(lines[i], "{", 2)[0]
+		case strings.Contains(line, "{"):
+			keyword := strings.SplitN(line, "{", 2)[0]
 			block.WriteString(keyword)
 			inblock = true
 		case inblock:
-			block.WriteString(lines[i] + "\n")
+			block.WriteString(line + "\n")
 		default:
-			ProcessInput(lines[i])
+			ProcessInput(line)
 		}
 	}
 	// Post-parse processing on some of the keywords
