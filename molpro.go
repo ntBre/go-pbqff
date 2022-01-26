@@ -240,7 +240,8 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 func (m *Molpro) HandleOutput(filename string) (string, string, error) {
 	outfile := filename + ".out"
 	logfile := filename + ".log"
-	lines, err := ReadFile(outfile)
+	f, err := os.Open(outfile)
+	defer f.Close()
 	if err != nil {
 		panic(err)
 	}
@@ -248,7 +249,10 @@ func (m *Molpro) HandleOutput(filename string) (string, string, error) {
 	error := regexp.MustCompile(`(?i)[^_]error`)
 	// notify about warnings or errors in output file
 	// apparently warnings are not printed in the log
-	for _, line := range lines {
+	scanner := bufio.NewScanner(f)
+	var line string
+	for scanner.Scan() {
+		line = scanner.Text()
 		if warn.MatchString(line) {
 			Warn("HandleOutput: warning %q, found in %s",
 				line, outfile)
