@@ -179,6 +179,7 @@ func (c *Config) WhichProgram() {
 	case "grad":
 		GRAD = true
 	case "molpro", "", "sic": // default if not specified
+		SIC = true
 	default:
 		panic("unsupported option for keyword program")
 	}

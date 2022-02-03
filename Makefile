@@ -54,3 +54,4 @@ version.go: .git
 
 eland: pbqff
 	scp -C pbqff 'eland:programs/pbqff/.'
+	date >> eland
