@@ -142,8 +142,8 @@ func Summarize(w io.Writer, zpt float64, mpHarm, idHarm, spHarm, spFund,
 func Drain(prog Program, q Queue, ncoords int, E0 float64,
 	gen func() ([]Calc, bool)) (min, realTime float64) {
 	start := time.Now()
-	if Conf.At(Deltas) != nil {
-		fmt.Println("step sizes: ", Conf.FlSlice(Deltas))
+	if Conf.Deltas != nil {
+		fmt.Println("step sizes: ", Conf.Deltas)
 	}
 	points := make([]Calc, 0)
 	var (
@@ -163,7 +163,7 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 	heap := new(GarbageHeap)
 	ok := true
 	var calcs []Calc
-	maxjobs := Conf.Int(JobLimit)
+	maxjobs := Conf.JobLimit
 	if *dump {
 		f, err := os.Create("dump.dat")
 		defer f.Close()
@@ -173,7 +173,7 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 		dumper = f
 	}
 	for {
-		for maxjobs+norun-nJobs >= Conf.Int(ChunkSize) && ok {
+		for maxjobs+norun-nJobs >= Conf.ChunkSize && ok {
 			calcs, ok = gen()
 			points = append(points, calcs...)
 			nJobs = len(points)
@@ -292,7 +292,7 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 		if shortenBy < 1 {
 			fmt.Fprintln(os.Stderr, "Didn't shorten, sleeping")
 			q.Stat(&qstat)
-			time.Sleep(time.Duration(Conf.Int(SleepInt)) * time.Second)
+			time.Sleep(time.Duration(Conf.SleepInt) * time.Second)
 		} else {
 			fmt.Fprintf(os.Stderr,
 				"%s finished %d/%d submitted, %v polling %d jobs\n",
@@ -300,7 +300,7 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 				finished, submitted,
 				time.Since(pollStart).Round(time.Millisecond), nJobs-norun)
 		}
-		if check >= Conf.Int(CheckInt) {
+		if check >= Conf.CheckInt {
 			if !nocheck {
 				MakeCheckpoint(prog.GetDir())
 			}
@@ -308,7 +308,7 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 			fmt.Fprintf(os.Stderr, "CPU time: %.3f s\n",
 				float64(GetCPU()-StartCPU)/1e9)
 		}
-		if heap.Len() >= Conf.Int(ChunkSize) && !*nodel {
+		if heap.Len() >= Conf.ChunkSize && !*nodel {
 			heap.Dump()
 			stackDump()
 		}
@@ -373,7 +373,7 @@ func RunFreqs(intder *Intder, anp *Anpass) {
 		}
 	}
 	prog := new(Molpro)
-	err = prog.FormatCart(Conf.Str(Geometry))
+	err = prog.FormatCart(Conf.Geometry)
 	if err != nil {
 		panic(err)
 	}
@@ -423,7 +423,7 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	}
 	if *freqs {
 		ParseInfile(infile)
-		spectro.Command = Conf.Str(SpectroCmd)
+		spectro.Command = Conf.SpectroCmd
 		var err error
 		intder, err = LoadIntder("intder.in")
 		if err != nil {
@@ -441,8 +441,8 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	if *checkpoint {
 		LoadCheckpoint(dir)
 	}
-	spectro.Command = Conf.Str(SpectroCmd)
-	nc := Conf.Int(Ncoords)
+	spectro.Command = Conf.SpectroCmd
+	nc := Conf.Ncoords
 	switch {
 	case CART:
 		fmt.Printf("%d coords requires %d Cartesian points\n",
@@ -460,11 +460,11 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 		fmt.Println("-count only implemented for gradients and Cartesians")
 		os.Exit(1)
 	}
-	mpName := filepath.Join(dir, Conf.Str(MolproTmpl))
-	idName := filepath.Join(dir, Conf.Str(IntderTmpl))
-	apName := filepath.Join(dir, Conf.Str(AnpassTmpl))
+	mpName := filepath.Join(dir, Conf.MolproTmpl)
+	idName := filepath.Join(dir, Conf.IntderTmpl)
+	apName := filepath.Join(dir, Conf.AnpassTmpl)
 	var err error
-	switch Conf.Str(Package) {
+	switch Conf.Package {
 	case "molpro", "":
 		prog, err = LoadMolpro(mpName)
 	case "g16", "gaussian", "gauss":
@@ -609,7 +609,7 @@ func main() {
 		queue    Queue
 	)
 
-	switch Conf.Str(QueueSystem) {
+	switch Conf.QueueSystem {
 	case "pbs":
 		queue = PBS{
 			SinglePt: pbsMaple,
@@ -623,10 +623,10 @@ func main() {
 	}
 
 	if OPT {
-		if Conf.Str(GeomType) != "zmat" {
+		if Conf.GeomType != "zmat" {
 			panic("optimization requires a zmat geometry")
 		}
-		err := prog.FormatZmat(Conf.Str(Geometry))
+		err := prog.FormatZmat(Conf.Geometry)
 		if err != nil {
 			panic(err)
 		}
@@ -638,10 +638,10 @@ func main() {
 		prog.UpdateZmat(zmat)
 		prog.Run(freq, queue)
 	} else {
-		if !strings.Contains("cart,xyz", Conf.Str(GeomType)) {
+		if !strings.Contains("cart,xyz", Conf.GeomType) {
 			panic("expecting cartesian geometry")
 		}
-		err := prog.FormatCart(Conf.Str(Geometry))
+		err := prog.FormatCart(Conf.Geometry)
 		if err != nil {
 			panic(err)
 		}
@@ -722,10 +722,10 @@ func main() {
 			res.Fund, res.Corr)
 	} else {
 		PrintFortFile(fc2, natoms, 6*natoms, "fort.15")
-		if Conf.Int(Deriv) > 2 {
+		if Conf.Deriv > 2 {
 			PrintFortFile(fc3, natoms, other3, "fort.30")
 		}
-		if Conf.Int(Deriv) > 3 {
+		if Conf.Deriv > 3 {
 			PrintFortFile(fc4, natoms, other4, "fort.40")
 			var buf bytes.Buffer
 			for i := range coords {

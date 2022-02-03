@@ -108,7 +108,7 @@ func BuildPoints(p Program, q Queue, filename string, atomNames []string,
 		count int
 		end   int
 	)
-	cs := Conf.Int(ChunkSize)
+	cs := Conf.ChunkSize
 	if start+cs > len(calcs) {
 		end = len(calcs)
 	} else {
@@ -153,7 +153,7 @@ func BuildCartPoints(p Program, q Queue, dir string, names []string,
 		count int
 	)
 	kmax, lmax := ncoords, ncoords
-	switch Conf.Int(Deriv) {
+	switch Conf.Deriv {
 	case 4:
 	case 3:
 		lmax = 0
@@ -163,7 +163,7 @@ func BuildCartPoints(p Program, q Queue, dir string, names []string,
 	default:
 		panic("unrecognized derivative level")
 	}
-	cs := Conf.Int(ChunkSize)
+	cs := Conf.ChunkSize
 	jnit, knit, lnit := 1, 0, 0
 	i, j, k, l := 1, jnit, knit, lnit
 	// returns a list of calcs and whether or not it should be
@@ -187,7 +187,7 @@ func BuildCartPoints(p Program, q Queue, dir string, names []string,
 								coords, i, j, k, l,
 								mol)...,
 						)
-						if len(calcs) >= Conf.Int(ChunkSize) {
+						if len(calcs) >= Conf.ChunkSize {
 							jnit, knit, lnit = j, k, l+1
 							return Push(q, dir, pf, count, calcs), true
 						}
@@ -214,7 +214,7 @@ func BuildGradPoints(p Program, q Queue, dir string, names []string,
 		count int
 	)
 	jmax, kmax := ncoords, ncoords
-	switch Conf.Int(Deriv) {
+	switch Conf.Deriv {
 	case 4:
 	case 3:
 		kmax = 0
@@ -224,7 +224,7 @@ func BuildGradPoints(p Program, q Queue, dir string, names []string,
 	default:
 		panic("unrecognized derivative level")
 	}
-	cs := Conf.Int(ChunkSize)
+	cs := Conf.ChunkSize
 	jnit, knit := 0, 0
 	i, j, k := 1, jnit, knit
 	// returns a list of calcs and whether or not it should be
@@ -244,7 +244,7 @@ func BuildGradPoints(p Program, q Queue, dir string, names []string,
 							coords, i, j, k,
 							mol)...,
 					)
-					if len(calcs) >= Conf.Int(ChunkSize) {
+					if len(calcs) >= Conf.ChunkSize {
 						jnit, knit = j, k+1
 						return Push(q, dir, pf, count, calcs), true
 					}

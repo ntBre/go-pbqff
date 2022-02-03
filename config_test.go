@@ -1,9 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
+
+func TestSomething(t *testing.T) {
+	conf := Config2{}
+	for _, f := range reflect.VisibleFields(reflect.TypeOf(conf)) {
+		fmt.Printf("%s -> %s\n", f.Name, f.Type)
+	}
+}
 
 func TestParseDeltas(t *testing.T) {
 	tests := []struct {

@@ -181,7 +181,7 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 		case strings.Contains(line, "=") &&
 			!strings.Contains(line, "gthresh") &&
 			!strings.Contains(line, "hf") &&
-			Conf.RE(EnergyLine).MatchString(line):
+			Conf.EnergyLine.MatchString(line):
 			split := strings.Fields(line)
 			for i := range split {
 				if strings.Contains(split[i], "=") {
@@ -380,10 +380,10 @@ func (m *Molpro) Run(proc Procedure, q Queue) (E0 float64) {
 	q.WritePBS(pbsfile,
 		&Job{
 			Name: fmt.Sprintf("%s-%s",
-				MakeName(Conf.Str(Geometry)), proc),
+				MakeName(Conf.Geometry), proc),
 			Filename: infile,
-			NumCPUs:  Conf.Int(NumCPUs),
-			PBSMem:   Conf.Int(PBSMem),
+			NumCPUs:  Conf.NumCPUs,
+			PBSMem:   Conf.PBSMem,
 		}, q.SinglePBS())
 	jobid := q.Submit(pbsfile)
 	jobMap := make(map[string]bool)
@@ -398,7 +398,7 @@ func (m *Molpro) Run(proc Procedure, q Queue) (E0 float64) {
 			jobid = q.Submit(pbsfile)
 			jobMap[jobid] = false
 		}
-		time.Sleep(time.Duration(Conf.Int(SleepInt)) * time.Second)
+		time.Sleep(time.Duration(Conf.SleepInt) * time.Second)
 	}
 	return
 }

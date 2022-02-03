@@ -106,8 +106,8 @@ func (p PBS) Resubmit(name string, err error) string {
 			Jobs:     []string{name + "_redo.inp"},
 			Host:     "",
 			Queue:    "",
-			NumCPUs:  Conf.Int(NumCPUs),
-			PBSMem:   Conf.Int(PBSMem),
+			NumCPUs:  Conf.NumCPUs,
+			PBSMem:   Conf.PBSMem,
 		}, p.SinglePBS())
 	return p.Submit(name + "_redo.pbs")
 }

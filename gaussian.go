@@ -431,10 +431,10 @@ func (g *Gaussian) Run(proc Procedure, q Queue) (E0 float64) {
 	q.WritePBS(pbsfile,
 		&Job{
 			Name: fmt.Sprintf("%s-%s",
-				MakeName(Conf.Str(Geometry)), proc),
+				MakeName(Conf.Geometry), proc),
 			Filename: infile,
-			NumCPUs:  Conf.Int(NumCPUs),
-			PBSMem:   Conf.Int(PBSMem),
+			NumCPUs:  Conf.NumCPUs,
+			PBSMem:   Conf.PBSMem,
 		}, pbsMaple)
 	jobid := q.Submit(pbsfile)
 	jobMap := make(map[string]bool)
@@ -449,7 +449,7 @@ func (g *Gaussian) Run(proc Procedure, q Queue) (E0 float64) {
 			jobid = q.Submit(pbsfile)
 			jobMap[jobid] = false
 		}
-		time.Sleep(time.Duration(Conf.Int(SleepInt)) * time.Second)
+		time.Sleep(time.Duration(Conf.SleepInt) * time.Second)
 	}
 	return
 }

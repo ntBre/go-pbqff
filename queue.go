@@ -17,7 +17,7 @@ type Queue interface {
 
 // SelectNode returns a node and queue from the Global node list
 func SelectNode() (node, queue string) {
-	queue = Conf.Str(WorkQueue)
+	queue = Conf.WorkQueue
 	// regenerate empty node list if empty
 	if len(Global.Nodes) == 0 {
 		Global.Nodes = PBSnodes()
@@ -51,13 +51,13 @@ func Push(q Queue, dir string, pf, count int, calcs []Calc) []Calc {
 	// This should be using the PBS from Config
 	q.WritePBS(subfile,
 		&Job{
-			Name:     MakeName(Conf.Str(Geometry)) + "pts",
+			Name:     MakeName(Conf.Geometry) + "pts",
 			Filename: subfile,
 			Jobs:     jobs,
 			Host:     node,
 			Queue:    queue,
-			NumCPUs:  Conf.Int(NumCPUs),
-			PBSMem:   Conf.Int(PBSMem),
+			NumCPUs:  Conf.NumCPUs,
+			PBSMem:   Conf.PBSMem,
 		}, q.ChunkPBS())
 	jobid := q.Submit(subfile)
 	if *debug {
@@ -65,7 +65,7 @@ func Push(q Queue, dir string, pf, count int, calcs []Calc) []Calc {
 	}
 	ptsJobs = append(ptsJobs, jobid)
 	paraJobs = append(paraJobs, jobid)
-	paraCount[jobid] = Conf.Int(ChunkSize)
+	paraCount[jobid] = Conf.ChunkSize
 	count = 1
 	pf++
 	// if end reached with no calcs, which can happen on continue

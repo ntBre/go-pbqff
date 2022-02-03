@@ -625,7 +625,7 @@ func (i *Intder) Read9903(filename string, lintri bool) {
 // on pts/intder.in and redirects the output into
 // pts/intder.out
 func RunIntder(filename string) {
-	err := RunProgram(Conf.Str(IntderCmd), filename)
+	err := RunProgram(Conf.IntderCmd, filename)
 	if err != nil {
 		panic(err)
 	}

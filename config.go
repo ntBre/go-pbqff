@@ -3,156 +3,44 @@
 package main
 
 import (
-	"errors"
-	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"text/template"
 )
 
-// Key is a type for input keyword indices
-type Key int
-
-// Keys in the configuration array. To add a new Keyword, add a Key
-// here and to the String method below, then add its field to Conf
-// below. If it requires other Keywords to fully process, add a method
-// on Config and call it at the end of ParseInfile in input.go.
-const (
-	Cluster   Key = iota
-	Package       // the quantum chemistry package to use
-	ChemProg      // the type of calculation sic|cart|grad
-	WorkQueue     // queue to select in the PBSTmpl
-	Delta
-	Deltas
-	Geometry
-	GeomType
-	Flags
-	Deriv
-	JobLimit
-	ChunkSize
-	CheckInt
-	SleepInt
-	NumCPUs
-	PBSMem
-	IntderCmd
-	SpectroCmd
-	Ncoords
-	EnergyLine
-	PBSTmpl     // internal template to use for job submission
-	QueueSystem // pbs or slurm
-	MolproTmpl
-	AnpassTmpl
-	IntderTmpl
-	NumKeys
-)
-
-func (k Key) String() string {
-	return []string{
-		"Cluster",
-		"Package",
-		"ChemProg",
-		"Queue",
-		"Delta",
-		"Deltas",
-		"Geometry",
-		"GeomType",
-		"Flags",
-		"Deriv",
-		"JobLimit",
-		"ChunkSize",
-		"CheckInt",
-		"SleepInt",
-		"NumCPUs",
-		"PBSMem",
-		"IntderCmd",
-		"SpectroCmd",
-		"Ncoords",
-		"EnergyLine",
-		"PBSTmpl",
-		"QueueSystem",
-		"MolproTmpl",
-		"AnpassTmpl",
-		"IntderTmpl",
-	}[k]
-}
-
-// If generics are ever added, this becomes
-
-// type Keyword[T any] struct {
-//   *regexp.Regexp
-//   Extract func(string) T
-//   Value T
-// }
-
-// and I can get rid of all these stupid conversion methods
-
-// At would become something like
-
-// func (c *Config) [T any] At(k Key) T {
-
-// Nope, no parameterized methods, need a different approach. I guess I
-// would just use Config[Key].Value since that's basically what at was
-// doing anyway, and the main advantage was not having to do the type
-// casting myself.
-
-// Keyword is a type for config keywords
-type Keyword struct {
-	Re      *regexp.Regexp
-	Extract func(string) interface{}
-	Value   interface{}
-}
-
-// Config is an alias for an array of keywords
-type Config [NumKeys]Keyword
-
-// At returns the Value of c at k
-func (c *Config) At(k Key) interface{} {
-	return (*c)[k].Value
-}
-
-// Set sets the Value of c at k
-func (c *Config) Set(k Key, val interface{}) {
-	(*c)[k].Value = val
-}
-
-// Str casts a keyword to a string
-func (c *Config) Str(k Key) string {
-	return (*c)[k].Value.(string)
-}
-
-// Float casts a keyword to a float64
-func (c *Config) Float(k Key) float64 {
-	return (*c)[k].Value.(float64)
-}
-
-// FlSlice casts a keyword to a slice of float64
-func (c *Config) FlSlice(k Key) []float64 {
-	return (*c)[k].Value.([]float64)
-}
-
-// Int casts a keyword to an int
-func (c *Config) Int(k Key) int {
-	return (*c)[k].Value.(int)
-}
-
-// RE casts a keyword to a *regexp.Regexp
-func (c *Config) RE(k Key) *regexp.Regexp {
-	return (*c)[k].Value.(*regexp.Regexp)
-}
-
-func (c Config) String() string {
-	var buf strings.Builder
-	for i, kw := range c {
-		fmt.Fprintf(&buf, "%s: %v\n", Key(i), kw.Value)
-	}
-	return buf.String()
+type Config struct {
+	Cluster     string
+	Package     string // quantum chemistry package (molpro|g16)
+	ChemProg    string
+	WorkQueue   string
+	Delta       float64 // step size
+	Deltas      []float64
+	Geometry    string
+	GeomType    string
+	Flags       string
+	Deriv       int // derivative level
+	JobLimit    int // maximum number of jobs to run at once
+	ChunkSize   int // number of jobs submitted in one group
+	CheckInt    int // interval for writing checkpoints
+	SleepInt    int // interval in seconds between polling jobs
+	NumCPUs     int // number of CPUs
+	PBSMem      int
+	IntderCmd   string
+	SpectroCmd  string
+	Ncoords     int
+	EnergyLine  *regexp.Regexp
+	PBSTmpl     *template.Template
+	QueueSystem string
+	MolproTmpl  string
+	AnpassTmpl  string
+	IntderTmpl  string
+	NumKeys     string
 }
 
 // WhichCluster is a helper function for setting Config.EnergyLine and
 // Config.PBS based on the selected Cluster
 func (c *Config) WhichCluster() {
-	cluster := c.Str(Cluster)
+	cluster := c.Cluster
 	sequoia := regexp.MustCompile(`(?i)sequoia`)
 	maple := regexp.MustCompile(`(?i)maple`)
 	pbs := new(template.Template)
@@ -160,20 +48,20 @@ func (c *Config) WhichCluster() {
 	case cluster == "", maple.MatchString(cluster):
 		pbs = pbsMaple
 	case sequoia.MatchString(cluster):
-		c.Set(EnergyLine, regexp.MustCompile(`PBQFF\(2\)`))
+		c.EnergyLine = regexp.MustCompile(`PBQFF\(2\`)
 		pbs = pbsSequoia
 	default:
 		panic("unsupported option for keyword cluster")
 	}
-	c.Set(PBSTmpl, pbs)
+	c.PBSTmpl = pbs
 }
 
 // WhichProgram is a helper function for setting Config.EnergyLine
 // based on the selected ChemProg
 func (c *Config) WhichProgram() {
-	switch c.Str(ChemProg) {
+	switch c.ChemProg {
 	case "cccr":
-		c.Set(EnergyLine, regexp.MustCompile(`^\s*CCCRE\s+=`))
+		c.EnergyLine = regexp.MustCompile(`^\s*CCCRE\s+=`)
 	case "cart", "gocart":
 		CART = true
 	case "grad":
@@ -194,11 +82,11 @@ func (c *Config) ProcessGeom() (cart bool) {
 		end     int
 		incr    int
 	)
-	if c.At(Geometry) == nil {
+	if c.Geometry == "" {
 		panic("no geometry given")
 	}
-	lines := strings.Split(c.Str(Geometry), "\n")
-	gt := c.At(GeomType)
+	lines := strings.Split(c.Geometry, "\n")
+	gt := c.GeomType
 	switch gt {
 	case "xyz", "cart":
 		start = 2
@@ -216,7 +104,7 @@ func (c *Config) ProcessGeom() (cart bool) {
 			ncoords += incr
 		}
 	}
-	c.Set(Ncoords, ncoords)
+	c.Ncoords = ncoords
 	return
 	// we could actually do heavier processing of the geometry
 	// here, as seen in the Zmat or XYZ functions I think in main
@@ -228,206 +116,60 @@ func (c *Config) ProcessGeom() (cart bool) {
 // 0.005, 0.075, 0.005, 0.005, 0.075, 0.005, 0.005], assuming c.Delta
 // is 0.005, and c.Ncoord is 9
 func (c *Config) ParseDeltas() {
-	err := errors.New("invalid deltas input")
-	ret := make([]float64, 0)
-	if c.At(Deltas) != nil {
-		pairs := strings.Split(c.Str(Deltas), ",")
-		for _, p := range pairs {
-			sp := strings.Split(p, ":")
-			if len(sp) != 2 {
-				panic(err)
-			}
-			d, e := strconv.Atoi(strings.TrimSpace(sp[0]))
-			if e != nil || d < 1 {
-				panic(err)
-			}
-			f, e := strconv.ParseFloat(strings.TrimSpace(sp[1]), 64)
-			if e != nil || f < 0.0 {
-				panic(err)
-			}
-			for d > len(ret) {
-				ret = append(ret, c.Float(Delta))
-			}
-			ret[d-1] = f
-		}
-	}
-	for len(ret) < c.Int(Ncoords) {
-		ret = append(ret, c.Float(Delta))
-	}
-	c.Set(Deltas, ret)
-}
-
-func kwpanic(str string, err error) {
-	panic(
-		fmt.Sprintf(
-			"%v parsing input line %q\n",
-			err, str),
-	)
-}
-
-// StringKeyword just returns its argument
-func StringKeyword(str string) interface{} {
-	return str
-}
-
-// FloatKeyword returns its argument parsed to a float64
-func FloatKeyword(str string) interface{} {
-	f, err := strconv.ParseFloat(str, 64)
-	if err != nil {
-		kwpanic(str, err)
-	}
-	return f
-}
-
-// IntKeyword returns its argument parsed to an int
-func IntKeyword(str string) interface{} {
-	v, err := strconv.Atoi(str)
-	if err != nil {
-		kwpanic(str, err)
-	}
-	return v
+	// err := errors.New("invalid deltas input")
+	// ret := make([]float64, 0)
+	// if c.Deltas != nil {
+	// 	pairs := strings.Split(c.Deltas, ",")
+	// 	for _, p := range pairs {
+	// 		sp := strings.Split(p, ":")
+	// 		if len(sp) != 2 {
+	// 			panic(err)
+	// 		}
+	// 		d, e := strconv.Atoi(strings.TrimSpace(sp[0]))
+	// 		if e != nil || d < 1 {
+	// 			panic(err)
+	// 		}
+	// 		f, e := strconv.ParseFloat(strings.TrimSpace(sp[1]), 64)
+	// 		if e != nil || f < 0.0 {
+	// 			panic(err)
+	// 		}
+	// 		for d > len(ret) {
+	// 			ret = append(ret, c.Float(Delta))
+	// 		}
+	// 		ret[d-1] = f
+	// 	}
+	// }
+	// for len(ret) < c.Int(Ncoords) {
+	// 	ret = append(ret, c.Float(Delta))
+	// }
+	// c.Deltas = ret
 }
 
 // NewConfig returns a Config with all of the default options set
 func NewConfig() Config {
 	return Config{
-		Cluster: {
-			Re:      regexp.MustCompile(`(?i)queuetype=`),
-			Extract: StringKeyword,
-			Value:   "maple",
-		},
-		Package: {
-			Re:      regexp.MustCompile(`(?i)package=`),
-			Extract: StringKeyword,
-			Value:   "molpro",
-		},
-		ChemProg: {
-			Re:      regexp.MustCompile(`(?i)program=`),
-			Extract: StringKeyword,
-			Value:   "sic",
-		},
-		WorkQueue: { // TODO these queues are maple-specific
-			Re: regexp.MustCompile(`(?i)queue=`),
-			Extract: func(str string) interface{} {
-				switch str {
-				case "workq", "r410", "":
-				default:
-					panic("unsupported option for keyword queue")
-				}
-				return str
-			},
-			// possible problem using this in template if ""
-			// doesn't satisify {{if .Field}} = False
-			// just delete and leave nil if not
-			Value: "",
-		},
-		Delta: {
-			Re:      regexp.MustCompile(`(?i)delta=`),
-			Extract: FloatKeyword,
-			Value:   0.005,
-		},
-		Deltas: {
-			Re:      regexp.MustCompile(`(?i)deltas=`),
-			Extract: StringKeyword,
-		},
-		Geometry: {
-			Re:      regexp.MustCompile(`(?i)geometry=`),
-			Extract: StringKeyword,
-		},
-		GeomType: {
-			Re:      regexp.MustCompile(`(?i)geomtype=`),
-			Extract: StringKeyword,
-			Value:   "zmat",
-		},
-		Flags: {
-			Re: regexp.MustCompile(`(?i)flags=`),
-			Extract: func(str string) interface{} {
-				switch str {
-				case "noopt":
-					OPT = false
-				default:
-					panic("unsupported option for keyword flag")
-				}
-				return str
-			},
-		},
-		Deriv: {
-			Re:      regexp.MustCompile(`(?i)deriv=`),
-			Extract: IntKeyword,
-			Value:   4,
-		},
-		JobLimit: {
-			Re:      regexp.MustCompile(`(?i)joblimit=`),
-			Extract: IntKeyword,
-			Value:   1024,
-		},
-		ChunkSize: {
-			Re:      regexp.MustCompile(`(?i)chunksize=`),
-			Extract: IntKeyword,
-			Value:   64,
-		},
-		CheckInt: {
-			Re: regexp.MustCompile(`(?i)checkint=`),
-			Extract: func(str string) interface{} {
-				switch str {
-				case "no":
-					nocheck = true
-					return 0
-				default:
-					return IntKeyword(str)
-				}
-			},
-			Value: 100,
-		},
-		SleepInt: {
-			Re:      regexp.MustCompile(`(?i)sleepint=`),
-			Extract: IntKeyword,
-			Value:   60,
-		},
-		NumCPUs: {
-			Re:      regexp.MustCompile(`(?i)numcpus=`),
-			Extract: IntKeyword,
-			Value:   1,
-		},
-		PBSMem: {
-			Re:      regexp.MustCompile(`(?i)pbsmem=`),
-			Extract: IntKeyword,
-			Value:   8,
-		},
-		IntderCmd: {
-			Re:      regexp.MustCompile(`(?i)intder=`),
-			Extract: StringKeyword,
-		},
-		SpectroCmd: {
-			Re:      regexp.MustCompile(`(?i)spectro=`),
-			Extract: StringKeyword,
-		},
-		EnergyLine: {
-			Re:    regexp.MustCompile(`(?i)energyline=`),
-			Value: regexp.MustCompile(`energy=`),
-			Extract: func(s string) interface{} {
-				return regexp.MustCompile(s)
-			},
-		},
-		QueueSystem: {
-			Re:      regexp.MustCompile(`(?i)queuesystem=`),
-			Value:   "pbs",
-			Extract: StringKeyword,
-		},
-		MolproTmpl: {
-			Re:      regexp.MustCompile(`(?i)molprotmpl=`),
-			Extract: StringKeyword,
-			Value:   "molpro.in",
-		},
-		AnpassTmpl: {
-			Re:      regexp.MustCompile(`(?i)anpasstmpl=`),
-			Extract: StringKeyword,
-			Value:   "anpass.in",
-		},
-		IntderTmpl: {
-			Re:      regexp.MustCompile(`(?i)intdertmpl=`),
-			Extract: StringKeyword,
-			Value:   "intder.in",
-		},
+		Cluster:     "maple",
+		Package:     "molpro",
+		ChemProg:    "sic",
+		WorkQueue:   "",
+		Delta:       0.005,
+		Deltas:      nil,
+		Geometry:    "",
+		GeomType:    "zmat",
+		Flags:       "",
+		Deriv:       4,
+		JobLimit:    1024,
+		ChunkSize:   8,
+		CheckInt:    100,
+		SleepInt:    60,
+		NumCPUs:     1,
+		PBSMem:      8,
+		IntderCmd:   "",
+		SpectroCmd:  "",
+		EnergyLine:  regexp.MustCompile(`energy=`),
+		QueueSystem: "pbs",
+		MolproTmpl:  "molpro.in",
+		AnpassTmpl:  "anpass.in",
+		IntderTmpl:  "intder.in",
 	}
 }

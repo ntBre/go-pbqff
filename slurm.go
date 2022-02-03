@@ -81,8 +81,8 @@ func (s Slurm) Resubmit(name string, err error) string {
 			Jobs:     []string{name + "_redo.inp"},
 			Host:     "",
 			Queue:    "",
-			NumCPUs:  Conf.Int(NumCPUs),
-			PBSMem:   Conf.Int(PBSMem),
+			NumCPUs:  Conf.NumCPUs,
+			PBSMem:   Conf.PBSMem,
 		}, s.SinglePBS())
 	return s.Submit(name + "_redo.pbs")
 }

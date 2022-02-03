@@ -68,7 +68,7 @@ func MakeName(geom string) (name string) {
 		switch {
 		case skip > 0:
 			skip--
-		case Conf.Str(GeomType) == "xyz" && len(fields) == 1:
+		case Conf.GeomType == "xyz" && len(fields) == 1:
 			// natoms line in xyz
 			skip++
 		case len(fields) >= 1 &&
@@ -205,9 +205,9 @@ func Step(coords []float64, steps ...int) []float64 {
 	for _, v := range steps {
 		if v < 0 {
 			v = -1 * v
-			c[v-1] -= Conf.FlSlice(Deltas)[v-1]
+			c[v-1] -= Conf.Deltas[v-1]
 		} else {
-			c[v-1] += Conf.FlSlice(Deltas)[v-1]
+			c[v-1] += Conf.Deltas[v-1]
 		}
 	}
 	return c

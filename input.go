@@ -2,26 +2,28 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"os"
-	"regexp"
+	"reflect"
 	"strings"
 )
 
-// Regexp combines a *regexp.Regexp and a Key
-type Regexp struct {
-	*regexp.Regexp
-	Name Key
-}
-
 // ProcessInput extracts keywords from a line of input
 func ProcessInput(line string) {
-	for k, kword := range Conf {
-		if kword.Extract != nil &&
-			kword.Re != nil &&
-			kword.Re.MatchString(line) {
-			split := strings.SplitN(line, "=", 2)
-			Conf[Key(k)].Value =
-				kword.Extract(split[len(split)-1])
+	line = strings.ToLower(line)
+	split := strings.SplitN(line, "=", 2)
+	key, val := split[0], split[1]
+	for _, kword := range reflect.VisibleFields(reflect.TypeOf(Conf)) {
+		keyname := kword.Name
+		if strings.ToLower(keyname) == key {
+			loc := reflect.ValueOf(&Conf).Elem().FieldByName(keyname)
+			fmt.Printf("%v %v %s\n", kword.Type, loc, val)
+			// switch kword.Type {
+
+			// // .Set(val)
+			// }
+			// Conf[Key(k)].Value =
+			// 	kword.Extract(split[len(split)-1])
 			break
 		}
 	}
