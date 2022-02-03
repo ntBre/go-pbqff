@@ -104,9 +104,9 @@ H 0.0000000000 -0.7574590974  0.5217905143
 func TestGaussReadOut(t *testing.T) {
 	tmp := Conf.EnergyLine
 	defer func() {
-		Conf.Set(EnergyLine, tmp)
+		Conf.EnergyLine =  tmp
 	}()
-	Conf.Set(EnergyLine, regexp.MustCompile(`SCF Done:`))
+	Conf.EnergyLine =  regexp.MustCompile(`SCF Done:`)
 	g := new(Gaussian)
 	energy, time, grad, err := g.ReadOut("testfiles/gaussian/opt.out")
 	want := struct {

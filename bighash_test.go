@@ -21,9 +21,9 @@ func TestNormalize(t *testing.T) {
 		Group:  symm.Cs,
 	}
 	tmp := Conf.Deltas
-	Conf.Set(Deltas, []float64{0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0})
+	Conf.Deltas =  []float64{0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0}
 	defer func() {
-		Conf.Set(Deltas, tmp)
+		Conf.Deltas =  tmp
 	}()
 	// step coordinate 7
 	got := Normalize(mol, symm.Labels(mol.Atoms), symm.Coords(mol.Atoms), []int{-7})

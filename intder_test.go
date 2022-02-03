@@ -363,8 +363,10 @@ func TestWorkDir(t *testing.T) {
 
 func TestRunIntder(t *testing.T) {
 	temp := Conf.IntderCmd
-	defer Conf.Set(IntderCmd, temp)
-	Conf.Set(IntderCmd, "../bin/intder")
+	defer func() {
+		Conf.IntderCmd =  temp
+	}()
+	Conf.IntderCmd =  "../bin/intder"
 	workDir("testfiles/write/intder.in", func(s string) {
 		RunIntder(s[:len(s)-3])
 	}, false)

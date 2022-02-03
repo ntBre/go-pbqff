@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"reflect"
 	"regexp"
 	"testing"
@@ -12,23 +11,12 @@ func TestProcessInput(t *testing.T) {
 	defer func() {
 		Conf = tmp
 	}()
-	Conf[ChemProg].Value = "test"
+	Conf.ChemProg = "test"
 	ProcessInput("program=notatest")
-	if Conf[ChemProg].Value != "notatest" {
+	if Conf.ChemProg != "notatest" {
 		t.Errorf("got %q, wanted %q\n",
-			Conf[ChemProg].Value, "notatest")
+			Conf.ChemProg, "notatest")
 	}
-}
-
-func compConf(kws []interface{}, conf Config) (bool, string) {
-	for k := range kws {
-		if !reflect.DeepEqual(kws[k], conf.Key(k)) {
-			return false,
-				fmt.Sprintf("At %s, %v != %v\n",
-					Key(k), kws[k], conf.Key(k))
-		}
-	}
-	return true, ""
 }
 
 func TestParseInfile(t *testing.T) {
@@ -39,11 +27,11 @@ func TestParseInfile(t *testing.T) {
 	}()
 	tests := []struct {
 		in   string
-		want []interface{}
+		want Config
 	}{
 		{
 			in: "testfiles/test.in",
-			want: []interface{}{
+			want: Config{
 				Cluster:  "maple",
 				ChemProg: "molpro",
 				Geometry: `X
@@ -63,11 +51,11 @@ XXO = 80.0 Deg`,
 				JobLimit:   1024,
 				NumCPUs:    1,
 				CheckInt:   100,
-				WorkQueue:      "",
+				WorkQueue:  "",
 				SleepInt:   60,
 				IntderCmd:  "/home/brent/Packages/intder/intder",
 				SpectroCmd: "",
-				PBSTmpl:        pbsMaple,
+				PBSTmpl:    pbsMaple,
 				PBSMem:     8,
 				EnergyLine: regexp.MustCompile(`energy=`),
 				Ncoords:    7,
@@ -76,7 +64,7 @@ XXO = 80.0 Deg`,
 		},
 		{
 			in: "testfiles/cccr.in",
-			want: []interface{}{
+			want: Config{
 				Cluster:  "maple",
 				ChemProg: "cart",
 				Geometry: `X
@@ -96,11 +84,11 @@ XXO = 80.0 Deg`,
 				JobLimit:   1024,
 				NumCPUs:    1,
 				CheckInt:   100,
-				WorkQueue:      "",
+				WorkQueue:  "",
 				SleepInt:   60,
 				IntderCmd:  "/home/brent/Packages/intder/intder",
 				SpectroCmd: "",
-				PBSTmpl:        pbsMaple,
+				PBSTmpl:    pbsMaple,
 				PBSMem:     8,
 				EnergyLine: regexp.MustCompile(`^\s*CCCRE\s+=`),
 				Ncoords:    7,
@@ -110,8 +98,8 @@ XXO = 80.0 Deg`,
 	}
 	for _, test := range tests {
 		ParseInfile(test.in)
-		if ok, msg := compConf(test.want, Conf); !ok {
-			t.Errorf(msg)
+		if !reflect.DeepEqual(Conf, test.want) {
+			t.Errorf(test.in)
 		}
 	}
 }

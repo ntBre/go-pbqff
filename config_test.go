@@ -1,17 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 )
-
-func TestSomething(t *testing.T) {
-	conf := Config2{}
-	for _, f := range reflect.VisibleFields(reflect.TypeOf(conf)) {
-		fmt.Printf("%s -> %s\n", f.Name, f.Type)
-	}
-}
 
 func TestParseDeltas(t *testing.T) {
 	tests := []struct {
@@ -56,11 +48,10 @@ func TestParseDeltas(t *testing.T) {
 	}
 	for _, test := range tests {
 		c := new(Config)
-		c.Set(Deltas, test.in)
-		c.Set(Ncoords, test.nc)
-		c.Set(Delta, test.delta)
-		c.ParseDeltas()
-		got := c.FlSlice(Deltas)
+		c.Ncoords = test.nc
+		c.Delta = test.delta
+		c.ParseDeltas(test.in)
+		got := c.Deltas
 		if !reflect.DeepEqual(got, test.out) {
 			t.Errorf("ParseDeltas(%q): got %v, wanted %v\n",
 				test.msg, got, test.out)
@@ -102,10 +93,10 @@ H          0.0000000000       -0.9238557835        1.2312205732`,
 	}
 	for _, test := range tests {
 		c := new(Config)
-		c.Set(Geometry, test.in)
-		c.Set(GeomType, test.gtype)
+		c.Geometry = test.in
+		c.GeomType = test.gtype
 		c.ProcessGeom()
-		got := c.Int(Ncoords)
+		got := c.Ncoords
 		if got != test.ncoords {
 			t.Errorf("got %v, wanted %v\n", got, test.ncoords)
 		}

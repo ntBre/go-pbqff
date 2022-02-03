@@ -65,7 +65,7 @@ func ParseInfile(filename string) {
 	Conf.WhichProgram()
 	Conf.WhichCluster() // Cluster EnergyLine overwrites ChemProg
 	if Conf.ProcessGeom() {
-		Conf.ParseDeltas()
+		Conf.ParseDeltas("TODO")
 	}
 }
 

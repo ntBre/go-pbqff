@@ -142,7 +142,7 @@ ch=                  1.09346324 ANG
 	}
 	for _, test := range tests {
 		got := MakeName(test.geom)
-		Conf.Set(GeomType, test.gtype)
+		Conf.GeomType =  test.gtype
 		want := test.want
 		if got != want {
 			t.Errorf("got %v, wanted %v\n", got, want)

@@ -141,7 +141,7 @@ func TestCart(t *testing.T) {
 		Conf = NewConfig()
 		submitted = 0
 		prog, _, _ := initialize(test.infile)
-		prog.FormatCart(Conf.Str(Geometry))
+		prog.FormatCart(Conf.Geometry)
 		cart := prog.GetGeom()
 		queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
 		E0 := prog.Run(none, queue)
@@ -210,7 +210,7 @@ func TestGrad(t *testing.T) {
 		submitted = 0
 	}()
 	prog, _, _ := initialize("tests/grad/grad.in")
-	prog.FormatCart(Conf.Str(Geometry))
+	prog.FormatCart(Conf.Geometry)
 	cart := prog.GetGeom()
 	E0 := 0.0
 	names, coords := XYZGeom(cart)
@@ -290,7 +290,7 @@ func TestResub(t *testing.T) {
 		Conf = NewConfig()
 		submitted = 0
 		prog, _, _ := initialize(test.infile)
-		prog.FormatCart(Conf.Str(Geometry))
+		prog.FormatCart(Conf.Geometry)
 		cart := prog.GetGeom()
 		queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
 		E0 := prog.Run(none, queue)
@@ -321,7 +321,7 @@ func TestResub(t *testing.T) {
 				Conf = NewConfig()
 				submitted = 0
 				prog, _, _ := initialize(test.infile)
-				prog.FormatCart(Conf.Str(Geometry))
+				prog.FormatCart(Conf.Geometry)
 				cart := prog.GetGeom()
 				queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
 				E0 := prog.Run(none, queue)

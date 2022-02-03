@@ -184,9 +184,9 @@ XXO = 80.0 Deg`,
 
 func TestReadOut(t *testing.T) {
 	m := Molpro{}
-	temp := Conf.RE(EnergyLine)
+	temp := Conf.EnergyLine
 	defer func() {
-		Conf.Set(EnergyLine, temp)
+		Conf.EnergyLine = temp
 	}()
 	tests := []struct {
 		msg      string
@@ -280,9 +280,9 @@ func TestReadOut(t *testing.T) {
 	}
 	for _, test := range tests {
 		if test.eline != nil {
-			Conf.Set(EnergyLine, test.eline)
+			Conf.EnergyLine = test.eline
 		} else {
-			Conf.Set(EnergyLine, regexp.MustCompile(`energy=`))
+			Conf.EnergyLine = regexp.MustCompile(`energy=`)
 		}
 		energy, time, grad, err := m.ReadOut(test.filename)
 		if math.IsNaN(test.energy) {
@@ -470,11 +470,11 @@ func TestStep(t *testing.T) {
 		Conf = tmp
 	}()
 	Conf = Config{}
-	Conf.Set(Deltas, []float64{
+	Conf.Deltas = []float64{
 		0.005, 0.005, 0.005,
 		0.005, 0.005, 0.005,
 		0.005, 0.005, 0.005,
-	})
+	}
 	got := Step([]float64{
 		1, 1, 1,
 		1, 1, 1,
@@ -535,7 +535,7 @@ func TestSelectNode(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		Conf.Set(WorkQueue, test.queue)
+		Conf.WorkQueue = test.queue
 		Global.Nodes = test.nodes
 		gn, gq := SelectNode()
 		if gn != test.node {
@@ -641,7 +641,7 @@ func TestDerivative(t *testing.T) {
 			deltas[i] = 1.0
 		}
 		initArrays(3 * len(test.coords))
-		Conf.Set(Deltas, deltas)
+		Conf.Deltas = deltas
 		mol := symm.ReadXYZ(strings.NewReader(ZipXYZ(test.names, test.coords)))
 		for i := range test.calcs {
 			e := Table.Lookup(mol, test.names, test.coords, test.steps[i])
@@ -670,7 +670,7 @@ func TestPush(t *testing.T) {
 		Conf = tmp2
 	}()
 	paraCount = make(map[string]int)
-	Conf.Set(ChunkSize, 2)
+	Conf.ChunkSize = 2
 	queue := TestQueue{
 		SinglePt: pbsMaple,
 		ChunkPts: ptsMaple,
@@ -752,12 +752,12 @@ func TestBuildCartPoints(t *testing.T) {
 		Conf = tmp
 		*nosym = tmpsym
 	}()
-	Conf.Set(Deltas, []float64{
+	Conf.Deltas= []float64{
 		0.005, 0.005, 0.005,
 		0.005, 0.005, 0.005,
 		0.005, 0.005, 0.005,
-	})
-	Conf.Set(Deriv, 4)
+	}
+	Conf.Deriv = 4
 	names := []string{"O", "H", "H"}
 	coords := []float64{
 		0.0000000000, 0.0000000000, -0.0657441568,
@@ -875,7 +875,7 @@ func TestGradDerivative(t *testing.T) {
 		for i := range test.coords {
 			deltas[i] = 1.0
 		}
-		Conf.Set(Deltas, deltas)
+		Conf.Deltas = deltas
 		mol := symm.ReadXYZ(strings.NewReader(ZipXYZ(test.names, test.coords)))
 		calcs := GradDerivative(prog, dir, test.names, test.coords,
 			test.dims[0], test.dims[1], test.dims[2], mol)
@@ -900,11 +900,11 @@ func TestBuildGradPoints(t *testing.T) {
 		qsub = "qsub"
 		Conf = tmp
 	}()
-	Conf.Set(Deltas, []float64{
+	Conf.Deltas= []float64{
 		0.005, 0.005, 0.005,
 		0.005, 0.005, 0.005,
 		0.005, 0.005, 0.005,
-	})
+	}
 	dir := t.TempDir()
 	names := []string{"O", "H", "H"}
 	coords := []float64{

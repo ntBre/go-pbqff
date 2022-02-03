@@ -3,7 +3,9 @@
 package main
 
 import (
+	"errors"
 	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 )
@@ -115,34 +117,34 @@ func (c *Config) ProcessGeom() (cart bool) {
 // example, the input 1:0.075,4:0.075,7:0.075 yields [0.075, 0.005,
 // 0.005, 0.075, 0.005, 0.005, 0.075, 0.005, 0.005], assuming c.Delta
 // is 0.005, and c.Ncoord is 9
-func (c *Config) ParseDeltas() {
-	// err := errors.New("invalid deltas input")
-	// ret := make([]float64, 0)
-	// if c.Deltas != nil {
-	// 	pairs := strings.Split(c.Deltas, ",")
-	// 	for _, p := range pairs {
-	// 		sp := strings.Split(p, ":")
-	// 		if len(sp) != 2 {
-	// 			panic(err)
-	// 		}
-	// 		d, e := strconv.Atoi(strings.TrimSpace(sp[0]))
-	// 		if e != nil || d < 1 {
-	// 			panic(err)
-	// 		}
-	// 		f, e := strconv.ParseFloat(strings.TrimSpace(sp[1]), 64)
-	// 		if e != nil || f < 0.0 {
-	// 			panic(err)
-	// 		}
-	// 		for d > len(ret) {
-	// 			ret = append(ret, c.Float(Delta))
-	// 		}
-	// 		ret[d-1] = f
-	// 	}
-	// }
-	// for len(ret) < c.Int(Ncoords) {
-	// 	ret = append(ret, c.Float(Delta))
-	// }
-	// c.Deltas = ret
+func (c *Config) ParseDeltas(deltas string) []float64 {
+	err := errors.New("invalid deltas input")
+	ret := make([]float64, 0)
+	if c.Deltas != nil {
+		pairs := strings.Split(deltas, ",")
+		for _, p := range pairs {
+			sp := strings.Split(p, ":")
+			if len(sp) != 2 {
+				panic(err)
+			}
+			d, e := strconv.Atoi(strings.TrimSpace(sp[0]))
+			if e != nil || d < 1 {
+				panic(err)
+			}
+			f, e := strconv.ParseFloat(strings.TrimSpace(sp[1]), 64)
+			if e != nil || f < 0.0 {
+				panic(err)
+			}
+			for d > len(ret) {
+				ret = append(ret, c.Delta)
+			}
+			ret[d-1] = f
+		}
+	}
+	for len(ret) < c.Ncoords {
+		ret = append(ret, c.Delta)
+	}
+	return ret
 }
 
 // NewConfig returns a Config with all of the default options set

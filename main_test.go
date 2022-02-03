@@ -242,13 +242,13 @@ func TestDrain(t *testing.T) {
 		Conf = conf
 		qsub = "qsub"
 	}()
-	Conf.Set(JobLimit, 128)
-	Conf.Set(Deltas, []float64{
+	Conf.JobLimit =  128
+	Conf.Deltas= []float64{
 		0.005, 0.005, 0.005,
 		0.005, 0.005, 0.005,
-	})
-	Conf.Set(SleepInt, 0)
-	Conf.Set(ChunkSize, 64)
+	}
+	Conf.SleepInt =  0
+	Conf.ChunkSize =  64
 	paraCount = make(map[string]int)
 	prog := new(Molpro)
 	ncoords := 6
