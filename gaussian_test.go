@@ -102,7 +102,7 @@ H 0.0000000000 -0.7574590974  0.5217905143
 }
 
 func TestGaussReadOut(t *testing.T) {
-	tmp := Conf.At(EnergyLine)
+	tmp := Conf.EnergyLine
 	defer func() {
 		Conf.Set(EnergyLine, tmp)
 	}()

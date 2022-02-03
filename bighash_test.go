@@ -20,7 +20,7 @@ func TestNormalize(t *testing.T) {
 		Planes: []symm.Plane{symm.XY},
 		Group:  symm.Cs,
 	}
-	tmp := Conf.At(Deltas)
+	tmp := Conf.Deltas
 	Conf.Set(Deltas, []float64{0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0})
 	defer func() {
 		Conf.Set(Deltas, tmp)

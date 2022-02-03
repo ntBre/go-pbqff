@@ -6,7 +6,7 @@ import (
 )
 
 func TestTaylor(t *testing.T) {
-	tmp := Conf.At(IntderCmd)
+	tmp := Conf.IntderCmd
 	path, _ := filepath.Abs("bin/intder")
 	Conf.Set(IntderCmd, path)
 	defer func() {

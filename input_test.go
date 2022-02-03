@@ -22,10 +22,10 @@ func TestProcessInput(t *testing.T) {
 
 func compConf(kws []interface{}, conf Config) (bool, string) {
 	for k := range kws {
-		if !reflect.DeepEqual(kws[k], conf.At(Key(k))) {
+		if !reflect.DeepEqual(kws[k], conf.Key(k)) {
 			return false,
 				fmt.Sprintf("At %s, %v != %v\n",
-					Key(k), kws[k], conf.At(Key(k)))
+					Key(k), kws[k], conf.Key(k))
 		}
 	}
 	return true, ""
