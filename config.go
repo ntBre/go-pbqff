@@ -77,69 +77,14 @@ func (k Key) String() string {
 	}[k]
 }
 
-// If generics are ever added, this becomes
-
-// type Keyword[T any] struct {
-//   *regexp.Regexp
-//   Extract func(string) T
-//   Value T
-// }
-
-// and I can get rid of all these stupid conversion methods
-
-// At would become something like
-
-// func (c *Config) [T any] At(k Key) T {
-
-// Nope, no parameterized methods, need a different approach. I guess I
-// would just use Config[Key].Value since that's basically what at was
-// doing anyway, and the main advantage was not having to do the type
-// casting myself.
-
-// Keyword is a type for config keywords
-type Keyword struct {
-	Re      *regexp.Regexp
-	Extract func(string) interface{}
-	Value   interface{}
+type Keyword[T any] struct {
+  *regexp.Regexp
+  Extract func(string) T
+  Value T
 }
 
 // Config is an alias for an array of keywords
-type Config [NumKeys]Keyword
-
-// At returns the Value of c at k
-func (c *Config) At(k Key) interface{} {
-	return (*c)[k].Value
-}
-
-// Set sets the Value of c at k
-func (c *Config) Set(k Key, val interface{}) {
-	(*c)[k].Value = val
-}
-
-// Str casts a keyword to a string
-func (c *Config) Str(k Key) string {
-	return (*c)[k].Value.(string)
-}
-
-// Float casts a keyword to a float64
-func (c *Config) Float(k Key) float64 {
-	return (*c)[k].Value.(float64)
-}
-
-// FlSlice casts a keyword to a slice of float64
-func (c *Config) FlSlice(k Key) []float64 {
-	return (*c)[k].Value.([]float64)
-}
-
-// Int casts a keyword to an int
-func (c *Config) Int(k Key) int {
-	return (*c)[k].Value.(int)
-}
-
-// RE casts a keyword to a *regexp.Regexp
-func (c *Config) RE(k Key) *regexp.Regexp {
-	return (*c)[k].Value.(*regexp.Regexp)
-}
+type Config [NumKeys]Keyword[any]
 
 func (c Config) String() string {
 	var buf strings.Builder
@@ -152,7 +97,7 @@ func (c Config) String() string {
 // WhichCluster is a helper function for setting Config.EnergyLine and
 // Config.PBS based on the selected Cluster
 func (c *Config) WhichCluster() {
-	cluster := c.Str(Cluster)
+	cluster := c[Cluster].Value
 	sequoia := regexp.MustCompile(`(?i)sequoia`)
 	maple := regexp.MustCompile(`(?i)maple`)
 	pbs := new(template.Template)

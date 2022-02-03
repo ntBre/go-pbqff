@@ -1,3 +1,5 @@
+GO = go1.18beta1
+
 SHORT=0
 FLAGS=-v -failfast
 ifeq ($(SHORT),1)
@@ -7,16 +9,16 @@ TESTFLAGS := -short
 endif
 
 qsub/qsub: qsub/*.go
-	go build -o $@ $^
+	$(GO) build -o $@ $^
 
 experiment: pbqff
 	scp -C pbqff 'woods:.'
 
 cover:
-	go test . -v -short -coverprofile=/tmp/pbqff.out; go tool cover -html /tmp/pbqff.out
+	$(GO) test . -v -short -coverprofile=/tmp/pbqff.out; go tool cover -html /tmp/pbqff.out
 
 profcart:
-	go test . -v -short -run '^TestCart$$' -cpuprofile=/tmp/cart.prof
+	$(GO) test . -v -short -run '^TestCart$$' -cpuprofile=/tmp/cart.prof
 
 deploy: pbqff
 	scp -C pbqff 'woods:Programs/pbqff/.'
@@ -28,10 +30,10 @@ alpha: pbqff
 	scp -C pbqff 'woods:Programs/pbqff/alpha/.'
 
 test: qsub/qsub version.go
-	go test . $(TESTFLAGS) $(FLAGS)
+	$(GO) test . $(TESTFLAGS) $(FLAGS)
 
 bench: qsub
-	go test . $(TESTFLAGS) -bench 'CheckLog|CheckProg|ReadOut'
+	$(GO) test . $(TESTFLAGS) -bench 'CheckLog|CheckProg|ReadOut'
 
 docs:
 	scp -r tutorial/main.pdf 'woods:Programs/pbqff/docs/tutorial.pdf'
@@ -47,7 +49,7 @@ clean:
 	rm -rf tests/cart/fort.* tests/cart/spectro.out
 
 pbqff: *.go version.go
-	go build .
+	$(GO) build .
 
 version.go: .git
 	./scripts/version.pl
