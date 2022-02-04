@@ -104,31 +104,31 @@ func ParseInfile(filename string) {
 }
 
 type Config struct {
-	Cluster     string
-	Package     string // quantum chemistry package (molpro|g16)
-	Program     string
+	PBSTmpl     *template.Template
+	EnergyLine  *regexp.Regexp
+	Intder      string
 	WorkQueue   string
-	Delta       float64 // step size
-	Deltas      []float64
+	AnpassTmpl  string
+	MolproTmpl  string
 	Geometry    string
 	GeomType    string
 	Flags       string
-	Deriv       int // derivative level
-	JobLimit    int // maximum number of jobs to run at once
-	ChunkSize   int // number of jobs submitted in one group
-	CheckInt    int // interval for writing checkpoints
-	SleepInt    int // interval in seconds between polling jobs
-	NumCPUs     int // number of CPUs
-	PBSMem      int
-	Intder      string
-	Spectro     string
-	Ncoords     int
-	EnergyLine  *regexp.Regexp
-	PBSTmpl     *template.Template
 	QueueSystem string
-	MolproTmpl  string
-	AnpassTmpl  string
+	Program     string
+	Package     string
+	Cluster     string
+	Spectro     string
 	IntderTmpl  string
+	Deltas      []float64
+	PBSMem      int
+	SleepInt    int
+	Ncoords     int
+	ChunkSize   int
+	JobLimit    int
+	Deriv       int
+	NumCPUs     int
+	Delta       float64
+	CheckInt    int
 }
 
 // NewConfig returns a Config with all of the default options set
