@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"runtime/pprof"
 )
 
 const (
@@ -63,13 +64,25 @@ func ParseFlags() []string {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			panic(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 	if *format {
 		FormatOutput("pts/inp/")
 		os.Exit(0)
 	}
+	if *version {
+		fmt.Printf("pbqff version: %s\ncompiled at %s\n", VERSION, COMP_TIME)
+		os.Exit(0)
+	}
 	switch {
 	case *freqs:
-		 FREQS = true
+		FREQS = true
 	case *pts:
 		PTS = true
 		FREQS = true

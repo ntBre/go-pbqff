@@ -436,6 +436,21 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 		RunFreqs(intder, anpass)
 		os.Exit(0)
 	}
+	if !*test {
+		fmt.Printf("pbqff version: %s\ncompiled at %s\n", VERSION, COMP_TIME)
+		fmt.Printf("\nRun started at %s under PID %d\n",
+			time.Now().Format("Mon Jan 2, 2006 at 15:04:05"), os.Getpid())
+		cur, _ := GetCPULimit()
+		fmt.Printf("Maximum CPU time (s): %d\n", cur)
+		if *maxthreads >= 1 {
+			fmt.Printf("Maximum number of threads: %d\n", *maxthreads)
+			rtdebug.SetMaxThreads(*maxthreads)
+		}
+		if *maxprocs >= 1 {
+			fmt.Printf("Maximum number of simultaneous CPUs: %d\n", *maxprocs)
+			runtime.GOMAXPROCS(*maxprocs)
+		}
+	}
 	dir := filepath.Dir(infile)
 	ParseInfile(infile)
 	if *checkpoint {
@@ -493,6 +508,9 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	errMap = make(map[error]int)
 	paraCount = make(map[string]int)
 	Global.Nodes = PBSnodes()
+	if !*test {
+		fmt.Printf("Available nodes: %q\n\n", Global.Nodes)
+	}
 	return prog, intder, anpass
 }
 
@@ -561,40 +579,11 @@ func main() {
 	defer CatchPanic()
 	go CatchKill()
 	args := ParseFlags()
-	if *version {
-		fmt.Printf("pbqff version: %s\ncompiled at %s\n", VERSION, COMP_TIME)
-		os.Exit(0)
-	}
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "pbqff: no input file supplied\n")
 		os.Exit(1)
 	}
-	infile := args[0]
-	prog, intder, anpass := initialize(infile)
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			panic(err)
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
-	}
-	// run after initialize so output goes to file
-	// TODO is this part of the initialization?
-	fmt.Printf("pbqff version: %s\ncompiled at %s\n", VERSION, COMP_TIME)
-	fmt.Printf("\nRun started at %s under PID %d\n",
-		time.Now().Format("Mon Jan 2, 2006 at 15:04:05"), os.Getpid())
-	cur, _ := GetCPULimit()
-	fmt.Printf("Maximum CPU time (s): %d\n", cur)
-	if *maxthreads >= 1 {
-		fmt.Printf("Maximum number of threads: %d\n", *maxthreads)
-		rtdebug.SetMaxThreads(*maxthreads)
-	}
-	if *maxprocs >= 1 {
-		fmt.Printf("Maximum number of simultaneous CPUs: %d\n", *maxprocs)
-		runtime.GOMAXPROCS(*maxprocs)
-	}
-	fmt.Printf("Available nodes: %q\n\n", Global.Nodes)
+	prog, intder, anpass := initialize(args[0])
 	var (
 		mpHarm   []float64
 		cart     string
@@ -608,20 +597,6 @@ func main() {
 		coords   []float64
 		queue    Queue
 	)
-
-	switch Conf.QueueSystem {
-	case "pbs":
-		queue = PBS{
-			SinglePt: pbsMaple,
-			ChunkPts: ptsMaple,
-		}
-	case "slurm":
-		queue = Slurm{
-			SinglePt: pbsSlurm,
-			ChunkPts: ptsSlurm,
-		}
-	}
-
 	if OPT {
 		if Conf.GeomType != "zmat" {
 			panic("optimization requires a zmat geometry")

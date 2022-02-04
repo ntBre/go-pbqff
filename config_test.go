@@ -17,11 +17,11 @@ func TestParseDeltas(t *testing.T) {
 			msg:   "normal input",
 			in:    "1:0.005,2:0.010,3:0.015,4:0.0075",
 			nc:    9,
-			delta: 0,
+			delta: -1,
 			out: []float64{
 				0.005, 0.010, 0.015,
-				0.0075, 0, 0,
-				0, 0, 0,
+				0.0075, -1, -1,
+				-1, -1, -1,
 			},
 		},
 		{

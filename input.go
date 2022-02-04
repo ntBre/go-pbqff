@@ -13,12 +13,31 @@ import (
 	"text/template"
 )
 
+var (
+	PBSQueue = PBS{
+		SinglePt: pbsMaple,
+		ChunkPts: ptsMaple,
+	}
+	SlurmQueue = Slurm{
+		SinglePt: pbsSlurm,
+		ChunkPts: ptsSlurm,
+	}
+)
+
 // ProcessInput extracts keywords from a line of input
 func ProcessInput(line string) {
 	// map of special extractor functions
 	var special = map[string]func(string){
 		"energyline": func(s string) {
 			Conf.EnergyLine = regexp.MustCompile(s)
+		},
+		"queue": func(s string) {
+			switch s {
+			case "pbs":
+				Conf.Queue = PBSQueue
+			case "slurm":
+				Conf.Queue = SlurmQueue
+			}
 		},
 	}
 	split := strings.SplitN(line, "=", 2)
@@ -96,7 +115,10 @@ func ParseInfile(filename string) {
 			ProcessInput(line)
 		}
 	}
+	// These require more than one piece of the config file, so do
+	// them last once everything has been collected
 	Conf.ProcessGeom()
+	// TODO this won't work if Delta is after Deltas in the file
 	if Conf.Deltas == nil {
 		Conf.Deltas = Conf.ParseDeltas("")
 	}
@@ -104,61 +126,61 @@ func ParseInfile(filename string) {
 }
 
 type Config struct {
-	PBSTmpl     *template.Template
-	EnergyLine  *regexp.Regexp
-	Intder      string
-	WorkQueue   string
-	AnpassTmpl  string
-	MolproTmpl  string
-	Geometry    string
-	GeomType    string
-	Flags       string
-	QueueSystem string
-	Program     string
-	Package     string
-	Cluster     string
-	Spectro     string
-	IntderTmpl  string
-	Deltas      []float64
-	PBSMem      int
-	SleepInt    int
-	Ncoords     int
-	ChunkSize   int
-	JobLimit    int
-	Deriv       int
-	NumCPUs     int
-	Delta       float64
-	CheckInt    int
+	PBSTmpl    *template.Template
+	EnergyLine *regexp.Regexp
+	Intder     string
+	WorkQueue  string
+	AnpassTmpl string
+	MolproTmpl string
+	Geometry   string
+	GeomType   string
+	Flags      string
+	Queue      Queue
+	Program    string
+	Package    string // quantum chemistry package (molpro|g16)
+	Cluster    string
+	Spectro    string
+	IntderTmpl string
+	Deltas     []float64
+	PBSMem     int
+	SleepInt   int // interval in seconds between polling jobs
+	Ncoords    int
+	ChunkSize  int     // number of jobs submitted in one group
+	JobLimit   int     // maximum number of jobs to run at once
+	Deriv      int     // derivative level
+	NumCPUs    int     // number of CPUs
+	Delta      float64 // step size
+	CheckInt   int     // interval for writing checkpoints
 }
 
 // NewConfig returns a Config with all of the default options set
 func NewConfig() Config {
 	return Config{
-		Cluster:     "maple",
-		Package:     "molpro",
-		Program:     "sic",
-		WorkQueue:   "",
-		Delta:       0.005,
-		Deltas:      nil,
-		Geometry:    "",
-		GeomType:    "zmat",
-		Flags:       "",
-		Deriv:       4,
-		JobLimit:    1024,
-		ChunkSize:   8,
-		CheckInt:    100,
-		SleepInt:    60,
-		NumCPUs:     1,
-		PBSMem:      8,
-		Intder:      "",
-		Spectro:     "",
-		Ncoords:     0,
-		EnergyLine:  regexp.MustCompile(`energy=`),
-		PBSTmpl:     pbsMaple,
-		QueueSystem: "pbs",
-		MolproTmpl:  "molpro.in",
-		AnpassTmpl:  "anpass.in",
-		IntderTmpl:  "intder.in",
+		Cluster:    "maple",
+		Package:    "molpro",
+		Program:    "sic",
+		WorkQueue:  "",
+		Delta:      0.005,
+		Deltas:     nil,
+		Geometry:   "",
+		GeomType:   "zmat",
+		Flags:      "",
+		Deriv:      4,
+		JobLimit:   1024,
+		ChunkSize:  8,
+		CheckInt:   100,
+		SleepInt:   60,
+		NumCPUs:    1,
+		PBSMem:     8,
+		Intder:     "",
+		Spectro:    "",
+		Ncoords:    0,
+		EnergyLine: regexp.MustCompile(`energy=`),
+		PBSTmpl:    pbsMaple,
+		Queue:      PBSQueue,
+		MolproTmpl: "molpro.in",
+		AnpassTmpl: "anpass.in",
+		IntderTmpl: "intder.in",
 	}
 }
 
@@ -246,6 +268,9 @@ func (c *Config) ProcessGeom() (cart bool) {
 // 0.005, 0.075, 0.005, 0.005, 0.075, 0.005, 0.005], assuming c.Delta
 // is 0.005, and c.Ncoord is 9
 func (c *Config) ParseDeltas(deltas string) []float64 {
+	if c.Delta == 0 {
+		panic("delta unset before parsing deltas")
+	}
 	err := errors.New("invalid deltas input")
 	ret := make([]float64, 0)
 	if deltas != "" {
