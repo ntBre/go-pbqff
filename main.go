@@ -65,11 +65,10 @@ var (
 
 // Global is a structure for holding global variables
 var Global struct {
-	Nodes     []string
-	JobNum    int
-	Warnings  int
-	ParaCount map[string]int
-	ErrMap    map[error]int
+	ErrMap   map[error]int
+	Nodes    []string
+	JobNum   int
+	Warnings int
 }
 
 // HashName returns a hashed filename. Well it used to, but now it
@@ -273,16 +272,6 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 				if !job.noRun {
 					finished++
 					check++
-					Global.ParaCount[paraJobs[job.ChunkNum]]--
-					if Global.ParaCount[paraJobs[job.ChunkNum]] == 0 {
-						// queueClear([]string{paraJobs[job.ChunkNum]})
-						if *debug {
-							fmt.Printf("clearing paracount of"+
-								"chunk %d, jobid %s\n",
-								job.ChunkNum,
-								paraJobs[job.ChunkNum])
-						}
-					}
 				} else {
 					norun--
 				}
@@ -505,7 +494,6 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 		MakeDirs(dir)
 	}
 	Global.ErrMap = make(map[error]int)
-	Global.ParaCount = make(map[string]int)
 	Global.Nodes = PBSnodes()
 	if !*test {
 		fmt.Printf("Available nodes: %q\n\n", Global.Nodes)

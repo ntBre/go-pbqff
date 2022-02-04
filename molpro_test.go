@@ -436,7 +436,6 @@ func TestBuildPoints(t *testing.T) {
 	names, _ := XYZGeom(cart)
 	os.Mkdir("testfiles/read/inp", 0755)
 	defer os.RemoveAll("testfiles/read/inp")
-	Global.ParaCount = make(map[string]int)
 	gen := BuildPoints(prog, queue, "testfiles/read/file07", names, true)
 	got, _ := gen()
 	want := []Calc{
@@ -669,7 +668,6 @@ func TestPush(t *testing.T) {
 	defer func() {
 		Conf = tmp2
 	}()
-	Global.ParaCount = make(map[string]int)
 	Conf.ChunkSize = 2
 	queue := TestQueue{
 		SinglePt: pbsMaple,
@@ -779,7 +777,6 @@ func TestBuildCartPoints(t *testing.T) {
 	cart := ZipXYZ(names, coords)
 	mol := symm.ReadXYZ(strings.NewReader(cart))
 	gen := BuildCartPoints(mp, queue, dir, names, coords, mol)
-	Global.ParaCount = make(map[string]int)
 	got := make([]Calc, 0)
 	hold, ok := gen()
 	got = append(got, hold...)
@@ -922,7 +919,6 @@ func TestBuildGradPoints(t *testing.T) {
 	cart := ZipXYZ(names, coords)
 	mol := symm.ReadXYZ(strings.NewReader(cart))
 	gen := BuildGradPoints(mp, queue, dir, names, coords, mol)
-	Global.ParaCount = make(map[string]int)
 	got := make([]Calc, 0)
 	hold, ok := gen()
 	got = append(got, hold...)

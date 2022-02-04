@@ -65,7 +65,6 @@ func Push(q Queue, dir string, pf, count int, calcs []Calc) []Calc {
 	}
 	ptsJobs = append(ptsJobs, jobid)
 	paraJobs = append(paraJobs, jobid)
-	Global.ParaCount[jobid] = Conf.ChunkSize
 	count = 1
 	pf++
 	// if end reached with no calcs, which can happen on continue

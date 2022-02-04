@@ -249,7 +249,6 @@ func TestDrain(t *testing.T) {
 	}
 	Conf.SleepInt =  0
 	Conf.ChunkSize =  64
-	Global.ParaCount = make(map[string]int)
 	prog := new(Molpro)
 	ncoords := 6
 	E0 := 0.0
