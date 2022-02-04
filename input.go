@@ -38,6 +38,12 @@ func ProcessInput(line string) {
 				Conf.Queue = SlurmQueue
 			}
 		},
+		"flags": func(s string) {
+			switch s {
+			case "noopt":
+				OPT = false
+			}
+		},
 	}
 	split := strings.SplitN(line, "=", 2)
 	key, val := strings.ToLower(split[0]), split[1]
@@ -132,7 +138,6 @@ type Config struct {
 	MolproTmpl string
 	Geometry   string
 	GeomType   string
-	Flags      string
 	Queue      Queue
 	Program    string
 	Package    string // quantum chemistry package (molpro|g16)
@@ -165,7 +170,6 @@ func NewConfig() Config {
 		Deltas:     nil,
 		Geometry:   "",
 		GeomType:   "zmat",
-		Flags:      "",
 		Deriv:      4,
 		JobLimit:   1024,
 		ChunkSize:  8,

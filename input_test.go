@@ -44,9 +44,6 @@ func compConf(t *testing.T, a, b Config) {
 	if a.GeomType != b.GeomType {
 		t.Errorf("got %v, wanted %v\n", a.GeomType, b.GeomType)
 	}
-	if a.Flags != b.Flags {
-		t.Errorf("got %v, wanted %v\n", a.Flags, b.Flags)
-	}
 	if a.Deriv != b.Deriv {
 		t.Errorf("got %v, wanted %v\n", a.Deriv, b.Deriv)
 	}
@@ -194,7 +191,6 @@ H        0.0000000000       -3.0146272390        1.7138963510`,
 				JobLimit:   8000,
 				NumCPUs:    1,
 				CheckInt:   100,
-				Flags:      "noopt",
 				WorkQueue:  "",
 				Queue:      SlurmQueue,
 				SleepInt:   1,
