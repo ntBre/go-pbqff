@@ -54,8 +54,6 @@ var (
 	molproTerminated = "Molpro calculation terminated"
 	ptsJobs          []string
 	paraJobs         []string // counters for parallel jobs
-	paraCount        map[string]int
-	errMap           map[error]int
 	nocheck          bool
 	submitted        int
 	StartCPU         int64
@@ -67,9 +65,11 @@ var (
 
 // Global is a structure for holding global variables
 var Global struct {
-	Nodes    []string
-	JobNum   int
-	Warnings int
+	Nodes     []string
+	JobNum    int
+	Warnings  int
+	ParaCount map[string]int
+	ErrMap    map[error]int
 }
 
 // HashName returns a hashed filename. Well it used to, but now it
@@ -220,7 +220,7 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 					fmt.Fprintf(os.Stderr,
 						"error: %v on %s\n", err, job.Name)
 				}
-				errMap[err]++
+				Global.ErrMap[err]++
 				// can't use job.whatever if you want to modify the thing
 				points[i].Resub = &Calc{
 					Name:    job.Name + "_redo",
@@ -273,8 +273,8 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 				if !job.noRun {
 					finished++
 					check++
-					paraCount[paraJobs[job.ChunkNum]]--
-					if paraCount[paraJobs[job.ChunkNum]] == 0 {
+					Global.ParaCount[paraJobs[job.ChunkNum]]--
+					if Global.ParaCount[paraJobs[job.ChunkNum]] == 0 {
 						// queueClear([]string{paraJobs[job.ChunkNum]})
 						if *debug {
 							fmt.Printf("clearing paracount of"+
@@ -323,7 +323,7 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 			secRem := realTime - 60*float64(minutes)
 			fmt.Printf("total job time (wall): %.2f sec = %dm%.2fs\n",
 				realTime, minutes, secRem)
-			for k, v := range errMap {
+			for k, v := range Global.ErrMap {
 				fmt.Printf("%v: %d occurrences\n", k, v)
 			}
 			return
@@ -457,17 +457,16 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 		LoadCheckpoint(dir)
 	}
 	spectro.Command = Conf.Spectro
-	nc := Conf.Ncoords
 	switch {
 	case CART:
 		fmt.Printf("%d coords requires %d Cartesian points\n",
-			nc, CartPoints(nc))
+			Conf.Ncoords, CartPoints(Conf.Ncoords))
 		if *count {
 			os.Exit(0)
 		}
 	case GRAD:
 		fmt.Printf("%d coords requires %d gradient points\n",
-			nc, GradPoints(nc))
+			Conf.Ncoords, GradPoints(Conf.Ncoords))
 		if *count {
 			os.Exit(0)
 		}
@@ -505,8 +504,8 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	if !*read {
 		MakeDirs(dir)
 	}
-	errMap = make(map[error]int)
-	paraCount = make(map[string]int)
+	Global.ErrMap = make(map[error]int)
+	Global.ParaCount = make(map[string]int)
 	Global.Nodes = PBSnodes()
 	if !*test {
 		fmt.Printf("Available nodes: %q\n\n", Global.Nodes)

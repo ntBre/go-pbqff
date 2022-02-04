@@ -249,7 +249,7 @@ func TestDrain(t *testing.T) {
 	}
 	Conf.SleepInt =  0
 	Conf.ChunkSize =  64
-	paraCount = make(map[string]int)
+	Global.ParaCount = make(map[string]int)
 	prog := new(Molpro)
 	ncoords := 6
 	E0 := 0.0
@@ -293,7 +293,7 @@ func TestDrain(t *testing.T) {
 	gen := func() ([]Calc, bool) {
 		return Push(queue, dir, 0, 0, calcs), false
 	}
-	errMap = make(map[error]int)
+	Global.ErrMap = make(map[error]int)
 	min, time := Drain(prog, queue, ncoords, E0, gen)
 	wmin, wtime := -56.499802779375, 867.46
 	if min != wmin {
