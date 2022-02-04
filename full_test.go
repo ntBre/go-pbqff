@@ -142,6 +142,7 @@ func TestCart(t *testing.T) {
 		submitted = 0
 		prog, _, _ := initialize(test.infile)
 		prog.FormatCart(Conf.Geometry)
+		fmt.Println("geom is: ", Conf.Geometry)
 		cart := prog.GetGeom()
 		queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
 		E0 := prog.Run(none, queue)

@@ -423,7 +423,7 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	}
 	if *freqs {
 		ParseInfile(infile)
-		spectro.Command = Conf.SpectroCmd
+		spectro.Command = Conf.Spectro
 		var err error
 		intder, err = LoadIntder("intder.in")
 		if err != nil {
@@ -441,7 +441,7 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	if *checkpoint {
 		LoadCheckpoint(dir)
 	}
-	spectro.Command = Conf.SpectroCmd
+	spectro.Command = Conf.Spectro
 	nc := Conf.Ncoords
 	switch {
 	case CART:

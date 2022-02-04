@@ -6,11 +6,11 @@ import (
 )
 
 func TestTaylor(t *testing.T) {
-	tmp := Conf.IntderCmd
+	tmp := Conf.Intder
 	path, _ := filepath.Abs("bin/intder")
-	Conf.IntderCmd =  path
+	Conf.Intder =  path
 	defer func() {
-		Conf.IntderCmd =  tmp
+		Conf.Intder =  tmp
 	}()
 	intder, _ := LoadIntder("tests/sic/intder.in")
 	Taylor([]string{"H", "O", "H"}, intder)
