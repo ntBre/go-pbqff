@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"reflect"
 	"regexp"
 	"testing"
@@ -20,91 +19,83 @@ func TestProcessInput(t *testing.T) {
 	}
 }
 
-func compConf(a, b Config) bool {
+func compConf(a, b Config) (ok bool, got interface{}, want interface{}) {
 	if a.Cluster != b.Cluster {
-		return false
+		return false, a.Cluster, b.Cluster
 	}
 	if a.Package != b.Package {
-		return false
+		return false, a.Package, b.Package
 	}
 	if a.Program != b.Program {
-		return false
+		return false, a.Program, b.Program
 	}
 	if a.WorkQueue != b.WorkQueue {
-		return false
+		return false, a.WorkQueue, b.WorkQueue
 	}
 	if a.Delta != b.Delta {
-		return false
+		return false, a.Delta, b.Delta
 	}
 	if !reflect.DeepEqual(a.Deltas, b.Deltas) {
-		return false
+		return false, a.Deltas, b.Deltas
 	}
 	if a.Geometry != b.Geometry {
-		fmt.Printf("got\n%+#v, wanted\n%+#v\n", a.Geometry, b.Geometry)
-		return false
+		return false, a.Geometry, b.Geometry
 	}
 	if a.GeomType != b.GeomType {
-		return false
+		return false, a.GeomType, b.GeomType
 	}
 	if a.Flags != b.Flags {
-		return false
+		return false, a.Flags, b.Flags
 	}
 	if a.Deriv != b.Deriv {
-		return false
+		return false, a.Deriv, b.Deriv
 	}
 	if a.JobLimit != b.JobLimit {
-		return false
+		return false, a.JobLimit, b.JobLimit
 	}
 	if a.ChunkSize != b.ChunkSize {
-		return false
+		return false, a.ChunkSize, b.ChunkSize
 	}
 	if a.CheckInt != b.CheckInt {
-		return false
+		return false, a.CheckInt, b.CheckInt
 	}
 	if a.SleepInt != b.SleepInt {
-		return false
+		return false, a.SleepInt, b.SleepInt
 	}
 	if a.NumCPUs != b.NumCPUs {
-		return false
+		return false, a.NumCPUs, b.NumCPUs
 	}
 	if a.PBSMem != b.PBSMem {
-		return false
+		return false, a.PBSMem, b.PBSMem
 	}
 	if a.Intder != b.Intder {
-		return false
+		return false, a.Intder, b.Intder
 	}
 	if a.Spectro != b.Spectro {
-		return false
+		return false, a.Spectro, b.Spectro
 	}
 	if a.Ncoords != b.Ncoords {
-		fmt.Println(a.Ncoords, b.Ncoords)
-		return false
+		return false, a.Ncoords, b.Ncoords
 	}
 	if !reflect.DeepEqual(a.EnergyLine, b.EnergyLine) {
-		fmt.Print("it's energyline")
-		return false
+		return false, a.EnergyLine, b.EnergyLine
 	}
 	if !reflect.DeepEqual(a.PBSTmpl, b.PBSTmpl) {
-		fmt.Print("it's pbstempl")
-		return false
+		return false, a.PBSTmpl, b.PBSTmpl
 	}
 	if a.QueueSystem != b.QueueSystem {
-		fmt.Printf("%q %q\n", a.QueueSystem, b.QueueSystem)
-		return false
+		return false, a.QueueSystem, b.QueueSystem
 	}
 	if a.MolproTmpl != b.MolproTmpl {
-		fmt.Printf("%q %q\n", a.MolproTmpl, b.MolproTmpl)
-		return false
+		return false, a.MolproTmpl, b.MolproTmpl
 	}
 	if a.AnpassTmpl != b.AnpassTmpl {
-		fmt.Printf("%q %q\n", a.AnpassTmpl, b.AnpassTmpl)
-		return false
+		return false, a.AnpassTmpl, b.AnpassTmpl
 	}
 	if a.IntderTmpl != b.IntderTmpl {
-		fmt.Printf("%q %q\n", a.IntderTmpl, b.IntderTmpl)
-		return false
+		return false, a.IntderTmpl, b.IntderTmpl
 	}
-	return true
+	return true, nil, nil
 }
 
 func TestParseInfile(t *testing.T) {
@@ -151,6 +142,7 @@ XXO = 80.0 Deg`,
 				MolproTmpl:  "molpro.in",
 				AnpassTmpl:  "anpass.in",
 				IntderTmpl:  "intder.in",
+				Deltas:      []float64{0.005, 0.005, 0.005, 0.005, 0.005, 0.005},
 			},
 		},
 		{
@@ -187,13 +179,14 @@ XXO = 80.0 Deg`,
 				MolproTmpl:  "molpro.in",
 				AnpassTmpl:  "anpass.in",
 				IntderTmpl:  "intder.in",
+				Deltas:      []float64{0.005, 0.005, 0.005, 0.005, 0.005, 0.005},
 			},
 		},
 	}
 	for _, test := range tests {
 		ParseInfile(test.in)
-		if !compConf(Conf, test.want) {
-			t.Error()
+		if ok, got, want := compConf(Conf, test.want); !ok {
+			t.Errorf("got %v wanted %v\n", got, want)
 		}
 	}
 }

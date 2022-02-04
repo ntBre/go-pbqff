@@ -142,7 +142,6 @@ func TestCart(t *testing.T) {
 		submitted = 0
 		prog, _, _ := initialize(test.infile)
 		prog.FormatCart(Conf.Geometry)
-		fmt.Println("geom is: ", Conf.Geometry)
 		cart := prog.GetGeom()
 		queue := PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
 		E0 := prog.Run(none, queue)
@@ -210,6 +209,7 @@ func TestGrad(t *testing.T) {
 		qsub = "qsub"
 		submitted = 0
 	}()
+	SIC = false
 	prog, _, _ := initialize("tests/grad/grad.in")
 	prog.FormatCart(Conf.Geometry)
 	cart := prog.GetGeom()

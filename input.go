@@ -33,7 +33,7 @@ func ProcessInput(line string) {
 			case ok:
 				f(val)
 			case key == "deltas":
-				fmt.Println("it's deltas")
+				Conf.Deltas = Conf.ParseDeltas(val)
 			case tn == "string":
 				loc.SetString(val)
 			case tn == "int":
@@ -97,6 +97,10 @@ func ParseInfile(filename string) {
 		}
 	}
 	Conf.ProcessGeom()
+	if Conf.Deltas == nil {
+		Conf.Deltas = Conf.ParseDeltas("")
+	}
+	Conf.WhichProgram()
 }
 
 type Config struct {
@@ -244,24 +248,26 @@ func (c *Config) ProcessGeom() (cart bool) {
 func (c *Config) ParseDeltas(deltas string) []float64 {
 	err := errors.New("invalid deltas input")
 	ret := make([]float64, 0)
-	pairs := strings.Split(deltas, ",")
-	for _, p := range pairs {
-		sp := strings.Split(p, ":")
-		if len(sp) != 2 {
-			panic(err)
+	if deltas != "" {
+		pairs := strings.Split(deltas, ",")
+		for _, p := range pairs {
+			sp := strings.Split(p, ":")
+			if len(sp) != 2 {
+				panic(err)
+			}
+			d, e := strconv.Atoi(strings.TrimSpace(sp[0]))
+			if e != nil || d < 1 {
+				panic(err)
+			}
+			f, e := strconv.ParseFloat(strings.TrimSpace(sp[1]), 64)
+			if e != nil || f < 0.0 {
+				panic(err)
+			}
+			for d > len(ret) {
+				ret = append(ret, c.Delta)
+			}
+			ret[d-1] = f
 		}
-		d, e := strconv.Atoi(strings.TrimSpace(sp[0]))
-		if e != nil || d < 1 {
-			panic(err)
-		}
-		f, e := strconv.ParseFloat(strings.TrimSpace(sp[1]), 64)
-		if e != nil || f < 0.0 {
-			panic(err)
-		}
-		for d > len(ret) {
-			ret = append(ret, c.Delta)
-		}
-		ret[d-1] = f
 	}
 	for len(ret) < c.Ncoords {
 		ret = append(ret, c.Delta)
