@@ -44,6 +44,9 @@ func compConf(t *testing.T, a, b Config) {
 	if a.GeomType != b.GeomType {
 		t.Errorf("got %v, wanted %v\n", a.GeomType, b.GeomType)
 	}
+	if a.Flags != b.Flags {
+		t.Errorf("got %v, wanted %v\n", a.Flags, b.Flags)
+	}
 	if a.Deriv != b.Deriv {
 		t.Errorf("got %v, wanted %v\n", a.Deriv, b.Deriv)
 	}
@@ -123,7 +126,10 @@ XXO = 80.0 Deg`,
 				NumCPUs:    1,
 				CheckInt:   100,
 				WorkQueue:  "",
-				Queue:      PBSQueue,
+				Queue:      PBS{
+					SinglePt: pbsMaple,
+					ChunkPts: ptsMaple,
+				},
 				SleepInt:   60,
 				Intder:     "/home/brent/Packages/intder/intder",
 				Spectro:    "",
@@ -159,7 +165,10 @@ XXO = 80.0 Deg`,
 				NumCPUs:    1,
 				CheckInt:   100,
 				WorkQueue:  "",
-				Queue:      PBSQueue,
+				Queue:      PBS{
+					SinglePt: pbsMaple,
+					ChunkPts: ptsMaple,
+				},
 				SleepInt:   60,
 				Intder:     "/home/brent/Packages/intder/intder",
 				Spectro:    "",
@@ -191,8 +200,12 @@ H        0.0000000000       -3.0146272390        1.7138963510`,
 				JobLimit:   8000,
 				NumCPUs:    1,
 				CheckInt:   100,
+				Flags:      "noopt",
 				WorkQueue:  "",
-				Queue:      SlurmQueue,
+				Queue:      Slurm{
+					SinglePt: pbsSlurm,
+					ChunkPts: ptsSlurm,
+				},
 				SleepInt:   1,
 				Intder:     "/home/r410/programs/intder/Intder2005.x",
 				Spectro:    "/home/r410/programs/spec3jm.ifort-O0.static.x",

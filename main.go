@@ -420,11 +420,15 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	var err error
 	switch Conf.Package {
 	case "molpro", "":
+		fmt.Println("setting molpro")
 		prog, err = LoadMolpro(mpName)
+		Conf.Queue.NewMolpro()
 	case "g16", "gaussian", "gauss":
 		prog, err = LoadGaussian(mpName)
-		ptsMaple = ptsMapleGauss
-		pbsMaple = pbsMapleGauss
+		fmt.Println(Conf.Queue)
+		fmt.Println("setting gaussian")
+		Conf.Queue.NewGauss()
+		fmt.Println(Conf.Queue)
 		OutExt = ".log"
 	}
 	if err != nil {
@@ -473,7 +477,6 @@ func main() {
 		ncoords  int
 		names    []string
 		coords   []float64
-		queue    Queue
 	)
 	if OPT {
 		if Conf.GeomType != "zmat" {
@@ -483,13 +486,13 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		E0 = prog.Run(opt, queue)
+		E0 = prog.Run(opt, Conf.Queue)
 		cart, zmat, err = prog.HandleOutput("opt/opt")
 		if err != nil {
 			panic(err)
 		}
 		prog.UpdateZmat(zmat)
-		prog.Run(freq, queue)
+		prog.Run(freq, Conf.Queue)
 	} else {
 		if !strings.Contains("cart,xyz", Conf.GeomType) {
 			panic("expecting cartesian geometry")
@@ -501,7 +504,7 @@ func main() {
 		cart = prog.GetGeom()
 		// only required for cartesians
 		if CART {
-			E0 = prog.Run(none, queue)
+			E0 = prog.Run(none, Conf.Queue)
 		}
 	}
 	mol := symm.ReadXYZ(strings.NewReader(cart))
@@ -523,19 +526,19 @@ func main() {
 	if SIC {
 		intder.WritePts("pts/intder.in")
 		RunIntder("pts/intder")
-		gen = BuildPoints(prog, queue, "pts/file07", names, true)
+		gen = BuildPoints(prog, Conf.Queue, "pts/file07", names, true)
 	} else {
 		ncoords = len(coords)
 		if CART {
-			gen = BuildCartPoints(prog, queue, "pts/inp", names,
+			gen = BuildCartPoints(prog, Conf.Queue, "pts/inp", names,
 				coords, mol)
 		} else if GRAD {
-			gen = BuildGradPoints(prog, queue, "pts/inp", names,
+			gen = BuildGradPoints(prog, Conf.Queue, "pts/inp", names,
 				coords, mol)
 		}
 	}
 
-	min, _ = Drain(prog, queue, ncoords, E0, gen)
+	min, _ = Drain(prog, Conf.Queue, ncoords, E0, gen)
 	queueClear(Global.WatchedJobs)
 
 	if SIC {

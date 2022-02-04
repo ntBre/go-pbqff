@@ -11,9 +11,13 @@ import (
 	"time"
 )
 
+// TODO copy g16b01 script and remove requirement that working dir be
+// where you submit from - probably just embed it in my template
 var (
 	ptsSlurm, _ = template.ParseFS(templates, "templates/pts.slurm")
 	pbsSlurm, _ = template.ParseFS(templates, "templates/pbs.slurm")
+	ptsSlurmGauss, _ = template.ParseFS(templates, "templates/ptsGauss.slurm")
+	pbsSlurmGauss, _ = template.ParseFS(templates, "templates/pbsGauss.slurm")
 )
 
 type Slurm struct {
@@ -21,17 +25,27 @@ type Slurm struct {
 	ChunkPts *template.Template
 }
 
-func (s Slurm) SinglePBS() *template.Template {
+func (s *Slurm) SinglePBS() *template.Template {
 	return s.SinglePt
 }
 
-func (s Slurm) ChunkPBS() *template.Template {
+func (s *Slurm) ChunkPBS() *template.Template {
 	return s.ChunkPts
+}
+
+func (s *Slurm) NewMolpro() {
+	s.SinglePt = pbsSlurm
+	s.ChunkPts = ptsSlurm
+}
+
+func (s *Slurm) NewGauss() {
+	s.SinglePt = pbsSlurmGauss
+	s.ChunkPts = ptsSlurmGauss
 }
 
 // WritePBS writes a pbs infile based on the queue type and
 // the templates above, with job information from job
-func (s Slurm) WritePBS(infile string, job *Job, single bool) {
+func (s *Slurm) WritePBS(infile string, job *Job, single bool) {
 	f, err := os.Create(infile)
 	defer f.Close()
 	if err != nil {
@@ -46,7 +60,7 @@ func (s Slurm) WritePBS(infile string, job *Job, single bool) {
 
 // Submit submits the pbs script defined by filename to the queue and
 // returns the jobid
-func (s Slurm) Submit(filename string) (jobid string) {
+func (s *Slurm) Submit(filename string) (jobid string) {
 	var (
 		maxRetries = 15
 		maxTime    = 1 << maxRetries
@@ -69,7 +83,7 @@ func (s Slurm) Submit(filename string) (jobid string) {
 // Resubmit copies the input file associated with name to
 // name_redo.inp, writes a new PBS file, submits the new PBS job, and
 // returns the associated jobid
-func (s Slurm) Resubmit(name string, err error) string {
+func (s *Slurm) Resubmit(name string, err error) string {
 	fmt.Fprintf(os.Stderr, "resubmitting %s for %s\n", name, err)
 	src, _ := os.Open(name + ".inp")
 	dst, _ := os.Create(name + "_redo.inp")
@@ -94,7 +108,7 @@ func (s Slurm) Resubmit(name string, err error) string {
 // Stat returns a map of job names to their queue status. The map
 // value is true if the job is either queued (Q) or running (R) and
 // false otherwise
-func (s Slurm) Stat(qstat *map[string]bool) {
+func (s *Slurm) Stat(qstat *map[string]bool) {
 	status, _ := exec.Command("squeue", "-u", os.Getenv("USER")).CombinedOutput()
 	scanner := bufio.NewScanner(strings.NewReader(string(status)))
 	var (

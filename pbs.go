@@ -54,6 +54,16 @@ func (p PBS) ChunkPBS() *template.Template {
 	return p.ChunkPts
 }
 
+func (p PBS) NewMolpro() {
+	p.SinglePt = ptsMaple
+	p.ChunkPts = pbsMaple
+}
+
+func (p PBS) NewGauss() {
+	p.SinglePt = ptsMapleGauss
+	p.ChunkPts = pbsMapleGauss
+}
+
 // WritePBS writes a pbs infile based on the queue type and
 // the templates above, with job information from job
 func (p PBS) WritePBS(infile string, job *Job, single bool) {

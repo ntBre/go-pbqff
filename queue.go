@@ -13,6 +13,8 @@ type Queue interface {
 	Submit(string) string
 	Resubmit(string, error) string
 	Stat(*map[string]bool)
+	NewMolpro()
+	NewGauss()
 }
 
 // SelectNode returns a node and queue from the Global node list

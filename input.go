@@ -12,17 +12,6 @@ import (
 	"strings"
 )
 
-var (
-	PBSQueue = PBS{
-		SinglePt: pbsMaple,
-		ChunkPts: ptsMaple,
-	}
-	SlurmQueue = Slurm{
-		SinglePt: pbsSlurm,
-		ChunkPts: ptsSlurm,
-	}
-)
-
 // ProcessInput extracts keywords from a line of input
 func ProcessInput(line string) {
 	// map of special extractor functions
@@ -32,13 +21,15 @@ func ProcessInput(line string) {
 		},
 		"queue": func(s string) {
 			switch s {
-			case "pbs":
-				Conf.Queue = PBSQueue
 			case "slurm":
-				Conf.Queue = SlurmQueue
+				Conf.Queue = &Slurm{
+					SinglePt: pbsSlurm,
+					ChunkPts: ptsSlurm,
+				}
 			}
 		},
 		"flags": func(s string) {
+			Conf.Flags = s
 			switch s {
 			case "noopt":
 				OPT = false
@@ -138,6 +129,7 @@ type Config struct {
 	MolproTmpl string
 	Geometry   string
 	GeomType   string
+	Flags      string
 	Queue      Queue
 	Program    string
 	Package    string // quantum chemistry package (molpro|g16)
@@ -170,6 +162,7 @@ func NewConfig() Config {
 		Deltas:     nil,
 		Geometry:   "",
 		GeomType:   "zmat",
+		Flags:      "",
 		Deriv:      4,
 		JobLimit:   1024,
 		ChunkSize:  8,
@@ -181,7 +174,10 @@ func NewConfig() Config {
 		Spectro:    "",
 		Ncoords:    0,
 		EnergyLine: regexp.MustCompile(`energy=`),
-		Queue:      PBSQueue,
+		Queue: PBS{
+			SinglePt: pbsMaple,
+			ChunkPts: ptsMaple,
+		},
 		MolproTmpl: "molpro.in",
 		AnpassTmpl: "anpass.in",
 		IntderTmpl: "intder.in",

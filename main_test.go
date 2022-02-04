@@ -237,6 +237,8 @@ func (tq TestQueue) ChunkPBS() *template.Template  { return tq.ChunkPts }
 func (tq TestQueue) Submit(string) string          { return "1" }
 func (tq TestQueue) Resubmit(string, error) string { return "" }
 func (tq TestQueue) Stat(*map[string]bool)         {}
+func (tq TestQueue) NewGauss()                     {}
+func (tq TestQueue) NewMolpro()                    {}
 
 func TestDrain(t *testing.T) {
 	Global.Submitted = 0
