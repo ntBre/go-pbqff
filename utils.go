@@ -4,13 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"os"
 	"os/exec"
 	"os/signal"
+	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 )
@@ -247,4 +250,99 @@ func CatchKill() {
 	fmt.Println("running queueClear before SIGTERM")
 	queueClear(Global.WatchedJobs)
 	errExit(fmt.Errorf("received SIGTERM"), "")
+}
+
+// Summarize prints a summary table of the vibrational frequency data
+func Summarize(w io.Writer, zpt float64, mpHarm, idHarm, spHarm, spFund,
+	spCorr []float64) error {
+	fmt.Fprint(w, "\n== Results == \n\n")
+	if len(mpHarm) != len(idHarm) ||
+		len(mpHarm) != len(spHarm) ||
+		len(mpHarm) != len(spFund) ||
+		len(mpHarm) != len(spCorr) {
+		return fmt.Errorf("error Summarize: dimension mismatch")
+	}
+	fmt.Fprintf(w, "ZPT = %.1f\n", zpt)
+	fmt.Fprintf(w, "+%8s-+%8s-+%8s-+%8s-+%8s-+\n",
+		"--------", "--------", "--------", "--------", "--------")
+	fmt.Fprintf(w, "|%8s |%8s |%8s |%8s |%8s |\n",
+		"Mp Harm", "Id Harm", "Sp Harm", "Sp Fund", "Sp Corr")
+	fmt.Fprintf(w, "+%8s-+%8s-+%8s-+%8s-+%8s-+\n",
+		"--------", "--------", "--------", "--------", "--------")
+	for i := range mpHarm {
+		fmt.Fprintf(w, "|%8.1f |%8.1f |%8.1f |%8.1f |%8.1f |\n",
+			mpHarm[i], idHarm[i], spHarm[i], spFund[i], spCorr[i])
+	}
+	fmt.Fprintf(w, "+%8s-+%8s-+%8s-+%8s-+%8s-+\n\n",
+		"--------", "--------", "--------", "--------", "--------")
+	return nil
+}
+
+// CartPoints returns the number of points required for a Cartesian
+// force field with n coordinates
+func CartPoints(n int) int {
+	return 2 * n * (n*n*n + 2*n*n + 8*n + 1) / 3
+}
+
+// GradPoints returns the number of points required for a Cartesian
+// gradient force field with n coordinates
+func GradPoints(n int) int {
+	return n * (4*n*n + 12*n + 8) / 3
+}
+
+// DupOutErr uses syscall.Dup2 to direct the stdout and stderr streams
+// to files
+func DupOutErr(infile string) {
+	// set up output and err files and dup their fds to stdout and stderr
+	// https://github.com/golang/go/issues/325
+	base := infile[:len(infile)-len(path.Ext(infile))]
+	outfile, _ := os.Create(base + ".out")
+	errfile, _ := os.Create(base + ".err")
+	syscall.Dup2(int(outfile.Fd()), 1)
+	syscall.Dup2(int(errfile.Fd()), 2)
+}
+
+// XYZGeom converts a string xyz style geometry into a list of atom
+// names and coords
+func XYZGeom(geom string) (names []string, coords []float64) {
+	lines := strings.Split(geom, "\n")
+	var skip int
+	for i, line := range lines {
+		if line == "" {
+			continue
+		}
+		if skip > 0 {
+			skip--
+			continue
+		}
+		fields := strings.Fields(line)
+		if i == 0 && len(fields) == 1 {
+			skip++
+			continue
+		}
+		if len(fields) == 4 {
+			names = append(names, fields[0])
+			for _, s := range fields[1:] {
+				f, _ := strconv.ParseFloat(s, 64)
+				coords = append(coords, f)
+			}
+		}
+	}
+	return
+}
+
+// PrintFortFile prints the third derivative force constants in the
+// format expected by SPECTRO
+func PrintFortFile(fc []CountFloat, natoms, other int, filename string) int {
+	f, _ := os.Create(filename)
+	defer f.Close()
+	fmt.Fprintf(f, "%5d%5d", natoms, other)
+	for i := range fc {
+		if i%3 == 0 {
+			fmt.Fprintf(f, "\n")
+		}
+		fmt.Fprintf(f, "%20.10f", fc[i].Val)
+	}
+	fmt.Fprint(f, "\n")
+	return len(fc)
 }
