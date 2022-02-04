@@ -41,7 +41,7 @@ func Push(q Queue, dir string, pf, count int, calcs []Calc) []Calc {
 		calcs[c].SubFile = subfile
 		calcs[c].ChunkNum = pf
 		if !calcs[c].noRun {
-			submitted++
+			Global.Submitted++
 			jobs = append(jobs, calcs[c].Name+".inp")
 		} else {
 			count++
@@ -63,8 +63,7 @@ func Push(q Queue, dir string, pf, count int, calcs []Calc) []Calc {
 	if *debug {
 		fmt.Printf("submitted %s from %s\n", jobid, subfile)
 	}
-	ptsJobs = append(ptsJobs, jobid)
-	paraJobs = append(paraJobs, jobid)
+	Global.WatchedJobs = append(Global.WatchedJobs, jobid)
 	count = 1
 	pf++
 	// if end reached with no calcs, which can happen on continue

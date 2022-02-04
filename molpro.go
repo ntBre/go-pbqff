@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -14,6 +13,8 @@ import (
 	"strings"
 	"time"
 )
+
+var MolproErrorLine = regexp.MustCompile(`(?i)[^_]error`)
 
 const (
 	opt Procedure = iota
@@ -148,12 +149,11 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 	f, err := os.Open(filename)
 	defer f.Close()
 	if err != nil {
-		return brokenFloat, 0, grad, ErrFileNotFound
+		err = ErrFileNotFound
+		return
 	}
 	scanner := bufio.NewScanner(f)
 	err = ErrEnergyNotFound
-	time = 0
-	result = brokenFloat
 	var (
 		i                   int
 		gradx, grady, gradz []string
@@ -174,7 +174,7 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 		case i == 0 && strings.Contains(strings.ToUpper(line), "ERROR"):
 			return result, time, grad, ErrFileContainsError
 		case strings.Contains(strings.ToLower(line), "error") &&
-			ErrorLine.MatchString(line):
+			MolproErrorLine.MatchString(line):
 			return result, time, grad, ErrFileContainsError
 			// since we assume the line contains an '='
 			// below, gate the regex match with that
@@ -193,7 +193,8 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 						err = nil
 						result, err = strconv.ParseFloat(split[i+1], 64)
 						if err != nil {
-							result = math.NaN()
+							err = ErrFinishedButNoEnergy
+							return
 						}
 					}
 				}
@@ -208,7 +209,8 @@ func (m Molpro) ReadOut(filename string) (result, time float64, grad []float64, 
 			grady = processGrad(line)
 		case strings.Contains(line, "GRADZ"):
 			gradz = processGrad(line)
-		case strings.Contains(line, molproTerminated) && err != nil:
+		case strings.Contains(line,
+			"Molpro calculation terminated") && err != nil:
 			err = ErrFinishedButNoEnergy
 		}
 	}

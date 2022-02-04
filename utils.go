@@ -234,7 +234,7 @@ func GetCPULimit() (cur, max uint64) {
 func CatchPanic() {
 	if r := recover(); r != nil {
 		fmt.Println("running queueClear before panic")
-		queueClear(ptsJobs)
+		queueClear(Global.WatchedJobs)
 		panic(r)
 	}
 }
@@ -245,6 +245,6 @@ func CatchKill() {
 	signal.Notify(c, os.Signal(syscall.SIGTERM))
 	<-c
 	fmt.Println("running queueClear before SIGTERM")
-	queueClear(ptsJobs)
+	queueClear(Global.WatchedJobs)
 	errExit(fmt.Errorf("received SIGTERM"), "")
 }

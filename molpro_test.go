@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -222,42 +221,42 @@ func TestReadOut(t *testing.T) {
 		{
 			msg:      "Error in output",
 			filename: "testfiles/read/error.out",
-			energy:   math.NaN(),
+			energy:   0,
 			time:     119.29,
 			err:      ErrFileContainsError,
 		},
 		{
 			msg:      "File not found",
 			filename: "nonexistent/file",
-			energy:   math.NaN(),
+			energy:   0,
 			time:     0.0,
 			err:      ErrFileNotFound,
 		},
 		{
 			msg:      "One-line error",
 			filename: "testfiles/read/shortcircuit.out",
-			energy:   math.NaN(),
+			energy:   0,
 			time:     0.0,
 			err:      ErrFileContainsError,
 		},
 		{
 			msg:      "Blank file",
 			filename: "testfiles/read/blank.out",
-			energy:   math.NaN(),
+			energy:   0,
 			time:     0.0,
 			err:      ErrBlankOutput,
 		},
 		{
 			msg:      "Parse error",
 			filename: "testfiles/read/parse.out",
-			energy:   math.NaN(),
+			energy:   0,
 			time:     10372.08,
 			err:      ErrFinishedButNoEnergy,
 		},
 		{
 			msg:      "Sequoia partial",
 			filename: "testfiles/read/seq.part",
-			energy:   math.NaN(),
+			energy:   0,
 			time:     67.94,
 			err:      ErrEnergyNotFound,
 		},
@@ -285,11 +284,7 @@ func TestReadOut(t *testing.T) {
 			Conf.EnergyLine = regexp.MustCompile(`energy=`)
 		}
 		energy, time, grad, err := m.ReadOut(test.filename)
-		if math.IsNaN(test.energy) {
-			if !math.IsNaN(energy) {
-				t.Errorf("got not NaN, wanted NaN\n")
-			}
-		} else if energy != test.energy {
+		if energy != test.energy {
 			t.Errorf("got %v, wanted %v\n", energy, test.energy)
 		}
 		if time != test.time {

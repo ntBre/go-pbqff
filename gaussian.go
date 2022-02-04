@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+var GaussErrorLine = regexp.MustCompile(`(?i)error termination`)
+
 // copying molpro for now, not sure how many are actually applicable
 type Gaussian struct {
 	Dir  string
@@ -201,22 +203,15 @@ func (g *Gaussian) ReadOut(filename string) (result, time float64,
 	f, err := os.Open(filename)
 	defer f.Close()
 	if err != nil {
-		return brokenFloat, 0, grad, ErrFileNotFound
+		err = ErrFileNotFound
+		return
 	}
 	scanner := bufio.NewScanner(f)
 	err = ErrEnergyNotFound
-	time = 0
-	result = brokenFloat
 	var (
 		i                   int
 		gradx, grady, gradz []string
 	)
-	processGrad := func(line string) []string {
-		coords := strings.Fields(line)
-		coords = coords[3 : len(coords)-1] // trim front and back
-		coords[len(coords)-1] = strings.TrimRight(coords[len(coords)-1], "]")
-		return coords
-	}
 	var line string
 	for i = 0; scanner.Scan(); i++ {
 		line = scanner.Text()
@@ -241,14 +236,6 @@ func (g *Gaussian) ReadOut(filename string) (result, time float64,
 			fields := strings.Fields(line)
 			timeStr := fields[8]
 			time, _ = strconv.ParseFloat(timeStr, 64)
-		case strings.Contains(line, "GRADX"):
-			gradx = processGrad(line)
-		case strings.Contains(line, "GRADY"):
-			grady = processGrad(line)
-		case strings.Contains(line, "GRADZ"):
-			gradz = processGrad(line)
-		case strings.Contains(line, molproTerminated) && err != nil:
-			err = ErrFinishedButNoEnergy
 		}
 	}
 	if i == 0 {

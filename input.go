@@ -150,7 +150,10 @@ type Config struct {
 	Deriv      int     // derivative level
 	NumCPUs    int     // number of CPUs
 	Delta      float64 // step size
-	CheckInt   int     // interval for writing checkpoints
+
+	// CheckInt is the interval for writing checkpoints. A zero or
+	// negative value disables checkpoints
+	CheckInt int
 }
 
 // NewConfig returns a Config with all of the default options set

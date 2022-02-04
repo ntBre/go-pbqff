@@ -14,9 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"os"
-	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -50,25 +48,19 @@ var (
 
 // Global variables
 var (
-	brokenFloat      = math.NaN()
-	molproTerminated = "Molpro calculation terminated"
-	ptsJobs          []string
-	paraJobs         []string // counters for parallel jobs
-	nocheck          bool
-	submitted        int
-	StartCPU         int64
-	Conf             = NewConfig()
-	ErrorLine        = regexp.MustCompile(`(?i)[^_]error`)
-	GaussErrorLine   = regexp.MustCompile(`(?i)error termination`)
-	OutExt           = ".out"
+	Conf   = NewConfig()
+	OutExt = ".out"
 )
 
-// Global is a structure for holding global variables
+// Global is a struct for holding global variables
 var Global struct {
-	ErrMap   map[error]int
-	Nodes    []string
-	JobNum   int
-	Warnings int
+	ErrMap      map[error]int
+	Nodes       []string
+	WatchedJobs []string
+	JobNum      int
+	Submitted   int
+	Warnings    int
+	StartCPU    int64
 }
 
 // HashName returns a hashed filename. Well it used to, but now it
@@ -226,7 +218,7 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 					ResubID: q.Resubmit(job.Name, err),
 				}
 				resubs++
-				ptsJobs = append(ptsJobs, points[i].Resub.ResubID)
+				Global.WatchedJobs = append(Global.WatchedJobs, points[i].Resub.ResubID)
 			} else if job.Resub != nil {
 				if energy, t, gradients,
 					err = prog.ReadOut(job.Resub.Name +
@@ -286,16 +278,16 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 			fmt.Fprintf(os.Stderr,
 				"%s finished %d/%d submitted, %v polling %d jobs\n",
 				time.Now().Format("[2006-01-02 15:04]"),
-				finished, submitted,
+				finished, Global.Submitted,
 				time.Since(pollStart).Round(time.Millisecond), nJobs-norun)
 		}
 		if check >= Conf.CheckInt {
-			if !nocheck {
+			if Conf.CheckInt > 0 {
 				MakeCheckpoint(prog.GetDir())
 			}
 			check = 1
 			fmt.Fprintf(os.Stderr, "CPU time: %.3f s\n",
-				float64(GetCPU()-StartCPU)/1e9)
+				float64(GetCPU()-Global.StartCPU)/1e9)
 		}
 		if heap.Len() >= Conf.ChunkSize && !*nodel {
 			heap.Dump()
@@ -305,8 +297,8 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 		if nJobs == 0 {
 			fmt.Printf("resubmitted %d/%d (%.1f%%),"+
 				" points execution time: %v\n",
-				resubs, submitted,
-				float64(resubs)/float64(submitted)*100,
+				resubs, Global.Submitted,
+				float64(resubs)/float64(Global.Submitted)*100,
 				time.Since(start))
 			minutes := int(realTime) / 60
 			secRem := realTime - 60*float64(minutes)
@@ -562,7 +554,7 @@ func initArrays(natoms int) (int, int) {
 }
 
 func main() {
-	StartCPU = GetCPU()
+	Global.StartCPU = GetCPU()
 	defer CatchPanic()
 	go CatchKill()
 	args := ParseFlags()
@@ -645,7 +637,7 @@ func main() {
 	}
 
 	min, _ = Drain(prog, queue, ncoords, E0, gen)
-	queueClear(ptsJobs)
+	queueClear(Global.WatchedJobs)
 
 	if SIC {
 		energies = FloatsFromCountFloats(cenergies)
@@ -716,7 +708,7 @@ func main() {
 			}
 		}
 	}
-	fmt.Printf("total CPU time used: %.3f s\n", float64(GetCPU()-StartCPU)/1e9)
+	fmt.Printf("total CPU time used: %.3f s\n", float64(GetCPU()-Global.StartCPU)/1e9)
 	if *memprofile != "" {
 		f, err := os.Create(*memprofile)
 		if err != nil {

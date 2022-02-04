@@ -27,7 +27,7 @@ func TestSIC(t *testing.T) {
 		Conf = temp
 		*test = false
 		qsub = "qsub"
-		submitted = 0
+		Global.Submitted = 0
 		cenergies = *new([]CountFloat)
 	}()
 	prog, intder, anpass := initialize("tests/sic/sic.in")
@@ -88,7 +88,7 @@ func TestCart(t *testing.T) {
 		Conf = temp
 		*test = false
 		qsub = "qsub"
-		submitted = 0
+		Global.Submitted = 0
 		*nosym = tmpsym
 	}()
 	tests := []struct {
@@ -139,7 +139,7 @@ func TestCart(t *testing.T) {
 	for _, test := range tests[0:] {
 		*nosym = test.nosym
 		Conf = NewConfig()
-		submitted = 0
+		Global.Submitted = 0
 		prog, _, _ := initialize(test.infile)
 		prog.FormatCart(Conf.Geometry)
 		cart := prog.GetGeom()
@@ -207,7 +207,7 @@ func TestGrad(t *testing.T) {
 		Conf = temp
 		*test = false
 		qsub = "qsub"
-		submitted = 0
+		Global.Submitted = 0
 	}()
 	SIC = false
 	prog, _, _ := initialize("tests/grad/grad.in")
@@ -264,7 +264,7 @@ func TestResub(t *testing.T) {
 		Conf = temp
 		*test = false
 		qsub = "qsub"
-		submitted = 0
+		Global.Submitted = 0
 		*nosym = tmpsym
 		*checkpoint = tmpchk
 	}()
@@ -289,7 +289,7 @@ func TestResub(t *testing.T) {
 	for _, test := range tests {
 		*nosym = test.nosym
 		Conf = NewConfig()
-		submitted = 0
+		Global.Submitted = 0
 		prog, _, _ := initialize(test.infile)
 		prog.FormatCart(Conf.Geometry)
 		cart := prog.GetGeom()
@@ -320,7 +320,7 @@ func TestResub(t *testing.T) {
 				*checkpoint = true
 				*nosym = test.nosym
 				Conf = NewConfig()
-				submitted = 0
+				Global.Submitted = 0
 				prog, _, _ := initialize(test.infile)
 				prog.FormatCart(Conf.Geometry)
 				cart := prog.GetGeom()

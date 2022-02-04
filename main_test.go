@@ -235,7 +235,7 @@ func (tq TestQueue) Resubmit(string, error) string { return "" }
 func (tq TestQueue) Stat(*map[string]bool)         {}
 
 func TestDrain(t *testing.T) {
-	submitted = 0
+	Global.Submitted = 0
 	conf := Conf
 	qsub = "qsub/qsub"
 	defer func() {
