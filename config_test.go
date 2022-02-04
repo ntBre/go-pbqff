@@ -9,9 +9,9 @@ func TestParseDeltas(t *testing.T) {
 	tests := []struct {
 		msg   string
 		in    string
+		out   []float64
 		nc    int
 		delta float64
-		out   []float64
 	}{
 		{
 			msg:   "normal input",

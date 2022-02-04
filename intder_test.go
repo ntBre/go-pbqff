@@ -32,8 +32,8 @@ var (
 func TestPattern(t *testing.T) {
 	tests := []struct {
 		msg    string
-		want   [][]int
 		inp    string
+		want   [][]int
 		ndummy int
 		negate bool
 	}{
@@ -118,11 +118,14 @@ func TestSwap(t *testing.T) {
 
 func TestMatchPattern(t *testing.T) {
 	tests := []struct {
-		msg          string
-		geom1, geom2 string
-		ndum1, ndum2 int
-		neg1, neg2   bool
-		want         []int
+		msg   string
+		geom1 string
+		geom2 string
+		want  []int
+		ndum1 int
+		ndum2 int
+		neg1  bool
+		neg2  bool
 	}{
 		{
 			msg:   "columns match",
@@ -364,9 +367,9 @@ func TestWorkDir(t *testing.T) {
 func TestRunIntder(t *testing.T) {
 	temp := Conf.Intder
 	defer func() {
-		Conf.Intder =  temp
+		Conf.Intder = temp
 	}()
-	Conf.Intder =  "../bin/intder"
+	Conf.Intder = "../bin/intder"
 	workDir("testfiles/write/intder.in", func(s string) {
 		RunIntder(s[:len(s)-3])
 	}, false)

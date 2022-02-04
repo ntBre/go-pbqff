@@ -189,13 +189,13 @@ func TestReadOut(t *testing.T) {
 		Conf.EnergyLine = temp
 	}()
 	tests := []struct {
-		msg      string
-		filename string
+		err      error
 		eline    *regexp.Regexp
+		filename string
+		msg      string
+		grad     []float64
 		energy   float64
 		time     float64
-		grad     []float64
-		err      error
 	}{
 		{
 			msg:      "Gradient success",
@@ -330,9 +330,9 @@ AlX = 0.85 Ang
 OX = 1.1 Ang
 XXO = 80.0 Deg`)
 	tests := []struct {
+		err  error
 		msg  string
 		file string
-		err  error
 	}{
 		{
 			msg:  "warning in outfile",
@@ -499,9 +499,9 @@ func TestSelectNode(t *testing.T) {
 	}()
 	tests := []struct {
 		queue string
-		nodes []string
 		q     string
 		node  string
+		nodes []string
 	}{
 		{
 			queue: "r410",
@@ -752,7 +752,7 @@ func TestBuildCartPoints(t *testing.T) {
 		Conf = tmp
 		*nosym = tmpsym
 	}()
-	Conf.Deltas= []float64{
+	Conf.Deltas = []float64{
 		0.005, 0.005, 0.005,
 		0.005, 0.005, 0.005,
 		0.005, 0.005, 0.005,
@@ -900,7 +900,7 @@ func TestBuildGradPoints(t *testing.T) {
 		qsub = "qsub"
 		Conf = tmp
 	}()
-	Conf.Deltas= []float64{
+	Conf.Deltas = []float64{
 		0.005, 0.005, 0.005,
 		0.005, 0.005, 0.005,
 		0.005, 0.005, 0.005,
@@ -944,10 +944,10 @@ func TestBuildGradPoints(t *testing.T) {
 // only tests one possibility
 func TestIndex(t *testing.T) {
 	tests := []struct {
-		ncoords int
-		nosort  bool
 		id      []int
 		want    []int
+		ncoords int
+		nosort  bool
 	}{
 		{
 			ncoords: 9,

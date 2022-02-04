@@ -15,8 +15,8 @@ var (
 )
 
 type Calc struct {
-	Energy   float64
 	Gradient []float64
+	Energy   float64
 }
 
 var geoms = make(map[string]Calc)

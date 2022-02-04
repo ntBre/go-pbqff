@@ -104,17 +104,17 @@ H 0.0000000000 -0.7574590974  0.5217905143
 func TestGaussReadOut(t *testing.T) {
 	tmp := Conf.EnergyLine
 	defer func() {
-		Conf.EnergyLine =  tmp
+		Conf.EnergyLine = tmp
 	}()
-	Conf.EnergyLine =  regexp.MustCompile(`SCF Done:`)
+	Conf.EnergyLine = regexp.MustCompile(`SCF Done:`)
 	g := new(Gaussian)
 	energy, time, grad, err := g.ReadOut("testfiles/gaussian/opt.out")
 	want := struct {
+		err    error
+		grad   []float64
 		energy float64
 		time   float64
-		grad   []float64
-		err    error
-	}{1.597082773539640e-01, 0.7, nil, nil}
+	}{energy: 1.597082773539640e-01, time: 0.7, grad: nil, err: nil}
 	if energy != want.energy {
 		t.Errorf("got %v, wanted %v\n", energy, want.energy)
 	}
@@ -133,9 +133,9 @@ func TestGaussHandleOutput(t *testing.T) {
 	g := new(Gaussian)
 	cart, zmat, err := g.HandleOutput("testfiles/gaussian/zmat_opt")
 	want := struct {
+		err  error
 		cart string
 		zmat string
-		err  error
 	}{
 		cart: `C  0.000000  0.000000  1.764568
 C  0.000000  1.252433 -0.610816
