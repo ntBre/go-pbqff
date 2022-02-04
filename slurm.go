@@ -31,13 +31,17 @@ func (s Slurm) ChunkPBS() *template.Template {
 
 // WritePBS writes a pbs infile based on the queue type and
 // the templates above, with job information from job
-func (s Slurm) WritePBS(infile string, job *Job, pbs *template.Template) {
+func (s Slurm) WritePBS(infile string, job *Job, single bool) {
 	f, err := os.Create(infile)
 	defer f.Close()
 	if err != nil {
 		panic(err)
 	}
-	pbs.Execute(f, job)
+	if single {
+		s.SinglePt.Execute(f, job)
+	} else {
+		s.ChunkPts.Execute(f, job)
+	}
 }
 
 // Submit submits the pbs script defined by filename to the queue and
@@ -83,7 +87,7 @@ func (s Slurm) Resubmit(name string, err error) string {
 			Queue:    "",
 			NumCPUs:  Conf.NumCPUs,
 			PBSMem:   Conf.PBSMem,
-		}, s.SinglePBS())
+		}, true)
 	return s.Submit(name + "_redo.pbs")
 }
 

@@ -1,0 +1,20 @@
+package=g16
+program=sic
+queueType=maple
+geomType=xyz
+geometry={
+C        0.0000000000        0.0000000000       -1.6794733900
+C        0.0000000000        1.2524327590        0.6959098120
+C        0.0000000000       -1.2524327590        0.6959098120
+H        0.0000000000        3.0146272390        1.7138963510
+H        0.0000000000       -3.0146272390        1.7138963510
+}
+flags=noopt
+deriv=4
+joblimit=8000
+chunksize=8
+sleepint=1
+energyline=SCF Done:
+queue=slurm
+intder=/home/r410/programs/intder/Intder2005.x
+spectro=/home/r410/programs/spec3jm.ifort-O0.static.x

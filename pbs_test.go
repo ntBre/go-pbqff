@@ -18,8 +18,10 @@ func TestWritePBS(t *testing.T) {
 	}
 	write := "testfiles/write/mp.pbs"
 	right := "testfiles/right/mp.pbs"
-	q := PBS{}
-	q.WritePBS(write, &p, pbsSequoia)
+	q := PBS{
+		SinglePt: pbsSequoia,
+	}
+	q.WritePBS(write, &p, true)
 	if !compareFile(write, right) {
 		t.Errorf("mismatch between %s and %s\n(diff %[1]q %[2]q)", right, write)
 	}

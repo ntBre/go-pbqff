@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"text/template"
 )
 
 var (
@@ -126,7 +125,6 @@ func ParseInfile(filename string) {
 }
 
 type Config struct {
-	PBSTmpl    *template.Template
 	EnergyLine *regexp.Regexp
 	Intder     string
 	WorkQueue  string
@@ -179,7 +177,6 @@ func NewConfig() Config {
 		Spectro:    "",
 		Ncoords:    0,
 		EnergyLine: regexp.MustCompile(`energy=`),
-		PBSTmpl:    pbsMaple,
 		Queue:      PBSQueue,
 		MolproTmpl: "molpro.in",
 		AnpassTmpl: "anpass.in",
@@ -198,17 +195,13 @@ func (c *Config) WhichCluster() {
 	cluster := c.Cluster
 	sequoia := regexp.MustCompile(`(?i)sequoia`)
 	maple := regexp.MustCompile(`(?i)maple`)
-	pbs := new(template.Template)
 	switch {
 	case cluster == "", maple.MatchString(cluster):
-		pbs = pbsMaple
 	case sequoia.MatchString(cluster):
 		c.EnergyLine = regexp.MustCompile(`PBQFF\(2\`)
-		pbs = pbsSequoia
 	default:
 		panic("unsupported option for keyword cluster")
 	}
-	c.PBSTmpl = pbs
 }
 
 // WhichProgram is a helper function for setting Config.EnergyLine
@@ -244,7 +237,9 @@ func (c *Config) ProcessGeom() (cart bool) {
 	gt := c.GeomType
 	switch gt {
 	case "xyz", "cart":
-		start = 2
+		if len(strings.Fields(lines[0])) == 1 {
+			start = 2
+		}
 		end = len(lines)
 		cart = true
 		incr = 3

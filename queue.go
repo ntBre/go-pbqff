@@ -7,7 +7,7 @@ import (
 )
 
 type Queue interface {
-	WritePBS(string, *Job, *template.Template)
+	WritePBS(string, *Job, bool)
 	SinglePBS() *template.Template
 	ChunkPBS() *template.Template
 	Submit(string) string
@@ -58,7 +58,7 @@ func Push(q Queue, dir string, pf, count int, calcs []Calc) []Calc {
 			Queue:    queue,
 			NumCPUs:  Conf.NumCPUs,
 			PBSMem:   Conf.PBSMem,
-		}, q.ChunkPBS())
+		}, false)
 	jobid := q.Submit(subfile)
 	if *debug {
 		fmt.Printf("submitted %s from %s\n", jobid, subfile)

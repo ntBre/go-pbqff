@@ -219,13 +219,17 @@ type TestQueue struct {
 	ChunkPts *template.Template
 }
 
-func (tq TestQueue) WritePBS(infile string, job *Job, pbs *template.Template) {
+func (tq TestQueue) WritePBS(infile string, job *Job, single bool) {
 	f, err := os.Create(infile)
 	defer f.Close()
 	if err != nil {
 		panic(err)
 	}
-	pbs.Execute(f, job)
+	if single {
+		tq.SinglePt.Execute(f, job)
+	} else {
+		tq.ChunkPts.Execute(f, job)
+	}
 }
 
 func (tq TestQueue) SinglePBS() *template.Template { return tq.SinglePt }
@@ -242,13 +246,13 @@ func TestDrain(t *testing.T) {
 		Conf = conf
 		qsub = "qsub"
 	}()
-	Conf.JobLimit =  128
-	Conf.Deltas= []float64{
+	Conf.JobLimit = 128
+	Conf.Deltas = []float64{
 		0.005, 0.005, 0.005,
 		0.005, 0.005, 0.005,
 	}
-	Conf.SleepInt =  0
-	Conf.ChunkSize =  64
+	Conf.SleepInt = 0
+	Conf.ChunkSize = 64
 	prog := new(Molpro)
 	ncoords := 6
 	E0 := 0.0
