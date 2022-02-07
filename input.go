@@ -174,7 +174,7 @@ func NewConfig() Config {
 		Spectro:    "",
 		Ncoords:    0,
 		EnergyLine: regexp.MustCompile(`energy=`),
-		Queue: PBS{
+		Queue: &PBS{
 			SinglePt: pbsMaple,
 			ChunkPts: ptsMaple,
 		},

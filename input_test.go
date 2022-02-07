@@ -126,7 +126,7 @@ XXO = 80.0 Deg`,
 				NumCPUs:   1,
 				CheckInt:  100,
 				WorkQueue: "",
-				Queue: PBS{
+				Queue: &PBS{
 					SinglePt: pbsMaple,
 					ChunkPts: ptsMaple,
 				},
@@ -165,7 +165,7 @@ XXO = 80.0 Deg`,
 				NumCPUs:   1,
 				CheckInt:  100,
 				WorkQueue: "",
-				Queue: PBS{
+				Queue: &PBS{
 					SinglePt: pbsMaple,
 					ChunkPts: ptsMaple,
 				},

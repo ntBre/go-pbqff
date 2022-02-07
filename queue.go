@@ -3,13 +3,10 @@ package main
 import (
 	"fmt"
 	"strings"
-	"text/template"
 )
 
 type Queue interface {
 	WritePBS(string, *Job, bool)
-	SinglePBS() *template.Template
-	ChunkPBS() *template.Template
 	Submit(string) string
 	Resubmit(string, error) string
 	Stat(*map[string]bool)

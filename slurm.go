@@ -25,14 +25,6 @@ type Slurm struct {
 	ChunkPts *template.Template
 }
 
-func (s *Slurm) SinglePBS() *template.Template {
-	return s.SinglePt
-}
-
-func (s *Slurm) ChunkPBS() *template.Template {
-	return s.ChunkPts
-}
-
 func (s *Slurm) NewMolpro() {
 	s.SinglePt = pbsSlurm
 	s.ChunkPts = ptsSlurm

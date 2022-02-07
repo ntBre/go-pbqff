@@ -241,6 +241,7 @@ func (g *Gaussian) ReadOut(filename string) (result, time float64,
 	if i == 0 {
 		return result, time, grad, ErrBlankOutput
 	}
+	// TODO extract gradients one day - fixes nilness
 	if gradx != nil {
 		grad = func(xs, ys, zs []string) []float64 {
 			lx := len(xs)

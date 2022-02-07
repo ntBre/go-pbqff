@@ -46,27 +46,19 @@ type PBS struct {
 	ChunkPts *template.Template
 }
 
-func (p PBS) SinglePBS() *template.Template {
-	return p.SinglePt
-}
-
-func (p PBS) ChunkPBS() *template.Template {
-	return p.ChunkPts
-}
-
-func (p PBS) NewMolpro() {
+func (p *PBS) NewMolpro() {
 	p.SinglePt = ptsMaple
 	p.ChunkPts = pbsMaple
 }
 
-func (p PBS) NewGauss() {
+func (p *PBS) NewGauss() {
 	p.SinglePt = ptsMapleGauss
 	p.ChunkPts = pbsMapleGauss
 }
 
 // WritePBS writes a pbs infile based on the queue type and
 // the templates above, with job information from job
-func (p PBS) WritePBS(infile string, job *Job, single bool) {
+func (p *PBS) WritePBS(infile string, job *Job, single bool) {
 	f, err := os.Create(infile)
 	defer f.Close()
 	if err != nil {
@@ -81,7 +73,7 @@ func (p PBS) WritePBS(infile string, job *Job, single bool) {
 
 // Submit submits the pbs script defined by filename to the queue and
 // returns the jobid
-func (p PBS) Submit(filename string) (jobid string) {
+func (p *PBS) Submit(filename string) (jobid string) {
 	var (
 		maxRetries = 15
 		maxTime    = 1 << maxRetries
@@ -104,7 +96,7 @@ func (p PBS) Submit(filename string) (jobid string) {
 // Resubmit copies the input file associated with name to
 // name_redo.inp, writes a new PBS file, submits the new PBS job, and
 // returns the associated jobid
-func (p PBS) Resubmit(name string, err error) string {
+func (p *PBS) Resubmit(name string, err error) string {
 	fmt.Fprintf(os.Stderr, "resubmitting %s for %s\n", name, err)
 	src, _ := os.Open(name + ".inp")
 	dst, _ := os.Create(name + "_redo.inp")
@@ -129,7 +121,7 @@ func (p PBS) Resubmit(name string, err error) string {
 // Stat returns a map of job names to their queue status. The map
 // value is true if the job is either queued (Q) or running (R) and
 // false otherwise
-func (p PBS) Stat(qstat *map[string]bool) {
+func (p *PBS) Stat(qstat *map[string]bool) {
 	status, _ := exec.Command("qstat", "-u", os.Getenv("USER")).CombinedOutput()
 	scanner := bufio.NewScanner(strings.NewReader(string(status)))
 	var (
