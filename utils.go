@@ -118,11 +118,7 @@ func MakeDirs(root string) (err error) {
 	if OPT {
 		dirs = []string{"opt", "freq"}
 	}
-	if CART || GRAD {
-		dirs = append(dirs, "pts/inp")
-	} else {
-		dirs = append(dirs, "pts", "freqs", "pts/inp")
-	}
+	dirs = append(dirs, "pts/inp", "freqs")
 	for _, dir := range dirs {
 		filename := root + "/" + dir
 		if _, err := os.Stat(filename); !os.IsNotExist(err) {

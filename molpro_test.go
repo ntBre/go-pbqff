@@ -426,6 +426,7 @@ func TestBuildPoints(t *testing.T) {
 		qsub = "qsub"
 		cenergies = *new([]CountFloat)
 	}()
+	Conf = ParseInfile("tests/sic/sic.in").ToConfig()
 	prog, _ := LoadMolpro("testfiles/load/molpro.in")
 	cart, _, _ := prog.HandleOutput("testfiles/opt")
 	names, _ := XYZGeom(cart)
@@ -663,6 +664,7 @@ func TestPush(t *testing.T) {
 	defer func() {
 		Conf = tmp2
 	}()
+	Conf = ParseInfile("testfiles/test.in").ToConfig()
 	Conf.ChunkSize = 2
 	queue := TestQueue{
 		SinglePt: pbsMaple,
@@ -697,7 +699,7 @@ func TestPush(t *testing.T) {
 	right := filepath.Join(dir, "right")
 	fmt.Fprintf(&buf,
 		`#!/bin/sh
-#PBS -N pts
+#PBS -N Al2O2pts
 #PBS -S /bin/bash
 #PBS -j oe
 #PBS -o %s

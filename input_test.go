@@ -13,6 +13,9 @@ func compConf(t *testing.T, a, b Config) {
 	if a.Package != b.Package {
 		t.Errorf("got %v, wanted %v\n", a.Package, b.Package)
 	}
+	if a.Program != b.Program {
+		t.Errorf("got %v, wanted %v\n", a.Program, b.Program)
+	}
 	if a.WorkQueue != b.WorkQueue {
 		t.Errorf("got %v, wanted %v\n", a.WorkQueue, b.WorkQueue)
 	}
@@ -88,6 +91,7 @@ func TestParseInfile(t *testing.T) {
 			in: "testfiles/test.in",
 			want: Config{
 				Cluster: "maple",
+				Program: "molpro",
 				Geometry: `X
 X 1 1.0
 Al 1 AlX 2 90.0
@@ -126,6 +130,7 @@ XXO = 80.0 Deg`,
 			in: "testfiles/cccr.in",
 			want: Config{
 				Cluster: "maple",
+				Program: "cart",
 				Geometry: `X
 X 1 1.0
 Al 1 AlX 2 90.0
@@ -165,6 +170,7 @@ XXO = 80.0 Deg`,
 			in:  "testfiles/eland_gauss.in",
 			want: Config{
 				Cluster: "maple",
+				Program: "sic",
 				Geometry: `C        0.0000000000        0.0000000000       -1.6794733900
 C        0.0000000000        1.2524327590        0.6959098120
 C        0.0000000000       -1.2524327590        0.6959098120

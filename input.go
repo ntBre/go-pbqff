@@ -51,6 +51,7 @@ func (rc *RawConf) ToConfig() Config {
 		},
 		"deltas": func(s string) { return },
 		"program": func(s string) {
+			ret.Program = s
 			switch s {
 			case "cart", "gocart":
 				CART = true
@@ -153,6 +154,7 @@ type Config struct {
 	GeomType   string
 	Flags      string
 	Queue      Queue
+	Program    string
 	Package    string // quantum chemistry package (molpro|g16)
 	Cluster    string
 	Spectro    string
@@ -177,6 +179,7 @@ func NewConfig() Config {
 	return Config{
 		Cluster:    "maple",
 		Package:    "molpro",
+		Program:    "sic",
 		WorkQueue:  "",
 		Delta:      0.005,
 		Deltas:     nil,

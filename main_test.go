@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -33,7 +34,7 @@ func TestMakeDirs(t *testing.T) {
 	}
 	dirs := []string{"opt", "freq", "pts", "freqs", "pts/inp"}
 	for _, dir := range dirs {
-		if _, err := os.Stat(root + "/" + dir); os.IsNotExist(err) {
+		if _, err := os.Stat(filepath.Join(root, dir)); os.IsNotExist(err) {
 			t.Errorf("failed to create %s in %s\n", dir, root)
 		}
 	}
@@ -240,6 +241,7 @@ func TestDrain(t *testing.T) {
 		Conf = conf
 		qsub = "qsub"
 	}()
+	Conf = ParseInfile("tests/sic/sic.in").ToConfig()
 	Conf.JobLimit = 128
 	Conf.Deltas = []float64{
 		0.005, 0.005, 0.005,
