@@ -80,7 +80,7 @@ func compConf(t *testing.T, a, b Config) {
 	if !reflect.DeepEqual(a.EnergyLine, b.EnergyLine) {
 		t.Errorf("got %v, wanted %v\n", a.EnergyLine, b.EnergyLine)
 	}
-	if a.Queue != b.Queue {
+	if !reflect.DeepEqual(a.Queue, b.Queue) {
 		t.Errorf("got %#+v, wanted %#+v\n", a.Queue, b.Queue)
 	}
 	if a.MolproTmpl != b.MolproTmpl {
@@ -118,15 +118,15 @@ O  1 OX  2 XXO  4 90.0
 AlX = 0.85 Ang
 OX = 1.1 Ang
 XXO = 80.0 Deg`,
-				Delta:      0.005,
-				GeomType:   "zmat",
-				ChunkSize:  8,
-				Deriv:      4,
-				JobLimit:   1024,
-				NumCPUs:    1,
-				CheckInt:   100,
-				WorkQueue:  "",
-				Queue:      PBS{
+				Delta:     0.005,
+				GeomType:  "zmat",
+				ChunkSize: 8,
+				Deriv:     4,
+				JobLimit:  1024,
+				NumCPUs:   1,
+				CheckInt:  100,
+				WorkQueue: "",
+				Queue: PBS{
 					SinglePt: pbsMaple,
 					ChunkPts: ptsMaple,
 				},
@@ -157,15 +157,15 @@ O  1 OX  2 XXO  4 90.0
 AlX = 0.85 Ang
 OX = 1.1 Ang
 XXO = 80.0 Deg`,
-				Delta:      0.005,
-				GeomType:   "zmat",
-				ChunkSize:  8,
-				Deriv:      4,
-				JobLimit:   1024,
-				NumCPUs:    1,
-				CheckInt:   100,
-				WorkQueue:  "",
-				Queue:      PBS{
+				Delta:     0.005,
+				GeomType:  "zmat",
+				ChunkSize: 8,
+				Deriv:     4,
+				JobLimit:  1024,
+				NumCPUs:   1,
+				CheckInt:  100,
+				WorkQueue: "",
+				Queue: PBS{
 					SinglePt: pbsMaple,
 					ChunkPts: ptsMaple,
 				},
@@ -193,16 +193,16 @@ C        0.0000000000        1.2524327590        0.6959098120
 C        0.0000000000       -1.2524327590        0.6959098120
 H        0.0000000000        3.0146272390        1.7138963510
 H        0.0000000000       -3.0146272390        1.7138963510`,
-				Delta:      0.005,
-				GeomType:   "xyz",
-				ChunkSize:  8,
-				Deriv:      4,
-				JobLimit:   8000,
-				NumCPUs:    1,
-				CheckInt:   100,
-				Flags:      "noopt",
-				WorkQueue:  "",
-				Queue:      Slurm{
+				Delta:     0.005,
+				GeomType:  "xyz",
+				ChunkSize: 8,
+				Deriv:     4,
+				JobLimit:  8000,
+				NumCPUs:   1,
+				CheckInt:  100,
+				Flags:     "noopt",
+				WorkQueue: "",
+				Queue: &Slurm{
 					SinglePt: pbsSlurm,
 					ChunkPts: ptsSlurm,
 				},
