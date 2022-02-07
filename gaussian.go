@@ -204,7 +204,7 @@ func (g *Gaussian) ReadOut(filename string) (result, time float64,
 	f, err := os.Open(filename)
 	defer f.Close()
 	if err != nil {
-		err = ErrFileNotFound
+		err = ErrGaussNotFound
 		return
 	}
 	scanner := bufio.NewScanner(f)
@@ -432,7 +432,7 @@ func (g *Gaussian) Run(proc Procedure, q Queue) (E0 float64) {
 	for proc != freq && err != nil {
 		E0, _, _, err = g.ReadOut(outfile)
 		q.Stat(&jobMap)
-		if err == ErrFileNotFound && !jobMap[jobid] {
+		if err == ErrGaussNotFound && !jobMap[jobid] {
 			fmt.Fprintf(os.Stderr, "resubmitting %s for %v\n",
 				pbsfile, err)
 			jobid = q.Submit(pbsfile)

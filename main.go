@@ -107,6 +107,7 @@ var (
 	ErrEnergyNotFound      = errors.New("Energy not found in Molpro output")
 	ErrFileContainsError   = errors.New("Molpro output file contains an error")
 	ErrFileNotFound        = errors.New("Molpro output file not found")
+	ErrGaussNotFound       = errors.New("Gaussan output file not found")
 	ErrFinishedButNoEnergy = errors.New("Molpro output finished but no energy found")
 )
 
