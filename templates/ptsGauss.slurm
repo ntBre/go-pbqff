@@ -42,11 +42,13 @@ function run {
     echo "running g16 on $(hostname)"
     export job_dir="$(basename $basenm)"_"$job_id"
     echo "job_dir: $job_dir"
+    # remove path from chkfile
+    sed -i 's/\(%chk=\).*\/\(.*\)/\1\2/' $input
     # find checkpoint file in input
     if grep -c "%chk=" $1 &> /dev/null ; then
 	export CHKFILE=$(fgrep --max-count=1 "%chk=" $1 | cut -f 2 -d"=")
     else
-	   export CHKFILE=NO
+	export CHKFILE=NO
     fi
     full_path=$(realpath $input)
     WORK=$(dirname $full_path)
@@ -94,6 +96,8 @@ function run {
     df -h $SCRDRV				>> $outfile
     df -h /home/				>> $outfile
     ls -l $GAUSS_SCRDIR			>> $outfile
+    echo "running $g16root/g16/formchk $CHKFILE $WORK/$(basename $basenm).fchk"
+    $g16root/g16/formchk $CHKFILE $WORK/$(basename $basenm).fchk
     /bin/mv $CHKFILE $WORK/. &> /dev/null
     /bin/mv $outfile $WORK/. &> /dev/null
 
