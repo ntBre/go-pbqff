@@ -52,6 +52,7 @@ func (p *PBS) NewMolpro() {
 }
 
 func (p *PBS) NewGauss() {
+	panic("need to update these templates to run g16 < infile > outfile instead of defaulting to log file output")
 	p.SinglePt = ptsMapleGauss
 	p.ChunkPts = pbsMapleGauss
 }

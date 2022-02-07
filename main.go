@@ -45,8 +45,7 @@ var (
 
 // Global variables
 var (
-	Conf   Config
-	OutExt = ".out"
+	Conf Config
 )
 
 // Global is a struct for holding global variables
@@ -178,7 +177,7 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 				energy = job.Src.Value
 				success = true
 			} else if energy, t, gradients,
-				err = prog.ReadOut(job.Name + OutExt); err == nil {
+				err = prog.ReadOut(job.Name + ".out"); err == nil {
 				success = true
 				if energy < min {
 					min = energy
@@ -206,7 +205,7 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 			} else if job.Resub != nil {
 				if energy, t, gradients,
 					err = prog.ReadOut(job.Resub.Name +
-					OutExt); err == nil {
+					".out"); err == nil {
 					success = true
 					if energy < min {
 						min = energy
@@ -426,7 +425,6 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	case "g16", "gaussian", "gauss":
 		prog, err = LoadGaussian(mpName)
 		Conf.Queue.NewGauss()
-		OutExt = ".log"
 	}
 	if err != nil {
 		errExit(err, fmt.Sprintf("loading molpro input %q", mpName))

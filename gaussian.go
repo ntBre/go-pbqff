@@ -117,7 +117,6 @@ func (g *Gaussian) WriteInput(filename string, p Procedure) {
 	if err != nil {
 		panic(err)
 	}
-	// might have to make this a basename, but only on eland T.T
 	fmt.Fprintf(f, "%%chk=%s.chk\n", basename)
 	g.makeInput(f, p)
 }
@@ -266,7 +265,7 @@ func (g *Gaussian) ReadOut(filename string) (result, time float64,
 // and Z-matrix (angstrom) form from a Gaussian output file. It also
 // checks the output file for warnings and errors.
 func (g *Gaussian) HandleOutput(filename string) (string, string, error) {
-	f, err := os.Open(filename + OutExt)
+	f, err := os.Open(filename + ".out")
 	defer f.Close()
 	if err != nil {
 		panic(err)
@@ -411,7 +410,7 @@ func (g *Gaussian) Run(proc Procedure, q Queue) (E0 float64) {
 	dir = filepath.Join(g.Dir, dir)
 	infile := filepath.Join(dir, name+".inp")
 	pbsfile := filepath.Join(dir, name+".pbs")
-	outfile := filepath.Join(dir, name+OutExt)
+	outfile := filepath.Join(dir, name+".out")
 	E0, _, _, err := g.ReadOut(outfile)
 	if *read && err == nil {
 		return
