@@ -45,7 +45,7 @@ var (
 
 // Global variables
 var (
-	Conf   = NewConfig()
+	Conf   Config
 	OutExt = ".out"
 )
 
@@ -362,7 +362,7 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 		DupOutErr(infile)
 	}
 	if *freqs {
-		ParseInfile(infile)
+		Conf = ParseInfile(infile).ToConfig()
 		spectro.Command = Conf.Spectro
 		var err error
 		intder, err = LoadIntder("intder.in")
@@ -392,7 +392,7 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 		}
 	}
 	dir := filepath.Dir(infile)
-	ParseInfile(infile)
+	Conf = ParseInfile(infile).ToConfig()
 	if *checkpoint {
 		LoadCheckpoint(dir)
 	}
@@ -534,6 +534,10 @@ func main() {
 		}
 	}
 
+	if gen == nil {
+		fmt.Println("sic, cart, grad", SIC, CART, GRAD)
+		panic("nil gen closure")
+	}
 	min, _ = Drain(prog, Conf.Queue, ncoords, E0, gen)
 	queueClear(Global.WatchedJobs)
 

@@ -117,6 +117,7 @@ func (g *Gaussian) WriteInput(filename string, p Procedure) {
 	if err != nil {
 		panic(err)
 	}
+	// might have to make this a basename, but only on eland T.T
 	fmt.Fprintf(f, "%%chk=%s.chk\n", basename)
 	g.makeInput(f, p)
 }
