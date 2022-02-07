@@ -9,14 +9,6 @@ import (
 	"text/template"
 )
 
-func TestMain(m *testing.M) {
-	*overwrite = true
-	MakeDirs("testfiles")
-	ParseInfile("testfiles/test.in")
-	code := m.Run()
-	os.Exit(code)
-}
-
 func TestGHAdd(t *testing.T) {
 	heap := new(GarbageHeap)
 	heap.Add("testname")

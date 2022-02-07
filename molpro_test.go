@@ -697,7 +697,7 @@ func TestPush(t *testing.T) {
 	right := filepath.Join(dir, "right")
 	fmt.Fprintf(&buf,
 		`#!/bin/sh
-#PBS -N Al2O2pts
+#PBS -N pts
 #PBS -S /bin/bash
 #PBS -j oe
 #PBS -o %s

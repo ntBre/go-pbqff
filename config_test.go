@@ -50,7 +50,8 @@ func TestParseDeltas(t *testing.T) {
 		c := new(Config)
 		c.Ncoords = test.nc
 		c.Delta = test.delta
-		got := c.ParseDeltas(test.in)
+		c.ParseDeltas(test.in)
+		got := c.Deltas
 		if !reflect.DeepEqual(got, test.out) {
 			t.Errorf("ParseDeltas(%q): got %v, wanted %v\n",
 				test.msg, got, test.out)

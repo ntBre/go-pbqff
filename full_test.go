@@ -20,8 +20,8 @@ func TestSIC(t *testing.T) {
 	*test = true
 	qsub = "qsub/qsub"
 	temp := Conf
-	Conf = NewConfig()
 	SIC = true
+	*overwrite = true
 	defer func() {
 		SIC = false
 		Conf = temp
@@ -30,6 +30,7 @@ func TestSIC(t *testing.T) {
 		Global.Submitted = 0
 		cenergies = *new([]CountFloat)
 	}()
+	Conf = ParseInfile("tests/sic/sic.in").ToConfig()
 	prog, intder, anpass := initialize("tests/sic/sic.in")
 	names := strings.Fields("H O H")
 	intder.WritePts("tests/sic/pts/intder.in")
@@ -138,7 +139,7 @@ func TestCart(t *testing.T) {
 	}
 	for _, test := range tests[0:] {
 		*nosym = test.nosym
-		Conf = NewConfig()
+		Conf = ParseInfile(test.infile).ToConfig()
 		Global.Submitted = 0
 		prog, _, _ := initialize(test.infile)
 		prog.FormatCart(Conf.Geometry)
@@ -202,14 +203,16 @@ func TestGrad(t *testing.T) {
 	*test = true
 	qsub = "qsub/qsub"
 	temp := Conf
-	Conf = NewConfig()
+	Conf = ParseInfile("tests/grad/grad.in").ToConfig()
 	defer func() {
 		Conf = temp
 		*test = false
 		qsub = "qsub"
 		Global.Submitted = 0
+		GRAD = false
 	}()
 	SIC = false
+	GRAD = true
 	prog, _, _ := initialize("tests/grad/grad.in")
 	prog.FormatCart(Conf.Geometry)
 	cart := prog.GetGeom()
@@ -268,7 +271,6 @@ func TestResub(t *testing.T) {
 		*nosym = tmpsym
 		*checkpoint = tmpchk
 	}()
-	GRAD = false
 	tests := []struct {
 		name   string
 		infile string
@@ -288,7 +290,7 @@ func TestResub(t *testing.T) {
 	}
 	for _, test := range tests {
 		*nosym = test.nosym
-		Conf = NewConfig()
+		Conf = ParseInfile(test.infile).ToConfig()
 		Global.Submitted = 0
 		prog, _, _ := initialize(test.infile)
 		prog.FormatCart(Conf.Geometry)
@@ -319,7 +321,7 @@ func TestResub(t *testing.T) {
 				fmt.Printf("caught the panic %q, resubmitting\n", r)
 				*checkpoint = true
 				*nosym = test.nosym
-				Conf = NewConfig()
+				Conf = ParseInfile(test.infile).ToConfig()
 				Global.Submitted = 0
 				prog, _, _ := initialize(test.infile)
 				prog.FormatCart(Conf.Geometry)

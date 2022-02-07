@@ -12,43 +12,68 @@ import (
 	"strings"
 )
 
-// ProcessInput extracts keywords from a line of input
-func ProcessInput(line string) {
+type RawConf map[string]string
+
+func (rc *RawConf) Add(line string) {
+	split := strings.SplitN(line, "=", 2)
+	key, val := strings.ToLower(split[0]), split[1]
+	(*rc)[key] = val
+}
+
+func (rc *RawConf) ToConfig() Config {
+	ret := NewConfig()
 	// map of special extractor functions
 	var special = map[string]func(string){
 		"energyline": func(s string) {
-			Conf.EnergyLine = regexp.MustCompile(s)
+			switch s {
+			// special case for cccr so you don't have to
+			// type this
+			case "cccr":
+				s = `^\s*CCCRE\s+=`
+			}
+			ret.EnergyLine = regexp.MustCompile(s)
 		},
 		"queue": func(s string) {
 			switch s {
 			case "slurm":
-				Conf.Queue = &Slurm{
+				ret.Queue = &Slurm{
 					SinglePt: pbsSlurm,
 					ChunkPts: ptsSlurm,
 				}
 			}
 		},
 		"flags": func(s string) {
-			Conf.Flags = s
+			ret.Flags = s
 			switch s {
 			case "noopt":
 				OPT = false
 			}
 		},
+		"deltas": func(s string) { return },
+		"program": func(s string) {
+			switch s {
+			case "cart", "gocart":
+				CART = true
+			case "grad":
+				GRAD = true
+			case "molpro", "sic":
+				SIC = true
+			default:
+				panic("unsupported option for keyword program")
+			}
+		},
 	}
-	split := strings.SplitN(line, "=", 2)
-	key, val := strings.ToLower(split[0]), split[1]
-	for _, kword := range reflect.VisibleFields(reflect.TypeOf(Conf)) {
+	for _, kword := range reflect.VisibleFields(reflect.TypeOf(ret)) {
 		keyname := kword.Name
-		if strings.ToLower(keyname) == key {
-			loc := reflect.ValueOf(&Conf).Elem().FieldByName(keyname)
+		key := strings.ToLower(keyname)
+		val, ok := (*rc)[key]
+		if ok {
+			loc := reflect.ValueOf(&ret).Elem().FieldByName(keyname)
 			tn := kword.Type.Name()
 			f, ok := special[key]
 			switch {
 			case ok:
 				f(val)
-			case key == "deltas":
-				Conf.Deltas = Conf.ParseDeltas(val)
 			case tn == "string":
 				loc.SetString(val)
 			case tn == "int":
@@ -56,7 +81,7 @@ func ProcessInput(line string) {
 				if err != nil {
 					e := fmt.Sprintf(
 						"couldn't parse %s as an int on line %s",
-						val, line)
+						val, key)
 					panic(e)
 				}
 				loc.Set(reflect.ValueOf(v))
@@ -65,22 +90,25 @@ func ProcessInput(line string) {
 				if err != nil {
 					e := fmt.Sprintf(
 						"couldn't parse %s as a float on line %s",
-						val, line)
+						val, key)
 					panic(e)
 				}
 				loc.SetFloat(v)
 			default:
-				e := fmt.Sprintf("uncaught type %s on line %q", tn, line)
+				e := fmt.Sprintf("uncaught type %s on line %q", tn, key)
 				panic(e)
 			}
-			break
 		}
 	}
+	ret.ProcessGeom()
+	ret.ParseDeltas((*rc)["deltas"])
+	// Conf.WhichProgram()
+	return ret
 }
 
-// ParseInfile parses an input file specified by filename and stores
-// the results in the global Conf
-func ParseInfile(filename string) {
+// ParseInfile parses an input file specified by filename into a
+// RawConf
+func ParseInfile(filename string) *RawConf {
 	f, err := os.Open(filename)
 	defer f.Close()
 	if err != nil {
@@ -92,6 +120,7 @@ func ParseInfile(filename string) {
 		inblock bool
 		line    string
 	)
+	ret := make(RawConf)
 	for scanner.Scan() {
 		line = scanner.Text()
 		switch {
@@ -99,7 +128,7 @@ func ParseInfile(filename string) {
 		case len(line) > 0 && line[0] == '#': // comment
 		case strings.Contains(line, "}"):
 			inblock = false
-			ProcessInput(strings.TrimSpace(block.String()))
+			ret.Add(strings.TrimSpace(block.String()))
 			block.Reset()
 		case strings.Contains(line, "{"):
 			keyword := strings.SplitN(line, "{", 2)[0]
@@ -108,17 +137,10 @@ func ParseInfile(filename string) {
 		case inblock:
 			block.WriteString(line + "\n")
 		default:
-			ProcessInput(line)
+			ret.Add(line)
 		}
 	}
-	// These require more than one piece of the config file, so do
-	// them last once everything has been collected
-	Conf.ProcessGeom()
-	// TODO this won't work if Delta is after Deltas in the file
-	if Conf.Deltas == nil {
-		Conf.Deltas = Conf.ParseDeltas("")
-	}
-	Conf.WhichProgram()
+	return &ret
 }
 
 type Config struct {
@@ -131,7 +153,6 @@ type Config struct {
 	GeomType   string
 	Flags      string
 	Queue      Queue
-	Program    string
 	Package    string // quantum chemistry package (molpro|g16)
 	Cluster    string
 	Spectro    string
@@ -156,7 +177,6 @@ func NewConfig() Config {
 	return Config{
 		Cluster:    "maple",
 		Package:    "molpro",
-		Program:    "sic",
 		WorkQueue:  "",
 		Delta:      0.005,
 		Deltas:     nil,
@@ -204,23 +224,6 @@ func (c *Config) WhichCluster() {
 	}
 }
 
-// WhichProgram is a helper function for setting Config.EnergyLine
-// based on the selected ChemProg
-func (c *Config) WhichProgram() {
-	switch c.Program {
-	case "cccr":
-		c.EnergyLine = regexp.MustCompile(`^\s*CCCRE\s+=`)
-	case "cart", "gocart":
-		CART = true
-	case "grad":
-		GRAD = true
-	case "molpro", "", "sic": // default if not specified
-		SIC = true
-	default:
-		panic("unsupported option for keyword program")
-	}
-}
-
 // ProcessGeom uses c.Geometry to update c.Deltas and calculate
 // c.Ncoords
 func (c *Config) ProcessGeom() (cart bool) {
@@ -265,12 +268,11 @@ func (c *Config) ProcessGeom() (cart bool) {
 // example, the input 1:0.075,4:0.075,7:0.075 yields [0.075, 0.005,
 // 0.005, 0.075, 0.005, 0.005, 0.075, 0.005, 0.005], assuming c.Delta
 // is 0.005, and c.Ncoord is 9
-func (c *Config) ParseDeltas(deltas string) []float64 {
+func (c *Config) ParseDeltas(deltas string) {
 	if c.Delta == 0 {
 		panic("delta unset before parsing deltas")
 	}
 	err := errors.New("invalid deltas input")
-	ret := make([]float64, 0)
 	if deltas != "" {
 		pairs := strings.Split(deltas, ",")
 		for _, p := range pairs {
@@ -286,16 +288,15 @@ func (c *Config) ParseDeltas(deltas string) []float64 {
 			if e != nil || f < 0.0 {
 				panic(err)
 			}
-			for d > len(ret) {
-				ret = append(ret, c.Delta)
+			for d > len(c.Deltas) {
+				c.Deltas = append(c.Deltas, c.Delta)
 			}
-			ret[d-1] = f
+			c.Deltas[d-1] = f
 		}
 	}
-	for len(ret) < c.Ncoords {
-		ret = append(ret, c.Delta)
+	for len(c.Deltas) < c.Ncoords {
+		c.Deltas = append(c.Deltas, c.Delta)
 	}
-	return ret
 }
 
 // TODO flag for reading pbs template file

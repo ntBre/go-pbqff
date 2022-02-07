@@ -6,28 +6,12 @@ import (
 	"testing"
 )
 
-func TestProcessInput(t *testing.T) {
-	tmp := Conf
-	defer func() {
-		Conf = tmp
-	}()
-	Conf.Program = "test"
-	ProcessInput("program=notatest")
-	if Conf.Program != "notatest" {
-		t.Errorf("got %q, wanted %q\n",
-			Conf.Program, "notatest")
-	}
-}
-
 func compConf(t *testing.T, a, b Config) {
 	if a.Cluster != b.Cluster {
 		t.Errorf("got %v, wanted %v\n", a.Cluster, b.Cluster)
 	}
 	if a.Package != b.Package {
 		t.Errorf("got %v, wanted %v\n", a.Package, b.Package)
-	}
-	if a.Program != b.Program {
-		t.Errorf("got %v, wanted %v\n", a.Program, b.Program)
 	}
 	if a.WorkQueue != b.WorkQueue {
 		t.Errorf("got %v, wanted %v\n", a.WorkQueue, b.WorkQueue)
@@ -95,10 +79,6 @@ func compConf(t *testing.T, a, b Config) {
 }
 
 func TestParseInfile(t *testing.T) {
-	tmp := Conf
-	defer func() {
-		Conf = tmp
-	}()
 	tests := []struct {
 		msg  string
 		in   string
@@ -108,7 +88,6 @@ func TestParseInfile(t *testing.T) {
 			in: "testfiles/test.in",
 			want: Config{
 				Cluster: "maple",
-				Program: "molpro",
 				Geometry: `X
 X 1 1.0
 Al 1 AlX 2 90.0
@@ -147,7 +126,6 @@ XXO = 80.0 Deg`,
 			in: "testfiles/cccr.in",
 			want: Config{
 				Cluster: "maple",
-				Program: "cart",
 				Geometry: `X
 X 1 1.0
 Al 1 AlX 2 90.0
@@ -187,7 +165,6 @@ XXO = 80.0 Deg`,
 			in:  "testfiles/eland_gauss.in",
 			want: Config{
 				Cluster: "maple",
-				Program: "sic",
 				Geometry: `C        0.0000000000        0.0000000000       -1.6794733900
 C        0.0000000000        1.2524327590        0.6959098120
 C        0.0000000000       -1.2524327590        0.6959098120
@@ -226,9 +203,8 @@ H        0.0000000000       -3.0146272390        1.7138963510`,
 			},
 		},
 	}
-	for _, test := range tests[2:] {
-		Conf = NewConfig()
-		ParseInfile(test.in)
-		compConf(t, Conf, test.want)
+	for _, test := range tests {
+		got := ParseInfile(test.in).ToConfig()
+		compConf(t, got, test.want)
 	}
 }

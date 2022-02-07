@@ -420,15 +420,11 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	var err error
 	switch Conf.Package {
 	case "molpro", "":
-		fmt.Println("setting molpro")
 		prog, err = LoadMolpro(mpName)
 		Conf.Queue.NewMolpro()
 	case "g16", "gaussian", "gauss":
 		prog, err = LoadGaussian(mpName)
-		fmt.Println(Conf.Queue)
-		fmt.Println("setting gaussian")
 		Conf.Queue.NewGauss()
-		fmt.Println(Conf.Queue)
 		OutExt = ".log"
 	}
 	if err != nil {
