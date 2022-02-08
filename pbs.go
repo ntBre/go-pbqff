@@ -153,30 +153,33 @@ func (p *PBS) Stat(qstat *map[string]bool) {
 
 // Clear the PBS queue of the pts jobs
 func queueClear(jobs []string) error {
-	for _, job := range jobs {
-		var host string
-		status, err := exec.Command("qstat", "-f", job).Output()
-		if err != nil {
-			return err
-		}
-		fields := strings.Fields(string(status))
-		for f := range fields {
-			if strings.Contains(fields[f], "exec_host") {
-				host = strings.Split(fields[f+2], "/")[0]
-				break
-			}
-		}
-		if host != "" {
-			// I think this doesn't work anymore and it's very slow
-			// it's now $USER.jobid.maple
-			// out, err := exec.Command("ssh", host, "-t",
-			// 	"rm -rf /tmp/$USER/"+job+".maple").CombinedOutput()
-			// if *debug {
-			// 	fmt.Println("CombinedOutput and error from queueClear: ",
-			// 		string(out), err)
-			// }
-		}
-	}
+	// this whole loop was for finding host and I don't use host
+	// anymore
+
+	// for _, job := range jobs {
+	// 	var host string
+	// 	status, err := exec.Command("qstat", "-f", job).Output()
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	fields := strings.Fields(string(status))
+	// 	for f := range fields {
+	// 		if strings.Contains(fields[f], "exec_host") {
+	// 			host = strings.Split(fields[f+2], "/")[0]
+	// 			break
+	// 		}
+	// 	}
+	// 	if host != "" {
+	// 		// I think this doesn't work anymore and it's very slow
+	// 		// it's now $USER.jobid.maple
+	// 		// out, err := exec.Command("ssh", host, "-t",
+	// 		// 	"rm -rf /tmp/$USER/"+job+".maple").CombinedOutput()
+	// 		// if *debug {
+	// 		// 	fmt.Println("CombinedOutput and error from queueClear: ",
+	// 		// 		string(out), err)
+	// 		// }
+	// 	}
+	// }
 	err := exec.Command("qdel", jobs...).Run()
 	return err
 }
