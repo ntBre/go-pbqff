@@ -64,14 +64,6 @@ func ParseFlags() []string {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			panic(err)
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
-	}
 	if *format {
 		FormatOutput("pts/inp/")
 		os.Exit(0)

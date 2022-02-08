@@ -460,6 +460,14 @@ func main() {
 		fmt.Fprintf(os.Stderr, "pbqff: no input file supplied\n")
 		os.Exit(1)
 	}
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			panic(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 	prog, intder, anpass := initialize(args[0])
 	var (
 		mpHarm   []float64
