@@ -181,7 +181,7 @@ func readChk(filename string) float64 {
 	scanner := bufio.NewScanner(f)
 	for {
 		for scanner.Scan() {
-			if line := scanner.Text(); strings.Contains(line, "SCF Energy") {
+			if line := scanner.Text(); strings.Contains(line, "Total Energy") {
 				fields := strings.Fields(line)
 				v, _ := strconv.ParseFloat(fields[3], 64)
 				return v

@@ -112,5 +112,5 @@ function run {
 }
 
 {{range $j := .Jobs}}
-run {{ $j }}
+( run {{ $j }} )
 {{- end }}

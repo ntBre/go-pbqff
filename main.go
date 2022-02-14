@@ -115,6 +115,7 @@ var (
 // to construct the zero gradient array.
 func Drain(prog Program, q Queue, ncoords int, E0 float64,
 	gen func() ([]Calc, bool)) (min, realTime float64) {
+	min = 1 // to work with semi-empirical methods with positives
 	start := time.Now()
 	if Conf.Deltas != nil {
 		fmt.Println("step sizes: ", Conf.Deltas)
