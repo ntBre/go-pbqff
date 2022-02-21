@@ -169,7 +169,7 @@ func (g *Gaussian) UpdateZmat(new string) {
 	g.Geom = updated + "\n" + new
 }
 
-// readChk reads a Gaussian fchk file and return the SCF energy
+// readChk reads a Gaussian fchk file and returns the total energy
 func readChk(filename string) float64 {
 	f, err := os.Open(filename)
 	defer f.Close()
@@ -194,12 +194,12 @@ func readChk(filename string) float64 {
 	}
 }
 
-// ReadOut reads a molpro output file and returns the resulting
+// ReadOut reads a Gaussian output file and returns the resulting
 // energy, the wall time taken in seconds, the gradient vector, and an
 // error describing the status of the output
-// TODO signal error on problem reading gradient
 func (g *Gaussian) ReadOut(filename string) (result, time float64,
 	grad []float64, err error) {
+	// TODO signal error on problem reading gradient
 	f, err := os.Open(filename)
 	defer f.Close()
 	if err != nil {
@@ -329,7 +329,50 @@ func (g *Gaussian) HandleOutput(filename string) (string, string, error) {
 				coords[0], coords[1], coords[2])
 		}
 	}
-	return cart.String(), zmat.String(), nil
+	return cartChk(filename), zmat.String(), nil
+}
+
+// cartChk extracts a more precise Cartesian geometry from a formatted
+// Gaussian checkpoint file
+func cartChk(filename string) string {
+	f, err := os.Open(filename + ".fchk")
+	defer f.Close()
+	for err != nil {
+		fmt.Printf("trying to open %s again\n", filename)
+		time.Sleep(1 * time.Second)
+		f, err = os.Open(filename)
+	}
+	scanner := bufio.NewScanner(f)
+	atoms := make([]string, 0)
+	coords := make([]float64, 0)
+	var (
+		inatom = false
+		incart = false
+	)
+	for scanner.Scan() {
+		line := scanner.Text()
+		switch {
+		case strings.Contains(line, "Atomic numbers"):
+			inatom = true
+		case inatom:
+			fields := strings.Fields(line)
+			for _, f := range fields {
+				atoms = append(atoms, ATOMIC_NUMBERS[f])
+			}
+			inatom = false
+		case strings.Contains(line, "Current cartesian coordinates"):
+			incart = true
+		case incart && strings.Contains(line, "Number of symbols"):
+			incart = false
+		case incart:
+			fields := strings.Fields(line)
+			for _, f := range fields {
+				v, _ := strconv.ParseFloat(f, 64)
+				coords = append(coords, v)
+			}
+		}
+	}
+	return ZipXYZ(atoms, coords)
 }
 
 // ReadFreqs reads a Gaussian harmonic frequency calculation output
