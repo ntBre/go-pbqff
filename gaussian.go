@@ -272,10 +272,10 @@ func (g *Gaussian) HandleOutput(filename string) (string, string, error) {
 	}
 	warn := regexp.MustCompile(`(?i)warning`)
 	var (
-		vars       bool
-		cart, zmat strings.Builder
-		skip       int
-		geom       bool
+		vars bool
+		zmat strings.Builder
+		skip int
+		geom bool
 	)
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -306,7 +306,6 @@ func (g *Gaussian) HandleOutput(filename string) (string, string, error) {
 		case strings.Contains(line, "Standard orientation"):
 			skip += 4
 			geom = true
-			cart.Reset()
 		case geom && strings.Contains(line, "------"):
 			geom = false
 		case geom:
@@ -316,17 +315,6 @@ func (g *Gaussian) HandleOutput(filename string) (string, string, error) {
 				coords[i], _ = strconv.ParseFloat(v, 64)
 				coords[i] /= angbohr
 			}
-			sym, ok := ATOMIC_NUMBERS[fields[0]]
-			if !ok {
-				panic("atomic number " +
-					fields[0] +
-					" not found in map")
-			}
-			// TODO can you get more precision? 6 is
-			// pretty low
-			fmt.Fprintf(&cart, "%s%10.6f%10.6f%10.6f\n",
-				sym,
-				coords[0], coords[1], coords[2])
 		}
 	}
 	return cartChk(filename), zmat.String(), nil
@@ -357,7 +345,12 @@ func cartChk(filename string) string {
 		case inatom:
 			fields := strings.Fields(line)
 			for _, f := range fields {
-				atoms = append(atoms, ATOMIC_NUMBERS[f])
+				sym, ok := ATOMIC_NUMBERS[f]
+				if !ok {
+					panic("atomic number " + f +
+						" not found in map")
+				}
+				atoms = append(atoms, sym)
 			}
 			inatom = false
 		case strings.Contains(line, "Current cartesian coordinates"):
@@ -420,7 +413,7 @@ func toAngstrom(geom string) string {
 		fields := strings.Fields(line)
 		if len(fields) > 1 {
 			v := strBohrToAng(fields[1:])
-			new[i] = fmt.Sprintf("%s %f %f %f",
+			new[i] = fmt.Sprintf("%s %.10f %.10f %.10f",
 				fields[0], v[0], v[1], v[2])
 		} else {
 			new[i] = ""
