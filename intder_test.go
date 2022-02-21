@@ -271,6 +271,16 @@ func TestConvertCart(t *testing.T) {
 				},
 			},
 		},
+		{
+			msg: "gaussian water",
+			cart: `O -0.000000    0.000000    0.118687
+H  0.000000    0.753879   -0.474748
+H -0.000000   -0.753879   -0.474748
+`,
+			intderFile: "testfiles/gauss.intder",
+			want:       []string{"H", "O", "H"},
+			wantDum:    []Dummy{},
+		},
 	}
 	for _, test := range tests {
 		tmp := *nomatch

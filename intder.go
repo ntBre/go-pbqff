@@ -264,6 +264,8 @@ func (i *Intder) ConvertCart(cart string) (names []string) {
 		pattern, _ = Pattern(buf.String(), 0, true)
 		swaps, order, ok = MatchPattern(i.Pattern, pattern)
 		if !ok {
+			fmt.Printf("failed to match %q with %q\n",
+				cart, i.Geometry)
 			panic("transform failed")
 		}
 	}
