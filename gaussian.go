@@ -316,10 +316,16 @@ func (g *Gaussian) HandleOutput(filename string) (string, string, error) {
 				coords[i], _ = strconv.ParseFloat(v, 64)
 				coords[i] /= angbohr
 			}
+			sym, ok := ATOMIC_NUMBERS[fields[0]]
+			if !ok {
+				panic("atomic number " +
+					fields[0] +
+					" not found in map")
+			}
 			// TODO can you get more precision? 6 is
 			// pretty low
 			fmt.Fprintf(&cart, "%s%10.6f%10.6f%10.6f\n",
-				ATOMIC_NUMBERS[fields[0]],
+				sym,
 				coords[0], coords[1], coords[2])
 		}
 	}
