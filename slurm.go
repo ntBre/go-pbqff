@@ -14,10 +14,8 @@ import (
 // TODO copy g16b01 script and remove requirement that working dir be
 // where you submit from - probably just embed it in my template
 var (
-	ptsSlurm, _      = template.ParseFS(templates, "templates/pts.slurm")
-	pbsSlurm, _      = template.ParseFS(templates, "templates/pbs.slurm")
-	ptsSlurmGauss, _ = template.ParseFS(templates, "templates/ptsGauss.slurm")
-	pbsSlurmGauss, _ = template.ParseFS(templates, "templates/pbsGauss.slurm")
+	ptsSlurm, _      = template.ParseFS(templates, "templates/molpro/slurm")
+	ptsSlurmGauss, _ = template.ParseFS(templates, "templates/gauss/slurm")
 )
 
 type Slurm struct {
