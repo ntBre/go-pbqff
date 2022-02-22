@@ -37,8 +37,7 @@ func (rc *RawConf) ToConfig() Config {
 			switch s {
 			case "slurm":
 				ret.Queue = &Slurm{
-					SinglePt: pbsSlurm,
-					ChunkPts: ptsSlurm,
+					Tmpl: ptsSlurm,
 				}
 			}
 		},
@@ -198,8 +197,7 @@ func NewConfig() Config {
 		Ncoords:    0,
 		EnergyLine: regexp.MustCompile(`energy=`),
 		Queue: &PBS{
-			SinglePt: pbsMaple,
-			ChunkPts: ptsMaple,
+			Tmpl: ptsMaple,
 		},
 		MolproTmpl: "molpro.in",
 		AnpassTmpl: "anpass.in",

@@ -34,42 +34,33 @@ func (j Job) Basename(file string) string {
 //go:embed templates/*
 var templates embed.FS
 var (
-	ptsMaple, _      = template.ParseFS(templates, "templates/ptsMaple.pbs")
-	ptsMapleGauss, _ = template.ParseFS(templates, "templates/ptsMapleGauss.pbs")
-	pbsMaple, _      = template.ParseFS(templates, "templates/pbsMaple.pbs")
-	pbsMapleGauss, _ = template.ParseFS(templates, "templates/pbsMapleGauss.pbs")
+	ptsMaple, _      = template.ParseFS(templates, "templates/molpro/pbs")
+	ptsMapleGauss, _ = template.ParseFS(templates, "templates/gauss/pbs")
 	pbsSequoia, _    = template.ParseFS(templates, "templates/pbsSequoia.pbs")
 )
 
 type PBS struct {
-	SinglePt *template.Template
-	ChunkPts *template.Template
+	Tmpl *template.Template
 }
 
 func (p *PBS) NewMolpro() {
-	p.SinglePt = ptsMaple
-	p.ChunkPts = pbsMaple
+	p.Tmpl = ptsMaple
 }
 
 func (p *PBS) NewGauss() {
 	panic("need to update these templates to run g16 < infile > outfile instead of defaulting to log file output")
-	p.SinglePt = ptsMapleGauss
-	p.ChunkPts = pbsMapleGauss
+	p.Tmpl = ptsMapleGauss
 }
 
 // WritePBS writes a pbs infile based on the queue type and
 // the templates above, with job information from job
-func (p *PBS) WritePBS(infile string, job *Job, single bool) {
+func (p *PBS) WritePBS(infile string, job *Job) {
 	f, err := os.Create(infile)
 	defer f.Close()
 	if err != nil {
 		panic(err)
 	}
-	if single {
-		p.SinglePt.Execute(f, job)
-	} else {
-		p.ChunkPts.Execute(f, job)
-	}
+	p.Tmpl.Execute(f, job)
 }
 
 // Submit submits the pbs script defined by filename to the queue and
@@ -115,7 +106,7 @@ func (p *PBS) Resubmit(name string, err error) string {
 			Queue:    "",
 			NumCPUs:  Conf.NumCPUs,
 			PBSMem:   Conf.PBSMem,
-		}, true)
+		})
 	return p.Submit(name + "_redo.pbs")
 }
 

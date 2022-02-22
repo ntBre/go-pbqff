@@ -35,7 +35,7 @@ func TestSIC(t *testing.T) {
 	names := strings.Fields("H O H")
 	intder.WritePts("tests/sic/pts/intder.in")
 	RunIntder("tests/sic/pts/intder")
-	queue := &PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+	queue := &PBS{Tmpl: ptsMaple}
 	gen := BuildPoints(prog, queue, "tests/sic/pts/file07", names, true)
 	E0 := -76.369839620287
 	min, _ := Drain(prog, queue, 0, E0, gen)
@@ -144,7 +144,7 @@ func TestCart(t *testing.T) {
 		prog, _, _ := initialize(test.infile)
 		prog.FormatCart(Conf.Geometry)
 		cart := prog.GetGeom()
-		queue := &PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+		queue := &PBS{Tmpl: ptsMaple}
 		E0 := prog.Run(none, queue)
 		names, coords := XYZGeom(cart)
 		natoms := len(names)
@@ -221,7 +221,7 @@ func TestGrad(t *testing.T) {
 	natoms := len(names)
 	other3, other4 := initArrays(natoms)
 	ncoords := len(coords)
-	queue := &PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+	queue := &PBS{Tmpl: ptsMaple}
 	mol := symm.ReadXYZ(strings.NewReader(cart))
 	gen := BuildGradPoints(prog, queue, "pts/inp", names, coords, mol)
 	Drain(prog, queue, ncoords, E0, gen)
@@ -295,7 +295,7 @@ func TestResub(t *testing.T) {
 		prog, _, _ := initialize(test.infile)
 		prog.FormatCart(Conf.Geometry)
 		cart := prog.GetGeom()
-		queue := &PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+		queue := &PBS{Tmpl: ptsMaple}
 		E0 := prog.Run(none, queue)
 		names, coords := XYZGeom(cart)
 		natoms := len(names)
@@ -326,7 +326,7 @@ func TestResub(t *testing.T) {
 				prog, _, _ := initialize(test.infile)
 				prog.FormatCart(Conf.Geometry)
 				cart := prog.GetGeom()
-				queue := &PBS{SinglePt: pbsMaple, ChunkPts: ptsMaple}
+				queue := &PBS{Tmpl: ptsMaple}
 				E0 := prog.Run(none, queue)
 				names, coords := XYZGeom(cart)
 				natoms := len(names)

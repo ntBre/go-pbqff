@@ -386,7 +386,8 @@ func (m *Molpro) Run(proc Procedure, q Queue) (E0 float64) {
 			Filename: infile,
 			NumCPUs:  Conf.NumCPUs,
 			PBSMem:   Conf.PBSMem,
-		}, true)
+			Jobs: []string{infile},
+		})
 	jobid := q.Submit(pbsfile)
 	jobMap := make(map[string]bool)
 	jobMap[jobid] = false

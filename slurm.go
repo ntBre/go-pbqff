@@ -14,40 +14,33 @@ import (
 // TODO copy g16b01 script and remove requirement that working dir be
 // where you submit from - probably just embed it in my template
 var (
-	ptsSlurm, _ = template.ParseFS(templates, "templates/pts.slurm")
-	pbsSlurm, _ = template.ParseFS(templates, "templates/pbs.slurm")
+	ptsSlurm, _      = template.ParseFS(templates, "templates/pts.slurm")
+	pbsSlurm, _      = template.ParseFS(templates, "templates/pbs.slurm")
 	ptsSlurmGauss, _ = template.ParseFS(templates, "templates/ptsGauss.slurm")
 	pbsSlurmGauss, _ = template.ParseFS(templates, "templates/pbsGauss.slurm")
 )
 
 type Slurm struct {
-	SinglePt *template.Template
-	ChunkPts *template.Template
+	Tmpl *template.Template
 }
 
 func (s *Slurm) NewMolpro() {
-	s.SinglePt = pbsSlurm
-	s.ChunkPts = ptsSlurm
+	s.Tmpl = ptsSlurm
 }
 
 func (s *Slurm) NewGauss() {
-	s.SinglePt = pbsSlurmGauss
-	s.ChunkPts = ptsSlurmGauss
+	s.Tmpl = ptsSlurmGauss
 }
 
 // WritePBS writes a pbs infile based on the queue type and
 // the templates above, with job information from job
-func (s *Slurm) WritePBS(infile string, job *Job, single bool) {
+func (s *Slurm) WritePBS(infile string, job *Job) {
 	f, err := os.Create(infile)
 	defer f.Close()
 	if err != nil {
 		panic(err)
 	}
-	if single {
-		s.SinglePt.Execute(f, job)
-	} else {
-		s.ChunkPts.Execute(f, job)
-	}
+	s.Tmpl.Execute(f, job)
 }
 
 // Submit submits the pbs script defined by filename to the queue and
@@ -93,7 +86,7 @@ func (s *Slurm) Resubmit(name string, err error) string {
 			Queue:    "",
 			NumCPUs:  Conf.NumCPUs,
 			PBSMem:   Conf.PBSMem,
-		}, true)
+		})
 	return s.Submit(name + "_redo.pbs")
 }
 

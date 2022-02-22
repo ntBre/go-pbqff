@@ -208,25 +208,20 @@ func TestGradPoints(t *testing.T) {
 }
 
 type TestQueue struct {
-	SinglePt *template.Template
-	ChunkPts *template.Template
+	Tmpl *template.Template
 }
 
-func (tq TestQueue) WritePBS(infile string, job *Job, single bool) {
+func (tq TestQueue) WritePBS(infile string, job *Job) {
 	f, err := os.Create(infile)
 	defer f.Close()
 	if err != nil {
 		panic(err)
 	}
-	if single {
-		tq.SinglePt.Execute(f, job)
-	} else {
-		tq.ChunkPts.Execute(f, job)
-	}
+	tq.Tmpl.Execute(f, job)
 }
 
-func (tq TestQueue) SinglePBS() *template.Template { return tq.SinglePt }
-func (tq TestQueue) ChunkPBS() *template.Template  { return tq.ChunkPts }
+func (tq TestQueue) SinglePBS() *template.Template { return tq.Tmpl }
+func (tq TestQueue) ChunkPBS() *template.Template  { return tq.Tmpl }
 func (tq TestQueue) Submit(string) string          { return "1" }
 func (tq TestQueue) Resubmit(string, error) string { return "" }
 func (tq TestQueue) Stat(*map[string]bool)         {}
@@ -286,8 +281,7 @@ func TestDrain(t *testing.T) {
 	}
 	dir := t.TempDir()
 	queue := TestQueue{
-		SinglePt: pbsMaple,
-		ChunkPts: ptsMaple,
+		Tmpl: ptsMaple,
 	}
 	gen := func() ([]Calc, bool) {
 		return Push(queue, dir, 0, 0, calcs), false

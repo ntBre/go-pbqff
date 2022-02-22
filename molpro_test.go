@@ -418,8 +418,7 @@ func dumpCalc(calcs []Calc) string {
 // TODO test write=false case
 func TestBuildPoints(t *testing.T) {
 	queue := TestQueue{
-		SinglePt: pbsMaple,
-		ChunkPts: ptsMaple,
+		Tmpl: ptsMaple,
 	}
 	qsub = "qsub/qsub"
 	defer func() {
@@ -667,8 +666,7 @@ func TestPush(t *testing.T) {
 	Conf = ParseInfile("testfiles/test.in").ToConfig()
 	Conf.ChunkSize = 2
 	queue := TestQueue{
-		SinglePt: pbsMaple,
-		ChunkPts: ptsMaple,
+		Tmpl: ptsMaple,
 	}
 	got := Push(queue, dir, pf, count, calcs[0:2])
 	got = append(got, Push(queue, dir, pf+1, count, calcs[2:])...)
@@ -768,8 +766,7 @@ func TestBuildCartPoints(t *testing.T) {
 	mp := new(Molpro)
 	dir := t.TempDir()
 	queue := TestQueue{
-		SinglePt: pbsMaple,
-		ChunkPts: ptsMaple,
+		Tmpl: ptsMaple,
 	}
 	cart := ZipXYZ(names, coords)
 	mol := symm.ReadXYZ(strings.NewReader(cart))
@@ -881,8 +878,7 @@ func TestGradDerivative(t *testing.T) {
 
 func TestBuildGradPoints(t *testing.T) {
 	queue := TestQueue{
-		SinglePt: pbsMaple,
-		ChunkPts: ptsMaple,
+		Tmpl: ptsMaple,
 	}
 	qsub = "qsub/qsub"
 	// test to make sure we get the right number of points

@@ -2,11 +2,11 @@
 #PBS -N H2O-ref
 #PBS -S /bin/bash
 #PBS -j oe
-#PBS -o pbs.tests/cart/h2o/pts/inp/ref.inp.out
+#PBS -o tests/cart/h2o/pts/inp/ref.inp.out
 #PBS -W umask=022
 #PBS -l walltime=5000:00:00
 #PBS -l ncpus=1
-#PBS -l mem=9gb
+#PBS -l mem=8gb
 
 module load pbspro molpro
 
@@ -16,6 +16,8 @@ cd $WORKDIR
 mkdir -p $TMPDIR
 
 date
+hostname
+
 molpro -t 1 tests/cart/h2o/pts/inp/ref.inp --no-xml-output
 date
 

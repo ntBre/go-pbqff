@@ -15,13 +15,14 @@ func TestWritePBS(t *testing.T) {
 		Queue:    "",
 		NumCPUs:  8,
 		PBSMem:   8,
+		Jobs: []string{"opt.inp"},
 	}
 	write := "testfiles/write/mp.pbs"
 	right := "testfiles/right/mp.pbs"
 	q := PBS{
-		SinglePt: pbsSequoia,
+		Tmpl: pbsSequoia,
 	}
-	q.WritePBS(write, &p, true)
+	q.WritePBS(write, &p)
 	if !compareFile(write, right) {
 		t.Errorf("mismatch between %s and %s\n(diff %[1]q %[2]q)", right, write)
 	}

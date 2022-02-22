@@ -6,7 +6,7 @@ import (
 )
 
 type Queue interface {
-	WritePBS(string, *Job, bool)
+	WritePBS(string, *Job)
 	Submit(string) string
 	Resubmit(string, error) string
 	Stat(*map[string]bool)
@@ -57,7 +57,7 @@ func Push(q Queue, dir string, pf, count int, calcs []Calc) []Calc {
 			Queue:    queue,
 			NumCPUs:  Conf.NumCPUs,
 			PBSMem:   Conf.PBSMem,
-		}, false)
+		})
 	jobid := q.Submit(subfile)
 	if *debug {
 		fmt.Printf("submitted %s from %s\n", jobid, subfile)
