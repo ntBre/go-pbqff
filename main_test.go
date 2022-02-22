@@ -281,7 +281,7 @@ func TestDrain(t *testing.T) {
 	}
 	dir := t.TempDir()
 	queue := TestQueue{
-		Tmpl: ptsMaple,
+		Tmpl: MolproPBSTmpl,
 	}
 	gen := func() ([]Calc, bool) {
 		return Push(queue, dir, 0, 0, calcs), false

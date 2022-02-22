@@ -7,7 +7,7 @@ import (
 
 func TestParseTemplates(t *testing.T) {
 	var err error
-	ptsSlurmGauss, err = template.ParseFS(templates, "templates/gauss/slurm")
+	GaussSlurmTmpl, err = template.ParseFS(templates, "templates/gauss/slurm")
 	if err != nil {
 		t.Error(err)
 	}

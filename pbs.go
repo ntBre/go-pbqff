@@ -34,8 +34,8 @@ func (j Job) Basename(file string) string {
 //go:embed templates/*
 var templates embed.FS
 var (
-	ptsMaple, _      = template.ParseFS(templates, "templates/molpro/pbs")
-	ptsMapleGauss, _ = template.ParseFS(templates, "templates/gauss/pbs")
+	MolproPBSTmpl, _ = template.ParseFS(templates, "templates/molpro/pbs")
+	GaussPBSTmpl, _  = template.ParseFS(templates, "templates/gauss/pbs")
 	pbsSequoia, _    = template.ParseFS(templates, "templates/pbsSequoia.pbs")
 )
 
@@ -44,12 +44,12 @@ type PBS struct {
 }
 
 func (p *PBS) NewMolpro() {
-	p.Tmpl = ptsMaple
+	p.Tmpl = MolproPBSTmpl
 }
 
 func (p *PBS) NewGauss() {
 	panic("need to update these templates to run g16 < infile > outfile instead of defaulting to log file output")
-	p.Tmpl = ptsMapleGauss
+	p.Tmpl = GaussPBSTmpl
 }
 
 // WritePBS writes a pbs infile based on the queue type and

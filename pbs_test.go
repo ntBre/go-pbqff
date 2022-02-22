@@ -98,7 +98,7 @@ date
 rm -rf $TMPDIR
 `
 	var buf bytes.Buffer
-	ptsMapleGauss.Execute(&buf, Job{
+	GaussPBSTmpl.Execute(&buf, Job{
 		Name: "test",
 		Jobs: []string{"first.com", "second.com", "third.com"},
 	})

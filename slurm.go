@@ -11,11 +11,9 @@ import (
 	"time"
 )
 
-// TODO copy g16b01 script and remove requirement that working dir be
-// where you submit from - probably just embed it in my template
 var (
-	ptsSlurm, _      = template.ParseFS(templates, "templates/molpro/slurm")
-	ptsSlurmGauss, _ = template.ParseFS(templates, "templates/gauss/slurm")
+	MolproSlurmTmpl, _ = template.ParseFS(templates, "templates/molpro/slurm")
+	GaussSlurmTmpl, _  = template.ParseFS(templates, "templates/gauss/slurm")
 )
 
 type Slurm struct {
@@ -23,11 +21,11 @@ type Slurm struct {
 }
 
 func (s *Slurm) NewMolpro() {
-	s.Tmpl = ptsSlurm
+	s.Tmpl = MolproSlurmTmpl
 }
 
 func (s *Slurm) NewGauss() {
-	s.Tmpl = ptsSlurmGauss
+	s.Tmpl = GaussSlurmTmpl
 }
 
 // WritePBS writes a pbs infile based on the queue type and
