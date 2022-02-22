@@ -1,0 +1,38 @@
+#+title: pbqff
+
+push-button quartic force fields
+
+* Introduction
+  This is a program for automating the generation of quartic force
+  fields (QFFs) - fourth-order Taylor series expansions of the
+  internuclear potential energy. [[https://r410berry.com/][My group]] uses QFFs with [[https://pubs.acs.org/doi/10.1021/acs.jpca.0c09526][VPT2]] to
+  compute anharmonic rovibrational spectra. The original methodology
+  for doing this was very tedious, involving numerous shell scripts
+  and ancient FORTRAN programs. I still depend on two of the original
+  three FORTRAN programs, but all of the shell scripts have been
+  eliminated and automated. When everything goes well, you put in your
+  molecular geometry and a bunch of template files and get out
+  anharmonic rovibrational data.
+
+  Currently I'm not sure how useful the program is to people outside
+  our group because it is tied closely to our computing infrastructure
+  and arcane knowledge of the aforementioned FORTRAN programs, but I
+  would like to make it more modular eventually. I also plan to
+  reimplement the remaining two FORTRAN programs in Go, at which point
+  they will be usable to people without the original source code as
+  well.
+
+* Development guide
+** Adding new quantum chemistry programs
+   1. Implement the Program interface in program.go
+   2. Add new submission script templates in the templates directory
+   3. Read these new templates in slurm.go and/or pbs.go
+   4. Extend the Queue interface in queue.go with a method of the form
+      New<Program>()
+   5. Implement the methods from the previous step
+   6. Add an arm to the switch on Conf.Package in main.go
+   7. Write a Load<Program> function
+
+   Ideally you would also add code to qsub and test cases in
+   full_test.go, but I haven't been keeping up with this. Only
+   Molpro and PBS submissions are currently fully tested.
