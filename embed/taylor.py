@@ -91,7 +91,8 @@ modchecks = None
 eqchecks = None
 
 
-# This function derives a single line from the cartesian product with the index 'n'
+# This function derives a single line from the cartesian product with
+# the index 'n'
 def entry(n, digits):
     combo = []
     if args.verbose and not args.silent:
@@ -159,7 +160,7 @@ def eqCheck(e, eqchecks):
         return True
     if args.verbose and not args.silent:
         print("# Equivalence checking is enabled.")
-    for k in eqchecks.iterkeys():
+    for k in eqchecks.keys():
         for r in eqchecks[k]:
             start = r[0]
             end = r[1]
@@ -194,7 +195,7 @@ def modCheck(e, modchecks):
         return True
     if args.verbose and not args.silent:
         print("# Mod checking is enabled.")
-    for k in modchecks.iterkeys():
+    for k in modchecks.keys():
         for r in modchecks[k]:
             start = r[0]
             end = r[1]
@@ -473,3 +474,5 @@ if args.debug:
 
 
 main(sIndex, eIndex)
+
+# just code up algos 5 and 4 from Thackston18
