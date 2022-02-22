@@ -275,7 +275,6 @@ func (g *Gaussian) HandleOutput(filename string) (string, string, error) {
 		vars bool
 		zmat strings.Builder
 		skip int
-		geom bool
 	)
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -303,18 +302,6 @@ func (g *Gaussian) HandleOutput(filename string) (string, string, error) {
 			vars = false
 		case vars:
 			fmt.Fprintln(&zmat, strings.TrimSpace(line))
-		case strings.Contains(line, "Standard orientation"):
-			skip += 4
-			geom = true
-		case geom && strings.Contains(line, "------"):
-			geom = false
-		case geom:
-			fields := strings.Fields(line)[1:]
-			coords := make([]float64, 3)
-			for i, v := range fields[2:5] {
-				coords[i], _ = strconv.ParseFloat(v, 64)
-				coords[i] /= angbohr
-			}
 		}
 	}
 	return cartChk(filename), zmat.String(), nil
