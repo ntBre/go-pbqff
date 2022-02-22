@@ -318,11 +318,11 @@ func cartChk(filename string) string {
 		f, err = os.Open(filename)
 	}
 	scanner := bufio.NewScanner(f)
-	atoms := make([]string, 0)
-	coords := make([]float64, 0)
 	var (
 		inatom = false
 		incart = false
+		atoms  []string
+		coords []float64
 	)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -351,6 +351,12 @@ func cartChk(filename string) string {
 				coords = append(coords, v)
 			}
 		}
+	}
+	// TODO fix this race condition if end of output file reached
+	// before formcheck finishes running - see outer loop in
+	// readchk for ideas
+	if atoms == nil || coords == nil || len(atoms) == 0 || len(coords) == 0 {
+		panic("atoms or coords not found in fchk => race condition hit")
 	}
 	return ZipXYZ(atoms, coords)
 }
