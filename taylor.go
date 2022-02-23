@@ -111,29 +111,6 @@ func Sum(is []int) int {
 	return sum
 }
 
-// NextRow takes an invalid row of the Cartesian product, the number
-// of variables n, and the truncation order m and returns the index of
-// the next valid row
-func NextRow(row []int, n, m int) int {
-	fmt.Println(row)
-	for i := n - 1; i >= 0; i-- {
-		if row[i] > 0 {
-			row[i] = 0
-			if i > 0 {
-				row[i-1] += 1
-			} else {
-				break
-			}
-		}
-	}
-	fmt.Println(row)
-	var index int
-	for i := 0; i < n; i++ {
-		index += row[i] * Ipow(m, i)
-	}
-	return index
-}
-
 // Disps generates the displacments corresponding to fcs
 func Disps(fcs [][]int) (disps [][]int) {
 	var idx int = 1
@@ -202,9 +179,7 @@ func newTaylor(m, n int) (forces [][]int) {
 			count++
 		}
 	}
-	// TODO do the symmetry checks - mod and equivalence checks
-
-	// TODO how to get disps? - the aptly named `displacements`
-	// function generates them from the corresponding fc row
+	// TODO do the symmetry checks - mod and equivalence checks.
+	// test both without (already have) and with these checks
 	return
 }
