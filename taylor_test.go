@@ -45,6 +45,14 @@ func TestRow(t *testing.T) {
 	}
 }
 
+func TestNextRow(t *testing.T) {
+	got := NextRow([]int{1, 0, 3}, 3, 5)
+	want := 30
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+}
+
 func TestDisps(t *testing.T) {
 	got := Disps(newTaylor(5, 3))
 	want := [][]int{

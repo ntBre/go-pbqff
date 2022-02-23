@@ -1,8 +1,8 @@
+// Thackston18 DOI: https://doi.org/10.1007/s10910-017-0783-3
 package main
 
 import (
 	_ "embed"
-	"fmt"
 )
 
 //go:embed embed/taylor.py
@@ -111,6 +111,26 @@ func Sum(is []int) int {
 	return sum
 }
 
+// NextRow takes an invalid row of the Cartesian product, the number
+// of variables n, and the truncation order m and returns the index of
+// the next valid row. This corresponds to Algorithm 4 in Thackston18
+func NextRow(row []int, n, m int) int {
+	for i := n - 1; i >= 0; i-- {
+		if row[i] > 0 {
+			row[i] = 0
+			if i > 0 {
+				row[i-1] += 1
+			}
+			break
+		}
+	}
+	var index int
+	for i := n - 1; i >= 0; i-- {
+		index += row[len(row)-i-1] * Ipow(m, i)
+	}
+	return index
+}
+
 // Disps generates the displacments corresponding to fcs
 func Disps(fcs [][]int) (disps [][]int) {
 	var idx int = 1
@@ -170,13 +190,14 @@ func CartProd(pools [][]int) [][]int {
 // variables. See Thackston18 for details
 func newTaylor(m, n int) (forces [][]int) {
 	lastIndex := Ipow(m, n)
-	var count int
-	for i := 0; i < lastIndex; i++ {
-		e := Row(i, n, m)
-		s := Sum(e)
+	for i := 0; i < lastIndex; {
+		row := Row(i, n, m)
+		s := Sum(row)
 		if s < m {
-			forces = append(forces, e)
-			count++
+			forces = append(forces, row)
+			i++
+		} else {
+			i = NextRow(row, n, m)
 		}
 	}
 	// TODO do the symmetry checks - mod and equivalence checks.
