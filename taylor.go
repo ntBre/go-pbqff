@@ -134,6 +134,61 @@ func NextRow(row []int, n, m int) int {
 	return index
 }
 
+// Disps generates the displacments corresponding to fcs
+func Disps(fcs [][]int) (disps [][]int) {
+	var idx int = 1
+	for _, row := range fcs {
+		indices := make([]int, 0)
+		values := make([]int, 0)
+		for i, digit := range row {
+			if digit != 0 {
+				indices = append(indices, i)
+				values = append(values, digit)
+			}
+		}
+		if len(values) == 0 {
+			disps = append(disps, row)
+			continue
+		}
+		prods := make([][]int, 0)
+		for _, digit := range values {
+			tmp := make([]int, 0)
+			for j := -digit; j <= digit; j += 2 {
+				tmp = append(tmp, j)
+			}
+			prods = append(prods, tmp)
+		}
+		newrows := CartProd(prods)
+		for _, nrow := range newrows {
+			r := make([]int, len(row))
+			copy(r, row)
+			for i, index := range indices {
+				r[index] = nrow[i]
+			}
+			disps = append(disps, r)
+			idx++
+		}
+	}
+	return
+}
+
+// CartProd returns the Cartesian product of the elements in prods.
+// Implementation adapted from
+// https://docs.python.org/3/library/itertools.html#itertools.product
+func CartProd(pools [][]int) [][]int {
+	result := make([][]int, 1)
+	for _, pool := range pools {
+		tmp := make([][]int, 0)
+		for _, x := range result {
+			for _, y := range pool {
+				tmp = append(tmp, append(x, y))
+			}
+		}
+		result = tmp
+	}
+	return result
+}
+
 // Taylor computes the Taylor series expansion of order m-1 with n
 // variables. See Thackston18 for details
 func newTaylor(m, n int) (forces [][]int) {
@@ -147,8 +202,9 @@ func newTaylor(m, n int) (forces [][]int) {
 			count++
 		}
 	}
-	// TODO do the symmetry checks
+	// TODO do the symmetry checks - mod and equivalence checks
 
-	// TODO how to get disps?
+	// TODO how to get disps? - the aptly named `displacements`
+	// function generates them from the corresponding fc row
 	return
 }

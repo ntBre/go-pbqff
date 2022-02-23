@@ -241,9 +241,11 @@ def displacements(e):
         for j in range(-1 * digit, digit + 1, 2):
             tmp.append(j)
         prods.append(tmp)
+    if args.verbose and not args.silent:
+            print("prods: ", prods)
     newrows = map(list, itertools.product(*prods))
     if args.verbose and not args.silent:
-        print("# Displacement combinations: " + str(newrows))
+        print("# Displacement combinations: " + str(list(newrows)))
     # Build each new displacement row by copying the force constant row then overwriting
     #   the non-zero values with the calculated values
     result = []
