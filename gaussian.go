@@ -170,7 +170,7 @@ func (g *Gaussian) UpdateZmat(new string) {
 }
 
 // readChk reads a Gaussian fchk file and returns the total energy
-func readChk(filename string) float64 {
+func readChk(filename string) (energy float64, gradient []float64) {
 	f, err := os.Open(filename)
 	defer f.Close()
 	for err != nil {
@@ -179,15 +179,34 @@ func readChk(filename string) float64 {
 		f, err = os.Open(filename)
 	}
 	scanner := bufio.NewScanner(f)
+	var (
+		line   string
+		fields []string
+		ingrad bool
+	)
 	for {
 		for scanner.Scan() {
-			if line := scanner.Text(); strings.Contains(line, "Total Energy") {
-				fields := strings.Fields(line)
-				v, _ := strconv.ParseFloat(fields[3], 64)
-				return v
+			line = scanner.Text()
+			switch {
+			case strings.Contains(line, "Total Energy"):
+				fields = strings.Fields(line)
+				energy, _ = strconv.ParseFloat(fields[3], 64)
+				if !GRAD {
+					return
+				}
+			case strings.Contains(line, "Cartesian Gradient"):
+				ingrad = true
+			case ingrad && strings.Contains(line, "Nonadiabatic"):
+				return
+			case ingrad:
+				fields = strings.Fields(line)
+				for _, f := range fields {
+					v, _ := strconv.ParseFloat(f, 64)
+					gradient = append(gradient, v)
+				}
 			}
 		}
-		fmt.Printf("can't find energy in %s, retrying\n", filename)
+		fmt.Printf("can't find gradient in %s, retrying\n", filename)
 		f.Seek(0, io.SeekStart)
 		scanner = bufio.NewScanner(f)
 		time.Sleep(1 * time.Second)
@@ -197,7 +216,7 @@ func readChk(filename string) float64 {
 // ReadOut reads a Gaussian output file and returns the resulting
 // energy, the wall time taken in seconds, the gradient vector, and an
 // error describing the status of the output
-func (g *Gaussian) ReadOut(filename string) (result, time float64,
+func (g *Gaussian) ReadOut(filename string) (energy, time float64,
 	grad []float64, err error) {
 	// TODO signal error on problem reading gradient
 	f, err := os.Open(filename)
@@ -209,8 +228,7 @@ func (g *Gaussian) ReadOut(filename string) (result, time float64,
 	scanner := bufio.NewScanner(f)
 	err = ErrEnergyNotFound
 	var (
-		i                   int
-		gradx, grady, gradz []string
+		i int
 	)
 	var line string
 	for i = 0; scanner.Scan(); i++ {
@@ -220,15 +238,15 @@ func (g *Gaussian) ReadOut(filename string) (result, time float64,
 		case i == 0 && strings.Contains(strings.ToUpper(line), "PANIC"):
 			panic("panic requested in output file")
 		case i == 0 && strings.Contains(strings.ToUpper(line), "ERROR"):
-			return result, time, grad, ErrFileContainsError
+			return energy, time, grad, ErrFileContainsError
 		case strings.Contains(strings.ToLower(line), "error") &&
 			GaussErrorLine.MatchString(line):
-			return result, time, grad, ErrFileContainsError
+			return energy, time, grad, ErrFileContainsError
 			// since we assume the line contains an '='
 			// below, gate the regex match with that
 		case strings.Contains(line, "Normal termination of Gaussian"):
 			basename := TrimExt(filename)
-			result = readChk(basename + ".fchk")
+			energy, grad = readChk(basename + ".fchk")
 			err = nil
 		case strings.Contains(line, "Elapsed time:"):
 			// TODO this only pulls the seconds portion of
@@ -239,26 +257,9 @@ func (g *Gaussian) ReadOut(filename string) (result, time float64,
 		}
 	}
 	if i == 0 {
-		return result, time, grad, ErrBlankOutput
+		return energy, time, grad, ErrBlankOutput
 	}
-	// TODO extract gradients one day - fixes nilness
-	if gradx != nil {
-		grad = func(xs, ys, zs []string) []float64 {
-			lx := len(xs)
-			if !(lx == len(ys) && lx == len(zs)) {
-				panic("Gradient dimension mismatch")
-			}
-			ret := make([]float64, 0, 3*lx)
-			for i := range xs {
-				x, _ := strconv.ParseFloat(xs[i], 64)
-				y, _ := strconv.ParseFloat(ys[i], 64)
-				z, _ := strconv.ParseFloat(zs[i], 64)
-				ret = append(ret, x, y, z)
-			}
-			return ret
-		}(gradx, grady, gradz)
-	}
-	return result, time, grad, err
+	return energy, time, grad, err
 }
 
 // HandleOutput extracts the optimized geometry in Cartesian (bohr)
@@ -458,7 +459,7 @@ func (g *Gaussian) Run(proc Procedure, q Queue) (E0 float64) {
 			Filename: infile,
 			NumCPUs:  Conf.NumCPUs,
 			PBSMem:   Conf.PBSMem,
-			Jobs: []string{infile},
+			Jobs:     []string{infile},
 		})
 	jobid := q.Submit(pbsfile)
 	jobMap := make(map[string]bool)

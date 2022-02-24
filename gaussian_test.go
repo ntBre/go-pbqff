@@ -103,8 +103,10 @@ H 0.0000000000 -0.7574590974  0.5217905143
 
 func TestGaussReadOut(t *testing.T) {
 	tmp := Conf.EnergyLine
+	GRAD = true // so I can test parsing the gradient
 	defer func() {
 		Conf.EnergyLine = tmp
+		GRAD = false
 	}()
 	Conf.EnergyLine = regexp.MustCompile(`SCF Done:`)
 	g := new(Gaussian)
@@ -114,7 +116,19 @@ func TestGaussReadOut(t *testing.T) {
 		grad   []float64
 		energy float64
 		time   float64
-	}{energy: 1.597082773539640e-01, time: 0.7, grad: nil, err: nil}
+	}{
+		energy: 1.597082773539640e-01,
+		time:   0.7,
+		grad: []float64{
+
+			1.87214734e-16, -1.40629670e-17, -1.51123931e-04,
+			3.06050356e-17, 9.51462392e-05, 7.10069232e-05,
+			-1.91235573e-16, -9.51462392e-05, 7.10069232e-05,
+			-1.11061937e-17, 4.45475526e-06, 4.55504205e-06,
+			-1.54780028e-17, -4.45475526e-06, 4.55504205e-06,
+		},
+		err: nil,
+	}
 	if energy != want.energy {
 		t.Errorf("got %v, wanted %v\n", energy, want.energy)
 	}
