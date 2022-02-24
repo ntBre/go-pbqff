@@ -69,7 +69,7 @@ func HashName() string {
 }
 
 const (
-	angbohr  = 0.529177249 // angstrom per bohr
+	ANGBOHR  = 0.529177249 // angstrom per bohr
 	resBound = 1e-16       // warn if anpass residuals above this
 )
 
@@ -596,7 +596,7 @@ func main() {
 				if i%3 == 0 && i > 0 {
 					fmt.Fprint(&buf, "\n")
 				}
-				fmt.Fprintf(&buf, " %.10f", coords[i]/angbohr)
+				fmt.Fprintf(&buf, " %.10f", coords[i]/ANGBOHR)
 			}
 			spec, err := spectro.Load("spectro.in")
 			if err != nil {

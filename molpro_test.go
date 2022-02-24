@@ -584,7 +584,7 @@ func TestDerivative(t *testing.T) {
 							Index: 0,
 						},
 					},
-					Scale: angbohr * angbohr / 4,
+					Scale: ANGBOHR * ANGBOHR / 4,
 					Coords: []float64{
 						2, 0, -0.0657441568,
 						0, 0.7574590974, 0.5217905143,
@@ -601,7 +601,7 @@ func TestDerivative(t *testing.T) {
 						},
 					},
 					noRun: true,
-					Scale: angbohr * angbohr / 4,
+					Scale: ANGBOHR * ANGBOHR / 4,
 					Coords: []float64{
 						0, 0, -0.0657441568,
 						0, 0.7574590974, 0.5217905143,
@@ -617,7 +617,7 @@ func TestDerivative(t *testing.T) {
 							Index: 0,
 						},
 					},
-					Scale: angbohr * angbohr / 4,
+					Scale: ANGBOHR * ANGBOHR / 4,
 					Coords: []float64{
 						-2, 0, -0.0657441568,
 						0, 0.7574590974, 0.5217905143,
@@ -831,7 +831,7 @@ func TestGradDerivative(t *testing.T) {
 							Index: 0,
 						},
 					},
-					Scale: angbohr * angbohr / 4,
+					Scale: ANGBOHR * ANGBOHR / 4,
 				},
 				{
 					Name: filepath.Join(dir, "E0"),
@@ -843,7 +843,7 @@ func TestGradDerivative(t *testing.T) {
 						},
 					},
 					noRun: true,
-					Scale: angbohr * angbohr / 4,
+					Scale: ANGBOHR * ANGBOHR / 4,
 				},
 				{
 					Name: filepath.Join(dir, "job.0000000001"),
@@ -854,7 +854,7 @@ func TestGradDerivative(t *testing.T) {
 							Index: 0,
 						},
 					},
-					Scale: angbohr * angbohr / 4,
+					Scale: ANGBOHR * ANGBOHR / 4,
 					noRun: false,
 				},
 			},

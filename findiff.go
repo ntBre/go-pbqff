@@ -3,7 +3,7 @@ package main
 // Make1D makes the Job slices for finite differences first
 // derivative force constants
 func Make1D(i int) []ProtoCalc {
-	scale := angbohr / (2 * Conf.Deltas[i-1])
+	scale := ANGBOHR / (2 * Conf.Deltas[i-1])
 	return []ProtoCalc{
 		{Name: HashName(), Steps: []int{i}, Index: []int{i}, Coeff: 1, Scale: scale},
 		{Name: HashName(), Steps: []int{-i}, Index: []int{i}, Coeff: -1, Scale: scale},
@@ -13,7 +13,7 @@ func Make1D(i int) []ProtoCalc {
 // Make2D makes the Job slices for finite differences second
 // derivative force constants
 func Make2D(i, j int) []ProtoCalc {
-	scale := angbohr * angbohr /
+	scale := ANGBOHR * ANGBOHR /
 		(4 * Conf.Deltas[i-1] *
 			Conf.Deltas[j-1])
 	switch {
@@ -53,7 +53,7 @@ func Make3D_2_1(i, _, k int, scale float64) []ProtoCalc {
 // Make3D makes the ProtoCalc slices for finite differences third
 // derivative force constants
 func Make3D(i, j, k int) []ProtoCalc {
-	scale := angbohr * angbohr * angbohr /
+	scale := ANGBOHR * ANGBOHR * ANGBOHR /
 		(8 * Conf.Deltas[i-1] *
 			Conf.Deltas[j-1] *
 			Conf.Deltas[k-1])
@@ -151,7 +151,7 @@ func Make4D_1_1_1_1(i, j, k, l int, scale float64) []ProtoCalc {
 // Make4D makes the ProtoCalc slices for finite differences fourth
 // derivative force constants
 func Make4D(i, j, k, l int) []ProtoCalc {
-	scale := angbohr * angbohr * angbohr * angbohr /
+	scale := ANGBOHR * ANGBOHR * ANGBOHR * ANGBOHR /
 		(16 * Conf.Deltas[i-1] *
 			Conf.Deltas[j-1] *
 			Conf.Deltas[k-1] *

@@ -161,7 +161,7 @@ func TestCart(t *testing.T) {
 			if i%3 == 0 && i > 0 {
 				fmt.Fprint(&buf, "\n")
 			}
-			fmt.Fprintf(&buf, " %.10f", coords[i]/angbohr)
+			fmt.Fprintf(&buf, " %.10f", coords[i]/ANGBOHR)
 		}
 		specin := filepath.Join(prog.GetDir(), "spectro.in")
 		spec, err := spectro.Load(specin)
@@ -233,7 +233,7 @@ func TestGrad(t *testing.T) {
 		if i%3 == 0 && i > 0 {
 			fmt.Fprint(&buf, "\n")
 		}
-		fmt.Fprintf(&buf, " %.10f", coords[i]/angbohr)
+		fmt.Fprintf(&buf, " %.10f", coords[i]/ANGBOHR)
 	}
 	specin := filepath.Join(prog.GetDir(), "spectro.in")
 	spec, err := spectro.Load(specin)
@@ -343,7 +343,7 @@ func TestResub(t *testing.T) {
 					if i%3 == 0 && i > 0 {
 						fmt.Fprint(&buf, "\n")
 					}
-					fmt.Fprintf(&buf, " %.10f", coords[i]/angbohr)
+					fmt.Fprintf(&buf, " %.10f", coords[i]/ANGBOHR)
 				}
 				specin := filepath.Join(prog.GetDir(), "spectro.in")
 				spec, err := spectro.Load(specin)
