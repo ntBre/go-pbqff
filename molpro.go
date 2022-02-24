@@ -56,7 +56,7 @@ func (m *Molpro) GetGeom() string {
 	return m.Geom
 }
 
-// LoadMolpro loads a template molpro input file
+// Load a template Molpro input file
 func (m *Molpro) Load(filename string) error {
 	f, err := os.Open(filename)
 	defer f.Close()

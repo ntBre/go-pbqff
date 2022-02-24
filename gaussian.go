@@ -52,7 +52,7 @@ func (g *Gaussian) GetGeom() string {
 	return g.Geom
 }
 
-// LoadGaussian loads a template Gaussian input file
+// Load a template Gaussian input file
 func (g *Gaussian) Load(filename string) error {
 	f, err := os.Open(filename)
 	defer f.Close()
