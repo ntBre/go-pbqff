@@ -15,7 +15,8 @@ import (
 )
 
 func TestLoadMolpro(t *testing.T) {
-	got, _ := LoadMolpro("testfiles/load/molpro.in")
+	got := new(Molpro)
+	got.Load("testfiles/load/molpro.in")
 	want := &Molpro{
 		Head: `memory,995,m   ! 30GB 12procs
 
@@ -133,7 +134,8 @@ OX=                  1.26606700 ANG
 		},
 	}
 	for _, test := range tests {
-		prog, _ := LoadMolpro(test.load)
+		var prog Molpro
+		prog.Load(test.load)
 		_, zmat, _ := prog.HandleOutput(test.out)
 		prog.FormatZmat(test.geom)
 		prog.UpdateZmat(zmat)
@@ -171,7 +173,8 @@ XXO = 80.0 Deg`,
 		},
 	}
 	for _, test := range tests {
-		mp, _ := LoadMolpro(test.load)
+		var mp Molpro
+		mp.Load(test.load)
 		mp.FormatZmat(test.geom)
 		mp.WriteInput(test.write, test.proc)
 		if !compareFile(test.write, test.right) {
@@ -426,12 +429,13 @@ func TestBuildPoints(t *testing.T) {
 		cenergies = *new([]CountFloat)
 	}()
 	Conf = ParseInfile("tests/sic/sic.in").ToConfig()
-	prog, _ := LoadMolpro("testfiles/load/molpro.in")
+	var prog Molpro
+	prog.Load("testfiles/load/molpro.in")
 	cart, _, _ := prog.HandleOutput("testfiles/opt")
 	names, _ := XYZGeom(cart)
 	os.Mkdir("testfiles/read/inp", 0755)
 	defer os.RemoveAll("testfiles/read/inp")
-	gen := BuildPoints(prog, queue, "testfiles/read/file07", names, true)
+	gen := BuildPoints(&prog, queue, "testfiles/read/file07", names, true)
 	got, _ := gen()
 	want := []Calc{
 		{

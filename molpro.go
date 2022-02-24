@@ -57,34 +57,33 @@ func (m *Molpro) GetGeom() string {
 }
 
 // LoadMolpro loads a template molpro input file
-func LoadMolpro(filename string) (*Molpro, error) {
+func (m *Molpro) Load(filename string) error {
 	f, err := os.Open(filename)
 	defer f.Close()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	scanner := bufio.NewScanner(f)
 	var (
 		buf  bytes.Buffer
 		line string
-		mp   Molpro
 	)
 	for scanner.Scan() {
 		line = scanner.Text()
 		if strings.Contains(line, "optg") && !strings.Contains(line, "gthresh") {
-			mp.Tail = buf.String()
+			m.Tail = buf.String()
 			buf.Reset()
-			mp.Opt = line + "\n"
+			m.Opt = line + "\n"
 			continue
 		}
 		buf.WriteString(line + "\n")
 		if strings.Contains(line, "geometry=") {
-			mp.Head = buf.String()
+			m.Head = buf.String()
 			buf.Reset()
 		}
 	}
-	mp.Extra = buf.String()
-	return &mp, nil
+	m.Extra = buf.String()
+	return nil
 }
 
 // WriteInput writes a Molpro input file
@@ -386,7 +385,7 @@ func (m *Molpro) Run(proc Procedure, q Queue) (E0 float64) {
 			Filename: infile,
 			NumCPUs:  Conf.NumCPUs,
 			PBSMem:   Conf.PBSMem,
-			Jobs: []string{infile},
+			Jobs:     []string{infile},
 		})
 	jobid := q.Submit(pbsfile)
 	jobMap := make(map[string]bool)

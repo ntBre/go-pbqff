@@ -8,7 +8,8 @@ import (
 )
 
 func TestLoadGaussian(t *testing.T) {
-	got, _ := LoadGaussian("testfiles/gaussian/opt.com")
+	got := new(Gaussian)
+	got.Load("testfiles/gaussian/opt.com")
 	want := &Gaussian{
 		Head: "%nprocs=4\n",
 		Opt:  "#P PM6=(print,zero,input) \n",
@@ -26,7 +27,8 @@ the title
 
 func TestMakeInput(t *testing.T) {
 	var got bytes.Buffer
-	g, _ := LoadGaussian("testfiles/gaussian/opt.com")
+	g := new(Gaussian)
+	g.Load("testfiles/gaussian/opt.com")
 	g.Geom = `
 C  0.0000000000  0.0000000000 -0.0000000318
 H  0.0000000000  0.0000000000  1.0840336982
@@ -120,12 +122,11 @@ func TestGaussReadOut(t *testing.T) {
 		energy: 1.597082773539640e-01,
 		time:   0.7,
 		grad: []float64{
-
-			1.87214734e-16, -1.40629670e-17, -1.51123931e-04,
-			3.06050356e-17, 9.51462392e-05, 7.10069232e-05,
-			-1.91235573e-16, -9.51462392e-05, 7.10069232e-05,
-			-1.11061937e-17, 4.45475526e-06, 4.55504205e-06,
-			-1.54780028e-17, -4.45475526e-06, 4.55504205e-06,
+			4.55504205e-06, 1.87214734e-16, -1.40629670e-17,
+			-1.51123931e-04, 3.06050356e-17, 9.51462392e-05,
+			7.10069232e-05, -1.91235573e-16, -9.51462392e-05,
+			7.10069232e-05, -1.11061937e-17, 4.45475526e-06,
+			4.55504205e-06, -1.54780028e-17, -4.45475526e-06,
 		},
 		err: nil,
 	}

@@ -53,17 +53,16 @@ func (g *Gaussian) GetGeom() string {
 }
 
 // LoadGaussian loads a template Gaussian input file
-func LoadGaussian(filename string) (*Gaussian, error) {
+func (g *Gaussian) Load(filename string) error {
 	f, err := os.Open(filename)
 	defer f.Close()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	scanner := bufio.NewScanner(f)
 	var (
 		str  strings.Builder
 		line string
-		g    Gaussian
 		geom bool
 	)
 	chargeSpin := regexp.MustCompile(`^\s*\d\s+\d\s*$`)
@@ -92,7 +91,7 @@ func LoadGaussian(filename string) (*Gaussian, error) {
 		}
 	}
 	g.Tail = str.String()
-	return &g, nil
+	return nil
 }
 
 func (g *Gaussian) makeInput(w io.Writer, p Procedure) {
@@ -197,6 +196,12 @@ func readChk(filename string) (energy float64, gradient []float64) {
 			case strings.Contains(line, "Cartesian Gradient"):
 				ingrad = true
 			case ingrad && strings.Contains(line, "Nonadiabatic"):
+				// g16 appears to start the gradient
+				// with the x1y1 coordinate and end
+				// with x1x1, so move that to the
+				// front
+				lg := len(gradient)
+				gradient = append(gradient[lg-1:], gradient[:lg-1]...)
 				return
 			case ingrad:
 				fields = strings.Fields(line)
@@ -242,8 +247,6 @@ func (g *Gaussian) ReadOut(filename string) (energy, time float64,
 		case strings.Contains(strings.ToLower(line), "error") &&
 			GaussErrorLine.MatchString(line):
 			return energy, time, grad, ErrFileContainsError
-			// since we assume the line contains an '='
-			// below, gate the regex match with that
 		case strings.Contains(line, "Normal termination of Gaussian"):
 			basename := TrimExt(filename)
 			energy, grad = readChk(basename + ".fchk")
@@ -393,7 +396,7 @@ func strBohrToAng(bohrs []string) []float64 {
 	ret := make([]float64, len(bohrs))
 	for i := range bohrs {
 		ret[i], _ = strconv.ParseFloat(bohrs[i], 64)
-		ret[i] *= angbohr
+		ret[i] *= ANGBOHR
 	}
 	return ret
 }

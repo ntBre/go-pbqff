@@ -421,14 +421,15 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	var err error
 	switch Conf.Package {
 	case "molpro", "":
-		prog, err = LoadMolpro(mpName)
+		prog = new(Molpro)
 		Conf.Queue.NewMolpro()
 	case "g16", "gaussian", "gauss":
-		prog, err = LoadGaussian(mpName)
+		prog = new(Gaussian)
 		Conf.Queue.NewGauss()
 	}
+	err = prog.Load(mpName)
 	if err != nil {
-		errExit(err, fmt.Sprintf("loading molpro input %q", mpName))
+		errExit(err, fmt.Sprintf("loading qc template %q", mpName))
 	}
 	prog.SetDir(dir)
 	if SIC {

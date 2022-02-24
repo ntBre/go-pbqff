@@ -13,6 +13,7 @@ import (
 // programs in the place of Molpro. TODO this is a massive interface,
 // how many of these are really necessary?
 type Program interface {
+	Load(string) error
 	GetDir() string
 	SetDir(string)
 	GetGeom() string
