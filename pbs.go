@@ -37,6 +37,7 @@ var (
 	MolproPBSTmpl, _ = template.ParseFS(templates, "templates/molpro/pbs")
 	GaussPBSTmpl, _  = template.ParseFS(templates, "templates/gauss/pbs")
 	pbsSequoia, _    = template.ParseFS(templates, "templates/pbsSequoia.pbs")
+	MopacPBSTmpl, _  = template.ParseFS(templates, "templates/mopac/slurm")
 )
 
 type PBS struct {
@@ -50,6 +51,11 @@ func (p *PBS) NewMolpro() {
 func (p *PBS) NewGauss() {
 	panic("need to update these templates to run g16 < infile > outfile instead of defaulting to log file output")
 	p.Tmpl = GaussPBSTmpl
+}
+
+func (p *PBS) NewMopac() {
+	panic("TODO write mopac pbs template")
+	p.Tmpl = MopacPBSTmpl
 }
 
 // WritePBS writes a pbs infile based on the queue type and

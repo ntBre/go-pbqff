@@ -12,6 +12,7 @@ type Queue interface {
 	Stat(*map[string]bool)
 	NewMolpro()
 	NewGauss()
+	NewMopac()
 }
 
 // SelectNode returns a node and queue from the Global node list

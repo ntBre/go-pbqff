@@ -14,6 +14,7 @@ import (
 var (
 	MolproSlurmTmpl, _ = template.ParseFS(templates, "templates/molpro/slurm")
 	GaussSlurmTmpl, _  = template.ParseFS(templates, "templates/gauss/slurm")
+	MopacSlurmTmpl, _  = template.ParseFS(templates, "templates/mopac/slurm")
 )
 
 type Slurm struct {
@@ -26,6 +27,10 @@ func (s *Slurm) NewMolpro() {
 
 func (s *Slurm) NewGauss() {
 	s.Tmpl = GaussSlurmTmpl
+}
+
+func (s *Slurm) NewMopac() {
+	s.Tmpl = MopacSlurmTmpl
 }
 
 // WritePBS writes a pbs infile based on the queue type and

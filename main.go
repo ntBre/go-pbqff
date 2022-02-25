@@ -426,6 +426,9 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	case "g16", "gaussian", "gauss":
 		prog = new(Gaussian)
 		Conf.Queue.NewGauss()
+	case "mopac":
+		prog = new(Mopac)
+		Conf.Queue.NewMopac()
 	}
 	err = prog.Load(mpName)
 	if err != nil {

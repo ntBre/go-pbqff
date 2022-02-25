@@ -227,6 +227,7 @@ func (tq TestQueue) Resubmit(string, error) string { return "" }
 func (tq TestQueue) Stat(*map[string]bool)         {}
 func (tq TestQueue) NewGauss()                     {}
 func (tq TestQueue) NewMolpro()                    {}
+func (tq TestQueue) NewMopac()                     {}
 
 func TestDrain(t *testing.T) {
 	Global.Submitted = 0
