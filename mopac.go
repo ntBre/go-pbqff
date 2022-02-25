@@ -22,7 +22,9 @@ func (m *Mopac) GetDir() string      { return m.Dir }
 func (m *Mopac) SetDir(dir string)   { m.Dir = dir }
 func (m *Mopac) GetGeom() string     { return m.Geom }
 func (m *Mopac) SetGeom(geom string) { m.Geom = geom }
-func (m *Mopac) AugmentHead()        {}
+func (m *Mopac) AugmentHead() {
+	m.Head = "XYZ A0 1SCF " + m.Head
+}
 
 // Load a MOPAC input file from filename
 func (m *Mopac) Load(filename string) error {
@@ -46,8 +48,19 @@ func (m *Mopac) WriteInput(filename string, proc Procedure) {
 		// optimization is the default, so just make sure 1SCF
 		// isn't in the header to turn it off
 		m.Head = strings.Replace(m.Head, "1SCF", "", -1)
+		// also turn off XYZ since it needs to be a ZMAT for opt
+		m.Head = strings.Replace(m.Head, "XYZ", "", -1)
 	case freq:
-		panic("proc not implemented for mopac")
+		lines := strings.Split(
+			strings.TrimSpace(m.Head),
+			"\n",
+		)
+		if len(lines) != 3 {
+			panic("wrong number of lines in MOPAC header")
+		}
+		lines[0] += " FORCE"
+		tmp := strings.Join(lines, "\n")
+		m.Head = tmp + "\n"
 	}
 	f, err := os.Create(filename)
 	defer f.Close()
@@ -77,6 +90,7 @@ func (m *Mopac) FormatZmat(geom string) (err error) {
 			break
 		}
 	}
+	out = append(out, "")
 	// in case there are units in the zmat params, remove them
 	for _, line := range split[i:] {
 		out = append(out, unit.ReplaceAllString(line, ""))
@@ -86,7 +100,7 @@ func (m *Mopac) FormatZmat(geom string) (err error) {
 }
 
 func (m *Mopac) FormatGeom(geom string) string {
-	panic("unimplemented")
+	return geom
 }
 
 func (m *Mopac) Run(proc Procedure, q Queue) (E0 float64) {
@@ -141,11 +155,53 @@ func (m *Mopac) Run(proc Procedure, q Queue) (E0 float64) {
 	return
 }
 
-func (m *Mopac) HandleOutput(string) (string, string, error) {
-	panic("unimplemented")
+func (m *Mopac) HandleOutput(filename string) (
+	cart string, zmat string, err error) {
+	auxfile := filename + ".inp.aux"
+	f, err := os.Open(auxfile)
+	defer f.Close()
+	if err != nil {
+		err = ErrFileNotFound
+		return
+	}
+	scanner := bufio.NewScanner(f)
+	var (
+		line     string
+		fields   []string
+		atoms    []string
+		coords   []float64
+		inatoms  bool
+		incoords bool
+	)
+	for scanner.Scan() {
+		line = scanner.Text()
+		fields = strings.Fields(line)
+		switch {
+		case strings.Contains(line, "ATOM_EL"):
+			inatoms = true
+		case strings.Contains(line, "ATOM_CORE"):
+			inatoms = false
+		case inatoms:
+			atoms = append(atoms, fields...)
+		case strings.Contains(line, "ATOM_X_OPT"):
+			incoords = true
+		case strings.Contains(line, "ATOM_CHARGES"):
+			incoords = false
+		case incoords:
+			for _, f := range fields {
+				v, _ := strconv.ParseFloat(f, 64)
+				coords = append(coords, v/ANGBOHR)
+			}
+		}
+	}
+	cart = ZipXYZ(atoms, coords)
+	// MOPAC doesn't give the optimized Zmat, so just use the Cart
+	// again
+	zmat = cart
+	return
 }
-func (m *Mopac) UpdateZmat(string) {
-	panic("unimplemented")
+func (m *Mopac) UpdateZmat(new string) {
+	m.Geom = new
 }
 func (m *Mopac) FormatCart(geom string) error {
 	m.Geom = geom
@@ -155,6 +211,8 @@ func (m *Mopac) FormatCart(geom string) error {
 func (m *Mopac) ReadOut(filename string) (
 	energy float64, time float64, grad []float64, err error) {
 	// TODO return the proper errors instead of just panicking
+	base := TrimExt(filename)
+	filename = base + ".inp.out"
 	f, err := os.Open(filename)
 	defer f.Close()
 	if err != nil {
@@ -192,7 +250,7 @@ func (m *Mopac) ReadOut(filename string) (
 	}
 	// should I close old f first? what about deferring double
 	// close?
-	auxfile := TrimExt(filename) + ".aux"
+	auxfile := base + ".inp.aux"
 	f, err = os.Open(auxfile)
 	defer f.Close()
 	if err != nil {
@@ -211,10 +269,12 @@ func (m *Mopac) ReadOut(filename string) (
 				strings.Replace(strVal, "D", "E", -1),
 				64,
 			)
+			energy /= KCALHT
 		}
 	}
 	return
 }
 func (m *Mopac) ReadFreqs(string) []float64 {
-	panic("unimplemented")
+	Warn("ReadFreqs not implemented for MOPAC")
+	return nil
 }

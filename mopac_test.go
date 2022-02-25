@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"reflect"
 	"testing"
@@ -74,7 +75,6 @@ C 1 cc
 C 1 cc 2 ccc
 H 2 ch 1 hcc 3 180.0
 H 3 ch 1 hcc 2 180.0
-
 CC=                  1.42101898 ANG
 CCC=                55.60133141 DEG
 CH=                  1.07692776 ANG
@@ -114,15 +114,18 @@ func TestMopacReadOut(t *testing.T) {
 	}{
 		{
 			infile: "testfiles/mopac.out",
-			energy: -0.255423728052956e+02,
+			energy: -0.255423728052956e+02 / KCALHT,
 			time:   0.02,
 			grad:   nil,
 		},
 	}
 	for _, test := range tests {
 		m := new(Mopac)
-		energy, time, grad, _ := m.ReadOut(test.infile)
-		if test.energy != energy {
+		energy, time, grad, err := m.ReadOut(test.infile)
+		if err != nil {
+			t.Errorf("got an error %v, didn't want one", err)
+		}
+		if math.Abs(energy-test.energy) > 1e-17 {
 			t.Errorf("got %v, wanted %v\n", energy, test.energy)
 		}
 		if test.time != time {
@@ -130,6 +133,33 @@ func TestMopacReadOut(t *testing.T) {
 		}
 		if !reflect.DeepEqual(test.grad, grad) {
 			t.Errorf("got %v, wanted %v\n", grad, test.grad)
+		}
+	}
+}
+
+func TestMopacHandleOutput(t *testing.T) {
+	tests := []struct {
+		infile string
+		want   string
+	}{
+		{
+			infile: "testfiles/mopac.opt",
+			want: `C 0.0000000000 0.0000000000 0.0000000000
+C 2.7140237918 0.0000000000 0.0000000000
+C 1.5105177402 2.2548306586 0.0000000000
+H 4.4610958957 -0.9562738407 0.0000000000
+H 1.6883893690 4.2385348398 0.0000000000
+`,
+		},
+	}
+	for _, test := range tests {
+		m := new(Mopac)
+		got, _, err := m.HandleOutput(test.infile)
+		if err != nil {
+			t.Error("got an error, didn't want one")
+		}
+		if got != test.want {
+			t.Errorf("got\n%#v, wanted\n%#v\n", got, test.want)
 		}
 	}
 }

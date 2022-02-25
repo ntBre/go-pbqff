@@ -23,6 +23,8 @@ type Program interface {
 	FormatGeom(string) string
 	AugmentHead()
 	Run(Procedure, Queue) float64
+	// HandleOutput returns the Cartesian (bohr) and Z-matrix
+	// (ang) geometries from the argument filename
 	HandleOutput(string) (string, string, error)
 	UpdateZmat(string)
 	FormatCart(string) error

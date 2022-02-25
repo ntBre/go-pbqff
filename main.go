@@ -70,6 +70,7 @@ func HashName() string {
 
 const (
 	ANGBOHR  = 0.529177249 // angstrom per bohr
+	KCALHT   = 627.5091809 // kcal/mol per hartree
 	resBound = 1e-16       // warn if anpass residuals above this
 )
 
