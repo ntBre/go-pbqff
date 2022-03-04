@@ -231,7 +231,7 @@ func (m *Mopac) ReadOut(filename string) (
 		switch {
 		case i == 0 && strings.Contains(strings.ToUpper(line), "PANIC"):
 			panic("panic requested in output file")
-		case i == 0 && strings.Contains(strings.ToUpper(line), "ERROR"):
+		case strings.Contains(strings.ToUpper(line), "ERROR"):
 			err = ErrFileContainsError
 			return
 		case strings.Contains(line, "TOTAL JOB TIME"):
