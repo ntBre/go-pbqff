@@ -187,10 +187,11 @@ func Drain(prog Program, q Queue, ncoords int, E0 float64,
 				realTime += t
 				heap.Add(job.Name)
 				// job has not been resubmitted && there is an error
-			} else if !job.noRun && job.Resub == nil &&
-				(err == ErrFinishedButNoEnergy ||
-					err == ErrFileContainsError || err == ErrBlankOutput ||
-					(err == ErrFileNotFound && !qstat[job.JobID])) {
+			} else if !job.noRun &&
+				(err == ErrFinishedButNoEnergy || err ==
+					ErrFileContainsError || err ==
+					ErrBlankOutput || (err ==
+					ErrFileNotFound && !qstat[job.JobID])) {
 				// THIS DOESNT CATCH FILE EXISTS BUT IS HUNG
 				if err == ErrFileContainsError {
 					fmt.Fprintf(os.Stderr,

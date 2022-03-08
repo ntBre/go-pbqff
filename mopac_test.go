@@ -14,7 +14,7 @@ func TestLoadMopac(t *testing.T) {
 	got.Load("testfiles/mopac.in")
 	want := Mopac{
 		Dir: "",
-		Head: `XYZ A0 scfcrt=1.D-21 aux(precision=9) external=params.dat 1SCF charge=1 PM6
+		Head: `scfcrt=1.D-21 aux(precision=9) external=params.dat charge=1 PM6
 Comment line 1
 Comment line 2
 `,
@@ -36,7 +36,7 @@ func TestWriteMopacInput(t *testing.T) {
 			geom: `H        0.0000000000        1.4186597974        0.9822041584
 O        0.0000000000        0.0094006500       -0.1238566934
 H        0.0000000000       -1.4280604475        0.9894964540`,
-			want: `XYZ A0 scfcrt=1.D-21 aux(precision=9) external=params.dat 1SCF charge=1 PM6
+			want: `1SCF XYZ scfcrt=1.D-21 aux(precision=9) external=params.dat charge=1 PM6
 Comment line 1
 Comment line 2
 H        0.0000000000        1.4186597974        0.9822041584
@@ -145,10 +145,10 @@ func TestMopacHandleOutput(t *testing.T) {
 		{
 			infile: "testfiles/mopac.opt",
 			want: `C 0.0000000000 0.0000000000 0.0000000000
-C 2.7140237918 0.0000000000 0.0000000000
-C 1.5105177402 2.2548306586 0.0000000000
-H 4.4610958957 -0.9562738407 0.0000000000
-H 1.6883893690 4.2385348398 0.0000000000
+C 1.4361996439 0.0000000000 0.0000000000
+C 0.7993316223 1.1932050849 0.0000000000
+H 2.3607104536 -0.5060383603 0.0000000000
+H 0.8934572415 2.2429362063 0.0000000000
 `,
 		},
 	}

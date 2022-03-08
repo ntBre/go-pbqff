@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -43,16 +44,20 @@ func (m *Mopac) Load(filename string) error {
 }
 
 func (m *Mopac) WriteInput(filename string, proc Procedure) {
+	var (
+		head string = m.Head
+		geom string = m.Geom
+	)
 	switch proc {
 	case opt:
 		// optimization is the default, so just make sure 1SCF
 		// isn't in the header to turn it off
-		m.Head = strings.Replace(m.Head, "1SCF", "", -1)
+		head = strings.Replace(head, "1SCF", "", -1)
 		// also turn off XYZ since it needs to be a ZMAT for opt
-		m.Head = strings.Replace(m.Head, "XYZ", "", -1)
+		head = strings.Replace(head, "XYZ", "", -1)
 	case freq:
 		lines := strings.Split(
-			strings.TrimSpace(m.Head),
+			strings.TrimSpace(head),
 			"\n",
 		)
 		if len(lines) != 3 {
@@ -60,7 +65,9 @@ func (m *Mopac) WriteInput(filename string, proc Procedure) {
 		}
 		lines[0] += " FORCE"
 		tmp := strings.Join(lines, "\n")
-		m.Head = tmp + "\n"
+		head = tmp + "\n"
+	default:
+		head = "1SCF XYZ " + head
 	}
 	f, err := os.Create(filename)
 	defer f.Close()
@@ -68,7 +75,7 @@ func (m *Mopac) WriteInput(filename string, proc Procedure) {
 		panic(err)
 	}
 	// m.Head must end in \n
-	fmt.Fprintf(f, "%s%s\n\n", m.Head, m.Geom)
+	fmt.Fprintf(f, "%s%s\n\n", head, geom)
 
 }
 
@@ -190,7 +197,7 @@ func (m *Mopac) HandleOutput(filename string) (
 		case incoords:
 			for _, f := range fields {
 				v, _ := strconv.ParseFloat(f, 64)
-				coords = append(coords, v/ANGBOHR)
+				coords = append(coords, v)
 			}
 		}
 	}
@@ -232,8 +239,7 @@ func (m *Mopac) ReadOut(filename string) (
 		case i == 0 && strings.Contains(strings.ToUpper(line), "PANIC"):
 			panic("panic requested in output file")
 		case strings.Contains(strings.ToUpper(line), "ERROR"):
-			err = ErrFileContainsError
-			return
+			log.Fatalf("file %q contains error\n", filename)
 		case strings.Contains(line, "TOTAL JOB TIME"):
 			fields = strings.Fields(line)
 			time, err = strconv.ParseFloat(fields[3], 64)
@@ -243,10 +249,6 @@ func (m *Mopac) ReadOut(filename string) (
 		case strings.Contains(line, "== MOPAC DONE =="):
 			break
 		}
-	}
-	if i == 0 {
-		err = ErrBlankOutput
-		return
 	}
 	// should I close old f first? what about deferring double
 	// close?

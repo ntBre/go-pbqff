@@ -1,12 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"reflect"
 	"regexp"
 	"testing"
 )
 
-func compConf(t *testing.T, a, b Config) {
+func compConf(t *testing.T, msg string, a, b Config) {
 	if a.Cluster != b.Cluster {
 		t.Errorf("got %v, wanted %v\n", a.Cluster, b.Cluster)
 	}
@@ -62,6 +63,7 @@ func compConf(t *testing.T, a, b Config) {
 		t.Errorf("got %v, wanted %v\n", a.Spectro, b.Spectro)
 	}
 	if a.Ncoords != b.Ncoords {
+		fmt.Println(SIC, CART, GRAD)
 		t.Errorf("got %v, wanted %v\n", a.Ncoords, b.Ncoords)
 	}
 	if !reflect.DeepEqual(a.EnergyLine, b.EnergyLine) {
@@ -79,6 +81,7 @@ func compConf(t *testing.T, a, b Config) {
 	if a.IntderTmpl != b.IntderTmpl {
 		t.Errorf("got %v, wanted %v\n", a.IntderTmpl, b.IntderTmpl)
 	}
+	fmt.Println(msg)
 }
 
 func TestParseInfile(t *testing.T) {
@@ -88,7 +91,8 @@ func TestParseInfile(t *testing.T) {
 		want Config
 	}{
 		{
-			in: "testfiles/test.in",
+			msg: "first",
+			in:  "testfiles/test.in",
 			want: Config{
 				Cluster: "maple",
 				Program: "molpro",
@@ -126,7 +130,8 @@ XXO = 80.0 Deg`,
 			},
 		},
 		{
-			in: "testfiles/cccr.in",
+			msg: "second",
+			in:  "testfiles/cccr.in",
 			want: Config{
 				Cluster: "maple",
 				Program: "cart",
@@ -155,12 +160,19 @@ XXO = 80.0 Deg`,
 				Spectro:    "",
 				PBSMem:     8,
 				EnergyLine: regexp.MustCompile(`^\s*CCCRE\s+=`),
-				Ncoords:    6,
+				Ncoords:    18,
 				Package:    "molpro",
 				MolproTmpl: "molpro.in",
 				AnpassTmpl: "anpass.in",
 				IntderTmpl: "intder.in",
-				Deltas:     []float64{0.005, 0.005, 0.005, 0.005, 0.005, 0.005},
+				Deltas: []float64{
+					0.005, 0.005, 0.005,
+					0.005, 0.005, 0.005,
+					0.005, 0.005, 0.005,
+					0.005, 0.005, 0.005,
+					0.005, 0.005, 0.005,
+					0.005, 0.005, 0.005,
+				},
 			},
 		},
 		{
@@ -208,6 +220,6 @@ H        0.0000000000       -3.0146272390        1.7138963510`,
 	}
 	for _, test := range tests {
 		got := ParseInfile(test.in).ToConfig()
-		compConf(t, got, test.want)
+		compConf(t, test.msg, got, test.want)
 	}
 }

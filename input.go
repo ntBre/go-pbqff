@@ -101,8 +101,11 @@ func (rc *RawConf) ToConfig() Config {
 		}
 	}
 	ret.ProcessGeom()
+	// get the right number of deltas for cart
+	if ret.GeomType == "zmat" && ret.Program == "cart" {
+		ret.Ncoords *= 3
+	}
 	ret.ParseDeltas((*rc)["deltas"])
-	// Conf.WhichProgram()
 	return ret
 }
 
