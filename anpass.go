@@ -251,3 +251,31 @@ func DoAnpass(anp *Anpass, dir string, energies []float64, intder *Intder) (
 	}
 	return str.String(), lin
 }
+
+func Format9903(ncoords int, fcs []anpass.FC) {
+	for _, fc := range fcs {
+		i, j, k, l :=
+			fc.Coord[0], fc.Coord[1],
+			fc.Coord[2], fc.Coord[3]
+		var (
+			targ *[]CountFloat
+			ids  []int
+		)
+		switch {
+		case i == 0 || j == 0:
+			continue
+		case k == 0:
+			targ = &fc2
+			ids = Index(ncoords, false, i, j)
+		case l == 0:
+			targ = &fc3
+			ids = Index(ncoords, false, i, j, k)
+		default:
+			targ = &fc4
+			ids = Index(ncoords, false, i, j, k, l)
+		}
+		for _, id := range ids {
+			(*targ)[id].Val = fc.Val
+		}
+	}
+}

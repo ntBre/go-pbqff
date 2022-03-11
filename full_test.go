@@ -67,6 +67,9 @@ func TestSIC(t *testing.T) {
 	}
 }
 
+// compfloat determines whether a and b are the same to eps precision. If they
+// are different, the index in which they differ and the difference between the
+// values at that index are returned along with false
 func compfloat(a, b []float64, eps float64) (int, float64, bool) {
 	if len(a) != len(b) {
 		return 0, 0, false
@@ -190,7 +193,7 @@ func TestCart(t *testing.T) {
 		// end DEBUG
 		out, _ := os.Create("/tmp/anpass.out")
 		defer out.Close()
-		anpass.Debug = true
+		anpass.Debug = false
 		longLine, _, _ := anpass.Run(
 			out, os.TempDir(), disps, energies, exps,
 		)
@@ -198,31 +201,7 @@ func TestCart(t *testing.T) {
 		_, fcs, _ := anpass.Run(
 			out, os.TempDir(), disps, energies, exps,
 		)
-		for _, fc := range fcs {
-			i, j, k, l :=
-				fc.Coord[0], fc.Coord[1],
-				fc.Coord[2], fc.Coord[3]
-			var (
-				targ *[]CountFloat
-				ids  []int
-			)
-			switch {
-			case i == 0 || j == 0:
-				continue
-			case k == 0:
-				targ = &fc2
-				ids = Index(ncoords, false, i, j)
-			case l == 0:
-				targ = &fc3
-				ids = Index(ncoords, false, i, j, k)
-			default:
-				targ = &fc4
-				ids = Index(ncoords, false, i, j, k, l)
-			}
-			for _, id := range ids {
-				(*targ)[id].Val = fc.Val
-			}
-		}
+		Format9903(ncoords, fcs)
 		// TODO convert anpass force constants to spectro format
 		PrintFortFile(fc2, natoms, 6*natoms,
 			filepath.Join(prog.GetDir(), "fort.15"))
