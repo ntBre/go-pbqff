@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"math"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -191,10 +190,6 @@ func TestCart(t *testing.T) {
 				Step(make([]float64, ncoords), step...)...)
 		}
 		disps := mat.NewDense(len(stepdat)/ncoords, ncoords, stepdat)
-		out, _ := os.Create("/tmp/anpass.out")
-		defer out.Close()
-		anpass.Debug = false
-		anpass.MAXIT = 250
 		coeffs, _ := anpass.Fit(disps, energies, exps)
 		fcs := anpass.MakeFCs(coeffs, exps)
 		Format9903(ncoords, fcs)

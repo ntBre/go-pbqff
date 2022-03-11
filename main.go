@@ -613,12 +613,6 @@ func main() {
 				Step(make([]float64, ncoords), step...)...)
 		}
 		disps := mat.NewDense(len(stepdat)/ncoords, ncoords, stepdat)
-		out, _ := os.Create("/tmp/anpass.out")
-		defer out.Close()
-		longLine, _, _ := anp.Run(
-			out, os.TempDir(), disps, energies, exps,
-		)
-		disps, energies = anp.Bias(disps, energies, longLine)
 		coeffs, _ := anp.Fit(disps, energies, exps)
 		fcs := anp.MakeFCs(coeffs, exps)
 		Format9903(ncoords, fcs)
