@@ -32,12 +32,8 @@ type Program interface {
 	ReadFreqs(string) []float64
 }
 
-// BuildPoints uses a file07 file from Intder to construct the
-// single-point energy calculations and return an array of jobs to
-// run. If write is set to true, write the necessary files. Otherwise
-// just return the list of jobs.
-func BuildPoints(p Program, q Queue, filename string, atomNames []string,
-	write bool) func() ([]Calc, bool) {
+func ReadFile07(p Program, filename string, atomNames []string, write bool) (
+	calcs []Calc) {
 	lines, err := ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -51,7 +47,6 @@ func BuildPoints(p Program, q Queue, filename string, atomNames []string,
 	dir := path.Dir(filename)
 	name := strings.Join(atomNames, "")
 	p.AugmentHead()
-	calcs := make([]Calc, 0)
 	for li, line := range lines {
 		if !strings.Contains(line, "#") {
 			ind := i % l
@@ -105,6 +100,17 @@ func BuildPoints(p Program, q Queue, filename string, atomNames []string,
 			i++
 		}
 	}
+	return
+}
+
+// BuildPoints uses a file07 file from Intder to construct the
+// single-point energy calculations and return an array of jobs to
+// run. If write is set to true, write the necessary files. Otherwise
+// just return the list of jobs.
+func BuildPoints(p Program, q Queue, filename string, atomNames []string,
+	write bool) func() ([]Calc, bool) {
+	dir := path.Dir(filename)
+	calcs := ReadFile07(p, filename, atomNames, write)
 	var (
 		start int
 		pf    int
