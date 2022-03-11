@@ -3,6 +3,8 @@ package main
 
 import (
 	_ "embed"
+	"fmt"
+	"strings"
 )
 
 //go:embed embed/taylor.py
@@ -166,7 +168,7 @@ func Disps(fcs [][]int) (disps [][]int) {
 			idx++
 		}
 	}
-	return
+	return Deduplicate(disps)
 }
 
 // CartProd returns the Cartesian product of the elements in prods.
@@ -186,6 +188,30 @@ func CartProd(pools [][]int) [][]int {
 	return result
 }
 
+// Deduplicate removes the duplicate rows produced by Taylor, like running `sort
+// -u` on disp.txt
+func Deduplicate(rows [][]int) (ret [][]int) {
+	toKey := func(rs []int) string {
+		var str strings.Builder
+		for i, r := range rs {
+			if i > 0 {
+				fmt.Fprint(&str, "-")
+			}
+			fmt.Fprintf(&str, "%d", r)
+		}
+		return str.String()
+	}
+	m := make(map[string]bool)
+	for _, row := range rows {
+		key := toKey(row)
+		if !m[key] {
+			m[key] = true
+			ret = append(ret, row)
+		}
+	}
+	return
+}
+
 // Taylor computes the Taylor series expansion of order m-1 with n
 // variables. See Thackston18 for details
 func newTaylor(m, n int) (forces [][]int) {
@@ -202,5 +228,5 @@ func newTaylor(m, n int) (forces [][]int) {
 	}
 	// TODO do the symmetry checks - mod and equivalence checks.
 	// test both without (already have) and with these checks
-	return
+	return forces
 }
