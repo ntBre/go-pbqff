@@ -28,9 +28,11 @@ import (
 
 	"runtime"
 
+	anp "github.com/ntBre/anpass"
 	"github.com/ntBre/chemutils/spectro"
 	"github.com/ntBre/chemutils/summarize"
 	symm "github.com/ntBre/chemutils/symmetry"
+	"gonum.org/v1/gonum/mat"
 )
 
 // Flags for the procedures to be run
@@ -592,6 +594,91 @@ func main() {
 		}
 		Summarize(os.Stdout, res.ZPT, mpHarm, intderHarms, res.Harm,
 			res.Fund, res.Corr)
+	} else if CART {
+		energies := FloatsFromCountFloats(cenergies)
+		for i := range energies {
+			energies[i] -= min
+		}
+		nforces := make([]float64, 0)
+		for i := 0; i < len(forces[0]); i++ {
+			for j := 0; j < len(forces); j++ {
+				nforces = append(nforces, float64(forces[j][i]))
+			}
+		}
+		exps := mat.NewDense(len(forces[0]), len(forces), nforces)
+		steps := DispToStep(Disps(forces))
+		stepdat := make([]float64, 0)
+		for _, step := range steps {
+			stepdat = append(stepdat,
+				Step(make([]float64, ncoords), step...)...)
+		}
+		disps := mat.NewDense(len(stepdat)/ncoords, ncoords, stepdat)
+		out, _ := os.Create("/tmp/anpass.out")
+		defer out.Close()
+		longLine, _, _ := anp.Run(
+			out, os.TempDir(), disps, energies, exps,
+		)
+		disps, energies = anp.Bias(disps, energies, longLine)
+		_, fcs, _ := anp.Run(
+			out, os.TempDir(), disps, energies, exps,
+		)
+		for _, fc := range fcs {
+			i, j, k, l :=
+				fc.Coord[0], fc.Coord[1],
+				fc.Coord[2], fc.Coord[3]
+			var (
+				targ *[]CountFloat
+				ids  []int
+			)
+			switch {
+			case i == 0 || j == 0:
+				continue
+			case k == 0:
+				targ = &fc2
+				ids = Index(ncoords, false, i, j)
+			case l == 0:
+				targ = &fc3
+				ids = Index(ncoords, false, i, j, k)
+			default:
+				targ = &fc4
+				ids = Index(ncoords, false, i, j, k, l)
+			}
+			for _, id := range ids {
+				(*targ)[id].Val = fc.Val
+			}
+		}
+		PrintFortFile(fc2, natoms, 6*natoms, "fort.15")
+		if Conf.Deriv > 2 {
+			PrintFortFile(fc3, natoms, other3, "fort.30")
+		}
+		if Conf.Deriv > 3 {
+			PrintFortFile(fc4, natoms, other4, "fort.40")
+			var buf bytes.Buffer
+			for i := range coords {
+				if i%3 == 0 && i > 0 {
+					fmt.Fprint(&buf, "\n")
+				}
+				fmt.Fprintf(&buf, " %.10f", coords[i]/ANGBOHR)
+			}
+			spec, err := spectro.Load("spectro.in")
+			if err != nil {
+				errExit(err, "loading spectro input")
+			}
+			spec.FormatGeom(names, buf.String())
+			spec.WriteInput("spectro.in")
+			err = spec.DoSpectro(".")
+			if err != nil {
+				errExit(err, "running spectro")
+			}
+			res := summarize.SpectroFile("spectro2.out")
+			// fill molpro and intder freqs slots with empty slices
+			nfreqs := len(res.Harm)
+			err = Summarize(os.Stdout, res.ZPT, make([]float64, nfreqs),
+				make([]float64, nfreqs), res.Harm, res.Fund, res.Corr)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
 	} else {
 		PrintFortFile(fc2, natoms, 6*natoms, "fort.15")
 		if Conf.Deriv > 2 {

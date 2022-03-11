@@ -1,6 +1,11 @@
 [
 	{
-		"Val": 0.000032416083020788814,
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -15,7 +20,12 @@
 		"Loaded": true
 	},
 	{
-		"Val": -0.00003077511900039415,
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -30,112 +40,12 @@
 		"Loaded": true
 	},
 	{
-		"Val": -0.0000027107184775740526,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
 		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
 	{
 		"Val": 0,
-		"Count": 0,
-		"Loaded": false
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": 0.3745242434882479,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": 0.2350135636739018,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -0.3433309492251319,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -0.20370165770916912,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": false
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": false
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": 0.2350135636739018,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": 0.21818269342592422,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -0.2663274186515074,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -0.22982169975798397,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": 0.031313796161405595,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": false
-	},
-	{
-		"Val": -0.00003077511900039415,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -150,7 +60,12 @@
 		"Loaded": true
 	},
 	{
-		"Val": 0.00006369531813841934,
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -165,42 +80,12 @@
 		"Loaded": true
 	},
 	{
-		"Val": -0.00003077511900039415,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
 		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
 	{
 		"Val": 0,
-		"Count": 0,
-		"Loaded": false
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -0.3433309492251319,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -0.2663274186515074,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": 0.6866600614587731,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -215,14 +100,9 @@
 		"Loaded": true
 	},
 	{
-		"Val": -0.3433309492251319,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": 0,
@@ -230,12 +110,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": -0.20370165770916912,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": -0.22982169975798397,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -250,7 +125,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": 0.4596414084403594,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -260,17 +135,7 @@
 		"Loaded": true
 	},
 	{
-		"Val": 0.20370165770916912,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
 		"Val": 0,
-		"Count": 0,
-		"Loaded": false
-	},
-	{
-		"Val": -0.0000027107184775740526,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -285,7 +150,17 @@
 		"Loaded": true
 	},
 	{
-		"Val": -0.00003077511900039415,
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -300,19 +175,9 @@
 		"Loaded": true
 	},
 	{
-		"Val": 0.000032416083020788814,
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": false
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": false
 	},
 	{
 		"Val": 0,
@@ -322,10 +187,15 @@
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
-		"Val": 0.031313796161405595,
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
 		"Count": 0,
 		"Loaded": true
 	},
@@ -335,24 +205,9 @@
 		"Loaded": true
 	},
 	{
-		"Val": -0.3433309492251319,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
-		"Val": 0.20370165770916912,
-		"Count": 0,
-		"Loaded": true
-	},
-	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
-	},
-	{
-		"Val": 0,
-		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": 0,
@@ -362,37 +217,182 @@
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
 	},
 	{
 		"Val": 0,
 		"Count": 0,
-		"Loaded": false
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
+	},
+	{
+		"Val": 0,
+		"Count": 0,
+		"Loaded": true
 	},
 	{
 		"Val": 0,

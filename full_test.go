@@ -140,7 +140,8 @@ func TestCart(t *testing.T) {
 			nosym: false,
 		},
 	}
-	for _, test := range tests[0:] {
+	*overwrite = true
+	for _, test := range tests[0:1] {
 		*nosym = test.nosym
 		Conf = ParseInfile(test.infile).ToConfig()
 		Global.Submitted = 0
@@ -176,8 +177,20 @@ func TestCart(t *testing.T) {
 				Step(make([]float64, ncoords), step...)...)
 		}
 		disps := mat.NewDense(len(stepdat)/ncoords, ncoords, stepdat)
+		// DEBUG
+		w, _ := os.Create("/tmp/anpass.mid")
+		defer w.Close()
+		fmt.Fprintln(w, "displacements")
+		rows, c := disps.Dims()
+		for i := 0; i < rows; i++ {
+			fmt.Fprintf(w, "%12.8f",
+				disps.RawMatrix().Data[c*i:c*i+c])
+			fmt.Fprintf(w, "%20.12f\n", energies[i])
+		}
+		// end DEBUG
 		out, _ := os.Create("/tmp/anpass.out")
 		defer out.Close()
+		anpass.Debug = true
 		longLine, _, _ := anpass.Run(
 			out, os.TempDir(), disps, energies, exps,
 		)

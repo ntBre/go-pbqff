@@ -184,7 +184,6 @@ func BuildCartPoints(prog Program, q Queue, dir string, names []string,
 	for geom, disp := range disps {
 		energy := Table.Lookup(mol, names, coords, disp)
 		coords := Step(coords, disp...)
-		prog.FormatCart(ZipXYZ(names, coords))
 		for len(cenergies) <= geom {
 			cenergies = append(cenergies, CountFloat{
 				Count: 1,
@@ -219,11 +218,6 @@ func BuildCartPoints(prog Program, q Queue, dir string, names []string,
 			temp.Result = energy.Value
 			temp.noRun = true
 		}
-		// only submit if there's at least one target
-		fname := filepath.Join(temp.Name + ".inp")
-		if !temp.noRun {
-			prog.WriteInput(fname, none)
-		}
 		calcs[geom] = temp
 	}
 	var (
@@ -246,6 +240,14 @@ func BuildCartPoints(prog Program, q Queue, dir string, names []string,
 			count++
 			start += cs
 		}()
+		for _, calc := range calcs[start:end] {
+			// only submit if there's at least one target
+			fname := filepath.Join(calc.Name + ".inp")
+			if !calc.noRun {
+				prog.FormatCart(ZipXYZ(names, calc.Coords))
+				prog.WriteInput(fname, none)
+			}
+		}
 		return Push(q, filepath.Join(dir), pf, count,
 			calcs[start:end]), end != len(calcs)
 	}
