@@ -145,14 +145,30 @@ func TestCart(t *testing.T) {
 		prog.FormatCart(Conf.Geometry)
 		cart := prog.GetGeom()
 		queue := &PBS{Tmpl: MolproPBSTmpl}
-		E0 := prog.Run(none, queue)
 		names, coords := XYZGeom(cart)
 		natoms := len(names)
 		other3, other4 := initArrays(natoms)
+		cenergies = *new([]CountFloat)
 		ncoords := len(coords)
 		mol := symm.ReadXYZ(strings.NewReader(cart))
-		gen := BuildCartPoints(prog, queue, "pts/inp", names, coords, mol)
-		Drain(prog, queue, ncoords, E0, gen)
+		gen, forces := BuildCartPoints(
+			prog, queue, "pts/inp", names, coords, mol,
+		)
+		min, _ := Drain(prog, queue, ncoords, 0, gen)
+		energies := FloatsFromCountFloats(cenergies)
+		for i := range energies {
+			energies[i] -= min
+		}
+		nforces := make([][]int, len(forces[0]))
+		for i := 0; i < len(forces[0]); i++ {
+			nforces[i] = make([]int, len(forces))
+			for j := 0; j < len(forces); j++ {
+				nforces[i][j] = forces[j][i]
+			}
+		}
+		fmt.Println(len(nforces), len(nforces[0]))
+		// TODO run anpass
+		// TODO convert anpass force constants to spectro format
 		PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(prog.GetDir(), "fort.15"))
 		PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(), "fort.30"))
 		PrintFortFile(fc4, natoms, other4, filepath.Join(prog.GetDir(), "fort.40"))
@@ -302,7 +318,8 @@ func TestResub(t *testing.T) {
 		initArrays(natoms)
 		ncoords := len(coords)
 		mol := symm.ReadXYZ(strings.NewReader(cart))
-		basegen := BuildCartPoints(prog, queue, "pts/inp", names, coords, mol)
+		basegen, _ := BuildCartPoints(
+			prog, queue, "pts/inp", names, coords, mol)
 		counter := 24
 		gen := func() ([]Calc, bool) {
 			counter--
@@ -333,7 +350,10 @@ func TestResub(t *testing.T) {
 				other3, other4 := initArrays(natoms)
 				ncoords := len(coords)
 				mol := symm.ReadXYZ(strings.NewReader(cart))
-				gen := BuildCartPoints(prog, queue, "pts/inp", names, coords, mol)
+				gen, _ := BuildCartPoints(
+					prog, queue, "pts/inp",
+					names, coords, mol,
+				)
 				Drain(prog, queue, ncoords, E0, gen)
 				PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(prog.GetDir(), "fort.15"))
 				PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(), "fort.30"))

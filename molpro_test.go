@@ -774,7 +774,7 @@ func TestBuildCartPoints(t *testing.T) {
 	}
 	cart := ZipXYZ(names, coords)
 	mol := symm.ReadXYZ(strings.NewReader(cart))
-	gen := BuildCartPoints(mp, queue, dir, names, coords, mol)
+	gen, _ := BuildCartPoints(mp, queue, dir, names, coords, mol)
 	got := make([]Calc, 0)
 	hold, ok := gen()
 	got = append(got, hold...)

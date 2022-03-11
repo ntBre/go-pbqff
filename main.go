@@ -533,6 +533,8 @@ func main() {
 	natoms = len(names)
 	other3, other4 := initArrays(natoms)
 
+	var forces [][]int
+	fmt.Println(forces)
 	if SIC {
 		intder.WritePts("pts/intder.in")
 		RunIntder("pts/intder")
@@ -540,7 +542,7 @@ func main() {
 	} else {
 		ncoords = len(coords)
 		if CART {
-			gen = BuildCartPoints(prog, Conf.Queue, "pts/inp", names,
+			gen, forces = BuildCartPoints(prog, Conf.Queue, "pts/inp", names,
 				coords, mol)
 		} else if GRAD {
 			gen = BuildGradPoints(prog, Conf.Queue, "pts/inp", names,

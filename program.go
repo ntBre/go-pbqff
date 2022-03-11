@@ -152,63 +152,105 @@ func min(a, b int) int {
 	return b
 }
 
-func BuildCartPoints(p Program, q Queue, dir string, names []string,
-	coords []float64, mol symm.Molecule) func() ([]Calc, bool) {
-	dir = filepath.Join(p.GetDir(), dir)
+func DispToStep(disps [][]int) (steps [][]int) {
+	steps = make([][]int, len(disps))
+	for i, disp := range disps {
+		for j, d := range disp {
+			switch {
+			case d == 0:
+			case d > 0:
+				for ; d > 0; d-- {
+					steps[i] = append(steps[i], j+1)
+				}
+			case d < 0:
+				for ; d < 0; d++ {
+					steps[i] = append(steps[i], -(j + 1))
+				}
+			}
+		}
+	}
+	return
+}
+
+func BuildCartPoints(prog Program, q Queue, dir string, names []string,
+	coords []float64, mol symm.Molecule) (
+	gen func() ([]Calc, bool), forces [][]int) {
+	dir = filepath.Join(prog.GetDir(), dir)
 	ncoords := len(coords)
+	// TODO do something with these forces
+	forces = newTaylor(Conf.Deriv, ncoords)
+	disps := Disps(forces)
+	disps = DispToStep(disps)
+	calcs := make([]Calc, len(disps))
+	for geom, disp := range disps {
+		energy := Table.Lookup(mol, names, coords, disp)
+		coords := Step(coords, disp...)
+		prog.FormatCart(ZipXYZ(names, coords))
+		for len(cenergies) <= geom {
+			cenergies = append(cenergies, CountFloat{
+				Count: 1,
+			})
+		}
+		temp := Calc{
+			Name:   filepath.Join(dir, HashName()),
+			Scale:  1.0,
+			Coords: coords,
+			Targets: []Target{
+				{
+					Coeff: 1,
+					Slice: &cenergies,
+					Index: geom,
+				},
+			},
+		}
+		switch energy.Status {
+		// returned status is still NotPresent, even without
+		// New
+		case NotPresent:
+			// add it to map for later lookup, set status
+			// to NotCalculated
+			temp.Src = energy
+			energy.Status = NotCalculated
+		case NotCalculated:
+			// can be used as a Source but not a raw value
+			temp.Src = energy
+			temp.noRun = true
+		case Done:
+			// use directly as a value
+			temp.Result = energy.Value
+			temp.noRun = true
+		}
+		// only submit if there's at least one target
+		fname := filepath.Join(temp.Name + ".inp")
+		if !temp.noRun {
+			prog.WriteInput(fname, none)
+		}
+		calcs[geom] = temp
+	}
 	var (
 		start int
 		pf    int
 		count int
+		end   int
 	)
-	kmax, lmax := ncoords, ncoords
-	switch Conf.Deriv {
-	case 4:
-	case 3:
-		lmax = 0
-	case 2:
-		lmax = 0
-		kmax = 0
-	default:
-		panic("unrecognized derivative level")
-	}
-	cs := Conf.ChunkSize
-	jnit, knit, lnit := 1, 0, 0
-	i, j, k, l := 1, jnit, knit, lnit
 	// returns a list of calcs and whether or not it should be
 	// called again
-	return func() ([]Calc, bool) {
+	gen = func() ([]Calc, bool) {
+		cs := Conf.ChunkSize
+		if start+cs > len(calcs) {
+			end = len(calcs)
+		} else {
+			end = start + cs
+		}
 		defer func() {
 			pf++
 			count++
 			start += cs
 		}()
-		calcs := make([]Calc, 0)
-		for ; i <= ncoords; i++ {
-			for j = jnit; j <= i; j++ {
-				// if we don't want these derivative
-				// levels, {k,l}max will be 0 and
-				// these will only be entered once
-				for k = knit; k <= min(j, kmax); k++ {
-					for l = lnit; l <= min(k, lmax); l++ {
-						calcs = append(calcs,
-							Derivative(p, dir, names,
-								coords, i, j, k, l,
-								mol)...,
-						)
-						if len(calcs) >= Conf.ChunkSize {
-							jnit, knit, lnit = j, k, l+1
-							return Push(q, dir, pf, count, calcs), true
-						}
-					}
-					lnit = 0
-				}
-				knit = 0
-			}
-			jnit = 1
-		}
-		return Push(q, dir, pf, count, calcs), false
+		return Push(q, filepath.Join(dir), pf, count,
+			calcs[start:end]), end != len(calcs)
 	}
+	return
 }
 
 // BuildGradPoints constructs the calculations needed to run a
