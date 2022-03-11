@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/ntBre/anpass"
 	"github.com/ntBre/chemutils/spectro"
 	"github.com/ntBre/chemutils/summarize"
 	symm "github.com/ntBre/chemutils/symmetry"
+	"gonum.org/v1/gonum/mat"
 )
 
 func TestSIC(t *testing.T) {
@@ -159,15 +162,24 @@ func TestCart(t *testing.T) {
 		for i := range energies {
 			energies[i] -= min
 		}
-		nforces := make([][]int, len(forces[0]))
+		nforces := make([]float64, 0)
 		for i := 0; i < len(forces[0]); i++ {
-			nforces[i] = make([]int, len(forces))
 			for j := 0; j < len(forces); j++ {
-				nforces[i][j] = forces[j][i]
+				nforces = append(nforces, float64(forces[j][i]))
 			}
 		}
-		fmt.Println(len(nforces), len(nforces[0]))
-		// TODO run anpass
+		exps := mat.NewDense(len(forces[0]), len(forces), nforces)
+		steps := DispToStep(Disps(forces))
+		stepdat := make([]float64, 0)
+		for _, step := range steps {
+			stepdat = append(stepdat,
+				Step(make([]float64, ncoords), step...)...)
+		}
+		disps := mat.NewDense(len(stepdat)/ncoords, ncoords, stepdat)
+		longLine, _, _ := anpass.Run(
+			os.Stdout, ".", disps, energies, exps)
+		disps, energies = anpass.Bias(disps, energies, longLine)
+		anpass.Run(os.Stdout, ".", disps, energies, exps)
 		// TODO convert anpass force constants to spectro format
 		PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(prog.GetDir(), "fort.15"))
 		PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(), "fort.30"))
