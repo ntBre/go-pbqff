@@ -176,14 +176,47 @@ func TestCart(t *testing.T) {
 				Step(make([]float64, ncoords), step...)...)
 		}
 		disps := mat.NewDense(len(stepdat)/ncoords, ncoords, stepdat)
+		out, _ := os.Create("/tmp/anpass.out")
+		defer out.Close()
 		longLine, _, _ := anpass.Run(
-			os.Stdout, ".", disps, energies, exps)
+			out, os.TempDir(), disps, energies, exps,
+		)
 		disps, energies = anpass.Bias(disps, energies, longLine)
-		anpass.Run(os.Stdout, ".", disps, energies, exps)
+		_, fcs, _ := anpass.Run(
+			out, os.TempDir(), disps, energies, exps,
+		)
+		for _, fc := range fcs {
+			i, j, k, l :=
+				fc.Coord[0], fc.Coord[1],
+				fc.Coord[2], fc.Coord[3]
+			var (
+				targ *[]CountFloat
+				ids  []int
+			)
+			switch {
+			case i == 0 || j == 0:
+				continue
+			case k == 0:
+				targ = &fc2
+				ids = Index(ncoords, false, i, j)
+			case l == 0:
+				targ = &fc3
+				ids = Index(ncoords, false, i, j, k)
+			default:
+				targ = &fc4
+				ids = Index(ncoords, false, i, j, k, l)
+			}
+			for _, id := range ids {
+				(*targ)[id].Val = fc.Val
+			}
+		}
 		// TODO convert anpass force constants to spectro format
-		PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(prog.GetDir(), "fort.15"))
-		PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(), "fort.30"))
-		PrintFortFile(fc4, natoms, other4, filepath.Join(prog.GetDir(), "fort.40"))
+		PrintFortFile(fc2, natoms, 6*natoms,
+			filepath.Join(prog.GetDir(), "fort.15"))
+		PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(),
+			"fort.30"))
+		PrintFortFile(fc4, natoms, other4, filepath.Join(prog.GetDir(),
+			"fort.40"))
 		var buf bytes.Buffer
 		for i := range coords {
 			if i%3 == 0 && i > 0 {

@@ -7,6 +7,8 @@ require (
 	github.com/ntBre/chemutils v0.0.0-20220113154217-a8472e0b341b
 )
 
+replace github.com/ntBre/anpass => /home/brent/Projects/anpass
+
 // for local testing of both together
 // replace	github.com/ntBre/chemutils => /home/brent/gopath/chemutils
 // replace	github.com/ntBre/chemutils => /home/brent/Projects/chemutils
