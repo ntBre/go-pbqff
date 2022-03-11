@@ -46,8 +46,9 @@ func TestSIC(t *testing.T) {
 	for i := range energies {
 		energies[i] -= min
 	}
-	fmt.Println(filepath.Join(prog.GetDir(), "freqs"))
-	longLine, _ := DoAnpass(anpass, filepath.Join(prog.GetDir(), "freqs"), energies, nil)
+	longLine, _ := DoAnpass(
+		anpass, filepath.Join(prog.GetDir(), "freqs"), energies, nil,
+	)
 	coords, _ := DoIntder(intder, names, longLine, prog.GetDir(), false)
 	spec, err := spectro.Load("tests/sic/spectro.in")
 	if err != nil {
@@ -109,42 +110,52 @@ func TestCart(t *testing.T) {
 		{
 			name:   "h2o",
 			infile: "tests/cart/h2o/cart.in",
-			want:   []float64{3753.2, 3656.5, 1598.5},
-			harm:   []float64{3943.690, 3833.702, 1650.933},
-			rots:   []float64{14.50450, 9.26320, 27.65578},
-			nosym:  false,
+			harm: []float64{
+				3943.55, 3833.553, 1651.393,
+			},
+			rots: []float64{
+				14.5044828, 9.2631684, 27.6551075,
+			},
+			want: []float64{
+				3752.9833, 3656.4114, 1598.3569,
+			},
+			nosym: false,
 		},
 		{
 			name:   "h2co",
 			infile: "tests/cart/h2co/test.in",
-			want: []float64{
-				2826.6, 2778.4, 1747.8,
-				1499.4, 1246.8, 1167.0,
-			},
 			harm: []float64{
-				3004.590, 2932.596, 1778.656,
-				1534.098, 1269.765, 1186.913,
+				3004.467, 2932.477, 1778.454,
+				1534.213, 1269.931, 1186.872,
 			},
-			rots:  []float64{1.29151, 1.13102, 9.39885},
+			rots: []float64{
+				1.2914872, 1.1310027, 9.3988073,
+			},
+			want: []float64{
+				2826.6827, 2778.5134, 1747.3462,
+				1500.3855, 1247.4367, 1167.086,
+			},
 			nosym: false,
 		},
 		{
 			name:   "nh3",
 			infile: "tests/cart/nh3/test.in",
-			want: []float64{
-				3435.8, 3435.7, 3341.7,
-				1628.3, 1628.0, 979.6,
-			},
 			harm: []float64{
-				3610.420, 3610.299, 3478.498,
-				1675.554, 1675.300, 1056.025,
+				3610.241, 3610.202, 3478.359,
+				1675.589, 1675.525, 1056.259,
 			},
-			rots:  []float64{9.89037, 6.22602, 9.88998},
+			rots: []float64{
+				9.8902307, 6.2261434, 9.889629,
+			},
+			want: []float64{
+				3435.6536, 3435.7423, 3341.752,
+				1628.4562, 1628.2703, 980.3231,
+			},
 			nosym: false,
 		},
 	}
 	*overwrite = true
-	for _, test := range tests[0:1] {
+	for _, test := range tests[0:] {
 		*nosym = test.nosym
 		Conf = ParseInfile(test.infile).ToConfig()
 		Global.Submitted = 0
@@ -180,29 +191,13 @@ func TestCart(t *testing.T) {
 				Step(make([]float64, ncoords), step...)...)
 		}
 		disps := mat.NewDense(len(stepdat)/ncoords, ncoords, stepdat)
-		// DEBUG
-		w, _ := os.Create("/tmp/anpass.mid")
-		defer w.Close()
-		fmt.Fprintln(w, "displacements")
-		rows, c := disps.Dims()
-		for i := 0; i < rows; i++ {
-			fmt.Fprintf(w, "%12.8f",
-				disps.RawMatrix().Data[c*i:c*i+c])
-			fmt.Fprintf(w, "%20.12f\n", energies[i])
-		}
-		// end DEBUG
 		out, _ := os.Create("/tmp/anpass.out")
 		defer out.Close()
 		anpass.Debug = false
-		longLine, _, _ := anpass.Run(
-			out, os.TempDir(), disps, energies, exps,
-		)
-		disps, energies = anpass.Bias(disps, energies, longLine)
-		_, fcs, _ := anpass.Run(
-			out, os.TempDir(), disps, energies, exps,
-		)
+		anpass.MAXIT = 250
+		coeffs, _ := anpass.Fit(disps, energies, exps)
+		fcs := anpass.MakeFCs(coeffs, exps)
 		Format9903(ncoords, fcs)
-		// TODO convert anpass force constants to spectro format
 		PrintFortFile(fc2, natoms, 6*natoms,
 			filepath.Join(prog.GetDir(), "fort.15"))
 		PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(),
@@ -341,6 +336,7 @@ func TestResub(t *testing.T) {
 			nosym:  false,
 		},
 	}
+	*overwrite = true
 	for _, test := range tests {
 		*nosym = test.nosym
 		Conf = ParseInfile(test.infile).ToConfig()
@@ -353,6 +349,7 @@ func TestResub(t *testing.T) {
 		names, coords := XYZGeom(cart)
 		natoms := len(names)
 		initArrays(natoms)
+		cenergies = *new([]CountFloat)
 		ncoords := len(coords)
 		mol := symm.ReadXYZ(strings.NewReader(cart))
 		basegen, _ := BuildCartPoints(

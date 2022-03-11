@@ -245,6 +245,9 @@ func TestFormat9903(t *testing.T) {
 		-3.658796612424,
 		3.397216632634,
 	}
+	for i := range want {
+		want[i] *= ANGBOHR * ANGBOHR / ATTO_JOULES
+	}
 	got := FloatsFromCountFloats(fc2)
 	if _, _, ok := compfloat(got, want, 1e-12); !ok {
 		t.Errorf("got %v, wanted %v\n", got, want)

@@ -619,34 +619,9 @@ func main() {
 			out, os.TempDir(), disps, energies, exps,
 		)
 		disps, energies = anp.Bias(disps, energies, longLine)
-		_, fcs, _ := anp.Run(
-			out, os.TempDir(), disps, energies, exps,
-		)
-		for _, fc := range fcs {
-			i, j, k, l :=
-				fc.Coord[0], fc.Coord[1],
-				fc.Coord[2], fc.Coord[3]
-			var (
-				targ *[]CountFloat
-				ids  []int
-			)
-			switch {
-			case i == 0 || j == 0:
-				continue
-			case k == 0:
-				targ = &fc2
-				ids = Index(ncoords, false, i, j)
-			case l == 0:
-				targ = &fc3
-				ids = Index(ncoords, false, i, j, k)
-			default:
-				targ = &fc4
-				ids = Index(ncoords, false, i, j, k, l)
-			}
-			for _, id := range ids {
-				(*targ)[id].Val = fc.Val
-			}
-		}
+		coeffs, _ := anp.Fit(disps, energies, exps)
+		fcs := anp.MakeFCs(coeffs, exps)
+		Format9903(ncoords, fcs)
 		PrintFortFile(fc2, natoms, 6*natoms, "fort.15")
 		if Conf.Deriv > 2 {
 			PrintFortFile(fc3, natoms, other3, "fort.30")

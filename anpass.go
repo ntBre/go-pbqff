@@ -252,14 +252,21 @@ func DoAnpass(anp *Anpass, dir string, energies []float64, intder *Intder) (
 	return str.String(), lin
 }
 
+const (
+	ATTO_JOULES = 4.359_744_722_2071 //  attoJ per hartree
+)
+
+// Format9903 sets fc2, fc3, and fc4 to the proper values, converting the Ht/Å
+// force constants from anpass to mdyne·Å (attojoules) as expected by spectro
 func Format9903(ncoords int, fcs []anpass.FC) {
 	for _, fc := range fcs {
 		i, j, k, l :=
 			fc.Coord[0], fc.Coord[1],
 			fc.Coord[2], fc.Coord[3]
 		var (
-			targ *[]CountFloat
-			ids  []int
+			targ  *[]CountFloat
+			ids   []int
+			scale float64 = 1
 		)
 		switch {
 		case i == 0 || j == 0:
@@ -267,15 +274,23 @@ func Format9903(ncoords int, fcs []anpass.FC) {
 		case k == 0:
 			targ = &fc2
 			ids = Index(ncoords, false, i, j)
+			// this factor of 4.36 gets me very close in the
+			// harmonics, but not sure where it comes from
+			scale = ANGBOHR * ANGBOHR / ATTO_JOULES
+			// 	(4 * Conf.Deltas[i-1] * Conf.Deltas[j-1])
 		case l == 0:
 			targ = &fc3
 			ids = Index(ncoords, false, i, j, k)
+			scale = ANGBOHR * ANGBOHR *
+				ANGBOHR / ATTO_JOULES
 		default:
 			targ = &fc4
 			ids = Index(ncoords, false, i, j, k, l)
+			scale = ANGBOHR * ANGBOHR *
+				ANGBOHR * ANGBOHR / ATTO_JOULES
 		}
 		for _, id := range ids {
-			(*targ)[id].Val = fc.Val
+			(*targ)[id].Val = fc.Val * scale
 		}
 	}
 }
