@@ -219,13 +219,13 @@ func DoAnpass(anp *Anpass, dir string, energies []float64, intder *Intder) (
 	string, bool) {
 	lin := anp.WriteAnpass(filepath.Join(dir, "anpass1.in"),
 		energies, intder)
-	anpass.ReadInput(filepath.Join(dir, "anpass1.in"))
 	out, err := os.Create(filepath.Join(dir, "anpass1.out"))
 	defer out.Close()
 	if err != nil {
 		panic(err)
 	}
-	disps, energies, exps, biases, _ := anpass.ReadInput(
+	// use the energies passed in instead of rereading them from the input
+	disps, _, exps, biases, _ := anpass.ReadInput(
 		filepath.Join(dir, "anpass1.in"),
 	)
 	anpass.PrintBias(out, biases)
