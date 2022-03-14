@@ -232,6 +232,10 @@ func ModCheck(row []int, modchecks [][]int) bool {
 	return true
 }
 
+// EqCheck computes an equivalence check of one or more subsets of digits. Not
+// sure what this means either, but it does something in taylor.py. Like
+// ModCheck, this takes a dict of {1: eqchecks} in the Python version, so I've
+// ommitted the variable for the 1 since that's all we use.
 func EqCheck(row []int, eqchecks [][]int) bool {
 	var start int
 	for _, check := range eqchecks {
@@ -249,12 +253,29 @@ func EqCheck(row []int, eqchecks [][]int) bool {
 
 // Taylor computes the Taylor series expansion of order m-1 with n
 // variables. See Thackston18 for details
-func newTaylor(m, n int) (forces [][]int) {
+func newTaylor(m, n int, modchecks, eqchecks [][]int) (forces [][]int) {
 	lastIndex := Ipow(m, n)
+	var mc, ec bool
 	for i := 0; i < lastIndex; {
 		row := Row(i, n, m)
 		s := Sum(row)
 		if s < m {
+			if modchecks != nil {
+				mc = ModCheck(row, modchecks)
+			} else {
+				mc = true
+			}
+			if eqchecks != nil {
+				ec = EqCheck(row, eqchecks)
+			} else {
+				ec = true
+			}
+			if (modchecks == nil && !ec) ||
+				(eqchecks == nil && !mc) ||
+				(!ec && !mc) {
+				i++
+				continue
+			}
 			forces = append(forces, row)
 			i++
 		} else {
