@@ -154,7 +154,7 @@ func TestCart(t *testing.T) {
 		},
 	}
 	*overwrite = true
-	for _, test := range tests[0:] {
+	for _, test := range tests[0:1] {
 		*nosym = test.nosym
 		Conf = ParseInfile(test.infile).ToConfig()
 		Global.Submitted = 0
@@ -183,7 +183,7 @@ func TestCart(t *testing.T) {
 			}
 		}
 		exps := mat.NewDense(len(forces[0]), len(forces), nforces)
-		steps := DispToStep(Disps(forces))
+		steps := DispToStep(Disps(forces,false))
 		stepdat := make([]float64, 0)
 		for _, step := range steps {
 			stepdat = append(stepdat,

@@ -2,8 +2,11 @@
 package main
 
 import (
+	"bufio"
 	_ "embed"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 )
 
@@ -133,9 +136,29 @@ func NextRow(row []int, n, m int) int {
 	return index
 }
 
+func MakeDisps(w io.Writer, disps [][]int) {
+	for _, row := range disps {
+		lrow := len(row) - 1
+		for i, d := range row {
+			fmt.Fprintf(w, "%d", d)
+			if i < lrow {
+				fmt.Fprint(w, ",")
+			}
+		}
+		fmt.Fprint(w, "\n")
+	}
+}
+
+func WriteDisps(filename string, disps [][]int) {
+	f, _ := os.Create(filename)
+	defer f.Close()
+	bf := bufio.NewWriter(f)
+	defer bf.Flush()
+	MakeDisps(bf, disps)
+}
+
 // Disps generates the displacments corresponding to fcs
-func Disps(fcs [][]int) (disps [][]int) {
-	var idx int = 1
+func Disps(fcs [][]int, dups bool) (disps [][]int) {
 	for _, row := range fcs {
 		indices := make([]int, 0)
 		values := make([]int, 0)
@@ -164,9 +187,12 @@ func Disps(fcs [][]int) (disps [][]int) {
 			for i, index := range indices {
 				r[index] = nrow[i]
 			}
+			// fmt.Printf("# Displacement list: %d\n", r)
 			disps = append(disps, r)
-			idx++
 		}
+	}
+	if dups {
+		return disps
 	}
 	return Deduplicate(disps)
 }
@@ -180,7 +206,11 @@ func CartProd(pools [][]int) [][]int {
 		tmp := make([][]int, 0)
 		for _, x := range result {
 			for _, y := range pool {
-				tmp = append(tmp, append(x, y))
+				l := len(x)+1
+				a := make([]int, l)
+				copy(a, x)
+				a[l-1] = y
+				tmp = append(tmp, a)
 			}
 		}
 		result = tmp

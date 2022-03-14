@@ -536,7 +536,6 @@ func main() {
 	other3, other4 := initArrays(natoms)
 
 	var forces [][]int
-	fmt.Println(forces)
 	if SIC {
 		intder.WritePts("pts/intder.in")
 		RunIntder("pts/intder")
@@ -606,7 +605,7 @@ func main() {
 			}
 		}
 		exps := mat.NewDense(len(forces[0]), len(forces), nforces)
-		steps := DispToStep(Disps(forces))
+		steps := DispToStep(Disps(forces, false))
 		stepdat := make([]float64, 0)
 		for _, step := range steps {
 			stepdat = append(stepdat,

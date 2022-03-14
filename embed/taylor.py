@@ -162,7 +162,6 @@ def eqCheck(e, eqchecks):
         print("# Equivalence checking is enabled.")
     for k in eqchecks.keys():
         for r in eqchecks[k]:
-            print(f"e: {e}, r: {r}, k: {k}")
             start = r[0]
             end = r[1]
             sub = e[start - 1 : end]
@@ -242,13 +241,16 @@ def displacements(e):
         prods.append(tmp)
     if args.verbose and not args.silent:
         print("prods: ", prods)
+    print(prods)
     newrows = map(list, itertools.product(*prods))
+    print(f"newrows: {list(newrows)}")
     if args.verbose and not args.silent:
         print("# Displacement combinations: " + str(list(newrows)))
-    # Build each new displacement row by copying the force constant row then overwriting
-    #   the non-zero values with the calculated values
+    # Build each new displacement row by copying the force constant row then
+    #   overwriting the non-zero values with the calculated values
     result = []
     for row in newrows:
+        print(f"row: {row}")
         # make a copy of 'e'
         r = list(e)
         for i, index in enumerate(indexes):
@@ -256,7 +258,7 @@ def displacements(e):
         result.append(r)
     if args.verbose and not args.silent:
         print("# Calculated a total of " + str(len(result)) + " displacements")
-        print("# Displacement list: " + str(result))
+        print(f"# Displacement list: {result}")
     return result
 
 

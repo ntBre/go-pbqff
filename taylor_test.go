@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"reflect"
 	"strconv"
@@ -20,7 +21,8 @@ import (
 // 	Taylor([]string{"H", "O", "H"}, intder)
 // }
 
-func loadForces(filename string) (ret [][]int) {
+// load a 2-dimensional int list with the columns separated by commas
+func loadInt2D(filename string) (ret [][]int) {
 	f, _ := os.Open(filename)
 	scanner := bufio.NewScanner(f)
 	var fields []string
@@ -61,7 +63,8 @@ func TestNewTaylor(t *testing.T) {
 			},
 		},
 		{
-			m: 5, n: 3, mods: [][]int{
+			m: 5, n: 3,
+			mods: [][]int{
 				{3, 3},
 				{0, 0},
 				{0, 0},
@@ -94,7 +97,7 @@ func TestNewTaylor(t *testing.T) {
 				{8, 8},
 				{9, 9},
 			},
-			want: loadForces("testfiles/load/force.txt"),
+			want: loadInt2D("testfiles/load/force.txt"),
 		},
 	}
 	for _, test := range tests {
@@ -122,140 +125,72 @@ func TestNextRow(t *testing.T) {
 }
 
 func TestDisps(t *testing.T) {
-	got := Disps(newTaylor(5, 3, nil, nil))
-	want := [][]int{
-		{0, 0, 0},
-		{0, 0, -1},
-		{0, 0, 1},
-		{0, 0, -2},
-		{0, 0, 2},
-		{0, 0, -3},
-		{0, 0, 3},
-		{0, 0, -4},
-		{0, 0, 4},
-		{0, -1, 0},
-		{0, 1, 0},
-		{0, -1, -1},
-		{0, -1, 1},
-		{0, 1, -1},
-		{0, 1, 1},
-		{0, -1, -2},
-		{0, -1, 2},
-		{0, 1, -2},
-		{0, 1, 2},
-		{0, -1, -3},
-		{0, -1, 3},
-		{0, 1, -3},
-		{0, 1, 3},
-		{0, -2, 0},
-		{0, 2, 0},
-		{0, -2, -1},
-		{0, -2, 1},
-		{0, 2, -1},
-		{0, 2, 1},
-		{0, -2, -2},
-		{0, -2, 2},
-		{0, 2, -2},
-		{0, 2, 2},
-		{0, -3, 0},
-		{0, 3, 0},
-		{0, -3, -1},
-		{0, -3, 1},
-		{0, 3, -1},
-		{0, 3, 1},
-		{0, -4, 0},
-		{0, 4, 0},
-		{-1, 0, 0},
-		{1, 0, 0},
-		{-1, 0, -1},
-		{-1, 0, 1},
-		{1, 0, -1},
-		{1, 0, 1},
-		{-1, 0, -2},
-		{-1, 0, 2},
-		{1, 0, -2},
-		{1, 0, 2},
-		{-1, 0, -3},
-		{-1, 0, 3},
-		{1, 0, -3},
-		{1, 0, 3},
-		{-1, -1, 0},
-		{-1, 1, 0},
-		{1, -1, 0},
-		{1, 1, 0},
-		{-1, -1, -1},
-		{-1, -1, 1},
-		{-1, 1, -1},
-		{-1, 1, 1},
-		{1, -1, -1},
-		{1, -1, 1},
-		{1, 1, -1},
-		{1, 1, 1},
-		{-1, -1, -2},
-		{-1, -1, 2},
-		{-1, 1, -2},
-		{-1, 1, 2},
-		{1, -1, -2},
-		{1, -1, 2},
-		{1, 1, -2},
-		{1, 1, 2},
-		{-1, -2, 0},
-		{-1, 2, 0},
-		{1, -2, 0},
-		{1, 2, 0},
-		{-1, -2, -1},
-		{-1, -2, 1},
-		{-1, 2, -1},
-		{-1, 2, 1},
-		{1, -2, -1},
-		{1, -2, 1},
-		{1, 2, -1},
-		{1, 2, 1},
-		{-1, -3, 0},
-		{-1, 3, 0},
-		{1, -3, 0},
-		{1, 3, 0},
-		{-2, 0, 0},
-		{2, 0, 0},
-		{-2, 0, -1},
-		{-2, 0, 1},
-		{2, 0, -1},
-		{2, 0, 1},
-		{-2, 0, -2},
-		{-2, 0, 2},
-		{2, 0, -2},
-		{2, 0, 2},
-		{-2, -1, 0},
-		{-2, 1, 0},
-		{2, -1, 0},
-		{2, 1, 0},
-		{-2, -1, -1},
-		{-2, -1, 1},
-		{-2, 1, -1},
-		{-2, 1, 1},
-		{2, -1, -1},
-		{2, -1, 1},
-		{2, 1, -1},
-		{2, 1, 1},
-		{-2, -2, 0},
-		{-2, 2, 0},
-		{2, -2, 0},
-		{2, 2, 0},
-		{-3, 0, 0},
-		{3, 0, 0},
-		{-3, 0, -1},
-		{-3, 0, 1},
-		{3, 0, -1},
-		{3, 0, 1},
-		{-3, -1, 0},
-		{-3, 1, 0},
-		{3, -1, 0},
-		{3, 1, 0},
-		{-4, 0, 0},
-		{4, 0, 0},
+	tests := []struct {
+		mods [][]int
+		eqs  [][]int
+		want [][]int
+		m    int
+		n    int
+		dups bool
+	}{
+		{
+			m: 5, n: 3,
+			mods: nil, eqs: nil,
+			want: loadInt2D("testfiles/load/dispu.h2o.txt"),
+		},
+		{
+			m: 5, n: 3,
+			mods: [][]int{
+				{3, 3},
+				{0, 0},
+				{0, 0},
+			},
+			eqs: [][]int{
+				{3, 3},
+				{0, 0},
+				{0, 0},
+			},
+			want: loadInt2D("testfiles/load/dispu.h2o.mod.txt"),
+		},
+		{
+			m: 5, n: 9,
+			want: loadInt2D("testfiles/load/dispu.c3h2.txt"),
+		},
+		{
+			m: 5, n: 9,
+			want: loadInt2D("testfiles/load/disp.c3h2.txt"),
+			dups: true,
+		},
+		{
+			m: 5, n: 9,
+			mods: [][]int{
+				{5, 7},
+				{8, 8},
+				{9, 9},
+			},
+			eqs: [][]int{
+				{5, 7},
+				{8, 8},
+				{9, 9},
+			},
+			want: loadInt2D("testfiles/load/dispu.c3h2.mod.txt"),
+		},
 	}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %v, wanted %v\n", got, want)
+	for _, test := range tests {
+		got := Disps(
+			newTaylor(test.m, test.n, test.mods, test.eqs),
+			test.dups,
+		)
+		if !reflect.DeepEqual(got, test.want) {
+			gf, _ := os.CreateTemp("", "got.*")
+			wf, _ := os.CreateTemp("", "want.*")
+			MakeDisps(gf, got)
+			MakeDisps(wf, test.want)
+			t.Errorf("got %v, wanted %v\n(diff %q %q)\n",
+				len(got), len(test.want),
+				gf.Name(), wf.Name(),
+			)
+		}
 	}
 }
 
@@ -301,11 +236,50 @@ func TestCartProd(t *testing.T) {
 				{1, 1, 1},
 			},
 		},
+		{
+			msg: "problem arising in disps",
+			inp: [][]int{
+				{-1, 1},
+				{-1, 1},
+				{-1, 1},
+				{-1, 1},
+			},
+			want: [][]int{
+				{-1, -1, -1, -1},
+				{-1, -1, -1, 1},
+				{-1, -1, 1, -1},
+				{-1, -1, 1, 1},
+				{-1, 1, -1, -1},
+				{-1, 1, -1, 1},
+				{-1, 1, 1, -1},
+				{-1, 1, 1, 1},
+				{1, -1, -1, -1},
+				{1, -1, -1, 1},
+				{1, -1, 1, -1},
+				{1, -1, 1, 1},
+				{1, 1, -1, -1},
+				{1, 1, -1, 1},
+				{1, 1, 1, -1},
+				{1, 1, 1, 1},
+			},
+		},
 	}
 	for _, test := range tests {
 		got := CartProd(test.inp)
 		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("got %v, wanted %v\n", got, test.want)
+			fmt.Printf("got len = %d, wanted %d\n",
+				len(got), len(test.want),
+			)
+			t.Errorf("(%s): got %v, wanted %v\n",
+				test.msg, got, test.want,
+			)
+			for i, g := range got {
+				if !reflect.DeepEqual(g, test.want[i]) {
+					fmt.Printf("%d %d %d\n",
+						i, g, test.want[i],
+					)
+				}
+			}
 		}
 	}
 }

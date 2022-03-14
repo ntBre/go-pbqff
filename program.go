@@ -178,7 +178,7 @@ func BuildCartPoints(prog Program, q Queue, dir string, names []string,
 	dir = filepath.Join(prog.GetDir(), dir)
 	ncoords := len(coords)
 	forces = newTaylor(Conf.Deriv+1, ncoords, nil, nil)
-	disps := Disps(forces)
+	disps := Disps(forces, false)
 	disps = DispToStep(disps)
 	calcs := make([]Calc, len(disps))
 	for geom, disp := range disps {
