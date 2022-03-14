@@ -515,9 +515,6 @@ func main() {
 		}
 		cart = prog.GetGeom()
 		// only required for cartesians
-		if CART {
-			E0 = prog.Run(none, Conf.Queue)
-		}
 	}
 	mol := symm.ReadXYZ(strings.NewReader(cart))
 	fmt.Printf("Point group %s\n", mol.Group)

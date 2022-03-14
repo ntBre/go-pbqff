@@ -113,10 +113,10 @@ func TestCart(t *testing.T) {
 				3943.55, 3833.553, 1651.393,
 			},
 			rots: []float64{
-				14.5044828, 9.2631684, 27.6551075,
+				14.5044924, 9.2631640, 27.6550391,
 			},
 			want: []float64{
-				3752.9833, 3656.4114, 1598.3569,
+				3752.9223, 3656.333, 1599.016,
 			},
 			nosym: false,
 		},
@@ -131,8 +131,8 @@ func TestCart(t *testing.T) {
 				1.2914872, 1.1310027, 9.3988073,
 			},
 			want: []float64{
-				2826.6827, 2778.5134, 1747.3462,
-				1500.3855, 1247.4367, 1167.086,
+				2826.6802, 2778.4171, 1747.6452,
+				1499.7355, 1247.435, 1167.0952,
 			},
 			nosym: false,
 		},
@@ -147,14 +147,14 @@ func TestCart(t *testing.T) {
 				9.8902307, 6.2261434, 9.889629,
 			},
 			want: []float64{
-				3435.6536, 3435.7423, 3341.752,
-				1628.4562, 1628.2703, 980.3231,
+				3435.7065, 3435.6384, 3342.0345,
+				1628.6497, 1628.6723, 980.7472,
 			},
 			nosym: false,
 		},
 	}
 	*overwrite = true
-	for _, test := range tests[0:1] {
+	for _, test := range tests[0:] {
 		*nosym = test.nosym
 		Conf = ParseInfile(test.infile).ToConfig()
 		Global.Submitted = 0
@@ -183,7 +183,7 @@ func TestCart(t *testing.T) {
 			}
 		}
 		exps := mat.NewDense(len(forces[0]), len(forces), nforces)
-		steps := DispToStep(Disps(forces,false))
+		steps := DispToStep(Disps(forces, false))
 		stepdat := make([]float64, 0)
 		for _, step := range steps {
 			stepdat = append(stepdat,
