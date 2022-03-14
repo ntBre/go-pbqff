@@ -162,10 +162,11 @@ def eqCheck(e, eqchecks):
         print("# Equivalence checking is enabled.")
     for k in eqchecks.keys():
         for r in eqchecks[k]:
+            print(f"e: {e}, r: {r}, k: {k}")
             start = r[0]
             end = r[1]
-            sub = e[start - 1: end]
-            failedEq = sum(e[start - 1: end]) != k
+            sub = e[start - 1 : end]
+            failedEq = sum(e[start - 1 : end]) != k
             if failedEq:
                 if args.verbose and not args.silent:
                     print(
@@ -199,8 +200,8 @@ def modCheck(e, modchecks):
         for r in modchecks[k]:
             start = r[0]
             end = r[1]
-            sub = e[start - 1: end]
-            failedMod = sum(e[start - 1: end]) % k != 0
+            sub = e[start - 1 : end]
+            failedMod = sum(e[start - 1 : end]) % k != 0
             if failedMod:
                 if args.verbose and not args.silent:
                     print(
@@ -209,9 +210,7 @@ def modCheck(e, modchecks):
                 return False
             else:
                 if args.verbose and not args.silent:
-                    print(
-                        "# Mod checking %" + str(k) + " for " + str(sub) + ". Passed."
-                    )
+                    print(f"# Mod checking %{k} for {sub}. Passed.")
     return True
 
 
@@ -242,7 +241,7 @@ def displacements(e):
             tmp.append(j)
         prods.append(tmp)
     if args.verbose and not args.silent:
-            print("prods: ", prods)
+        print("prods: ", prods)
     newrows = map(list, itertools.product(*prods))
     if args.verbose and not args.silent:
         print("# Displacement combinations: " + str(list(newrows)))
@@ -334,7 +333,8 @@ def main(startIndex, endIndex):
                 writerForce.writerow(e)
             i += 1
         else:
-            # Check if numbers in array total to (args.digits - 1) or greater and skip to next block
+            # Check if numbers in array total to (args.digits - 1) or greater
+            # and skip to next block
             if sum(e) >= (args.digits - 1):
                 done = False
                 # copy the row

@@ -241,3 +241,78 @@ func TestCartProd(t *testing.T) {
 		}
 	}
 }
+
+func TestModCheck(t *testing.T) {
+	tests := []struct {
+		row       []int
+		modchecks [][]int
+		want      bool
+	}{
+		{
+			row: []int{0, 0, 0},
+			modchecks: [][]int{
+				{3, 3},
+				{0, 0},
+				{0, 0},
+			},
+			want: true,
+		},
+		{
+			row: []int{0, 0, 1},
+			modchecks: [][]int{
+				{3, 3},
+				{0, 0},
+				{0, 0},
+			},
+			want: false,
+		},
+		{
+			row: []int{0, 0, 2},
+			modchecks: [][]int{
+				{3, 3},
+				{0, 0},
+				{0, 0},
+			},
+			want: true,
+		},
+	}
+	for _, test := range tests {
+		got := ModCheck(test.row, test.modchecks)
+		if got != test.want {
+			t.Errorf("got %v, wanted %v\n", got, test.want)
+		}
+	}
+}
+
+func TestEqCheck(t *testing.T) {
+	tests := []struct {
+		row      []int
+		eqchecks [][]int
+		want     bool
+	}{
+		{
+			row: []int{0, 0, 0},
+			eqchecks: [][]int{
+				{3, 3},
+				{0, 0},
+				{0, 0},
+			},
+			want: false,
+		},
+		{
+			row: []int{0, 0, 1},
+			eqchecks: [][]int{
+				{3, 3},
+				{0, 0},
+				{0, 0},
+			},
+			want: false,
+		},
+	}
+	for _, test := range tests {
+		got := EqCheck(test.row, test.eqchecks)
+		if got != test.want {
+			t.Errorf("got %v, wanted %v\n", got, test.want)
+		}
+	}
+}

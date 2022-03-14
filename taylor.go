@@ -212,6 +212,41 @@ func Deduplicate(rows [][]int) (ret [][]int) {
 	return
 }
 
+// ModCheck computes a mod check of one or more subsets of digits. I'm honestly
+// not too sure what it means, but it does something in taylor.py. Also,
+// taylor.py takes modchecks as a dict of {2: [][]int}, so I've omitted the
+// variable k=2 and hard-coded it since that's all we usually use.
+func ModCheck(row []int, modchecks [][]int) bool {
+	var start int
+	for _, check := range modchecks {
+		start = check[0] - 1
+		// if check[0] == 0 in Python, subtracting 1 gives the end of
+		// the list and slicing from the end of the list gives an empty
+		// list, which is acceptable for the mod check
+		if start >= 0 && Sum(
+			row[start:check[1]],
+		)%2 != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func EqCheck(row []int, eqchecks [][]int) bool {
+	var start int
+	for _, check := range eqchecks {
+		start = check[0] - 1
+		// this time, it's not acceptable to have an empty list since
+		// that doesn't have a sum of 1
+		if start < 0 || Sum(
+			row[start:check[1]],
+		) != 1 {
+			return false
+		}
+	}
+	return true
+}
+
 // Taylor computes the Taylor series expansion of order m-1 with n
 // variables. See Thackston18 for details
 func newTaylor(m, n int) (forces [][]int) {
