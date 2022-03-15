@@ -595,13 +595,6 @@ func main() {
 		for i := range energies {
 			energies[i] -= min
 		}
-		nforces := make([]float64, 0)
-		for i := 0; i < len(forces[0]); i++ {
-			for j := 0; j < len(forces); j++ {
-				nforces = append(nforces, float64(forces[j][i]))
-			}
-		}
-		exps := mat.NewDense(len(forces[0]), len(forces), nforces)
 		steps := DispToStep(Disps(forces, false))
 		stepdat := make([]float64, 0)
 		for _, step := range steps {
@@ -609,8 +602,8 @@ func main() {
 				Step(make([]float64, ncoords), step...)...)
 		}
 		disps := mat.NewDense(len(stepdat)/ncoords, ncoords, stepdat)
-		coeffs, _ := anp.Fit(disps, energies, exps)
-		fcs := anp.MakeFCs(coeffs, exps)
+		coeffs, _ := anp.Fit(disps, energies, forces)
+		fcs := anp.MakeFCs(coeffs, forces)
 		Format9903(ncoords, fcs)
 		PrintFortFile(fc2, natoms, 6*natoms, "fort.15")
 		if Conf.Deriv > 2 {
