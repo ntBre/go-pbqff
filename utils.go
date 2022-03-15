@@ -342,3 +342,15 @@ func PrintFortFile(fc []CountFloat, natoms, other int, filename string) int {
 	fmt.Fprint(f, "\n")
 	return len(fc)
 }
+
+// Transpose an int matrix
+func Transpose(inp [][]int) [][]int {
+	ret := make([][]int, len(inp[0]))
+	for i := 0; i < len(inp[0]); i++ {
+		ret[i] = make([]int, len(inp))
+		for j := 0; j < len(inp); j++ {
+			ret[i][j] = inp[j][i]
+		}
+	}
+	return ret
+}
