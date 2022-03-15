@@ -327,26 +327,15 @@ func TestResub(t *testing.T) {
 				other3, other4 := initArrays(natoms)
 				ncoords := len(coords)
 				mol := symm.ReadXYZ(strings.NewReader(cart))
-				gen, _ := BuildCartPoints(
+				gen, forces := BuildCartPoints(
 					prog, queue, "pts/inp",
 					names, coords, mol,
 				)
-				Drain(prog, queue, ncoords, E0, gen)
-				PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(prog.GetDir(), "fort.15"))
-				PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(), "fort.30"))
-				PrintFortFile(fc4, natoms, other4, filepath.Join(prog.GetDir(), "fort.40"))
-				specin := filepath.Join(prog.GetDir(), "spectro.in")
-				spec, err := spectro.Load(specin)
-				if err != nil {
-					errExit(err, "loading spectro input")
-				}
-				spec.FormatGeom(names, coords, true)
-				spec.WriteInput(specin)
-				err = spec.DoSpectro(prog.GetDir())
-				if err != nil {
-					errExit(err, "running spectro")
-				}
-				res := summarize.SpectroFile(filepath.Join(prog.GetDir(), "spectro2.out"))
+				min, _ := Drain(prog, queue, ncoords, E0, gen)
+				res := CartQFF(
+					prog.GetDir(), min, forces, names, coords,
+					other3, other4,
+				)
 				if i, v, ok := compfloat(res.Harm, test.harm, 1e-1); !ok {
 					t.Errorf("%s harm: got\n%v, wanted\n%v\n"+
 						"%dth element differs by %f\n",
