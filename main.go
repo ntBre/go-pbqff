@@ -28,7 +28,7 @@ import (
 
 	"runtime"
 
-	anp "github.com/ntBre/anpass"
+	"github.com/ntBre/anpass"
 	"github.com/ntBre/chemutils/spectro"
 	"github.com/ntBre/chemutils/summarize"
 	symm "github.com/ntBre/chemutils/symmetry"
@@ -460,6 +460,50 @@ func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
 	return prog, intder, anpass
 }
 
+func CartQFF(dir string, min float64, forces [][]int,
+	names []string, coords []float64, other3, other4 int) *summarize.Result {
+	energies := FloatsFromCountFloats(cenergies)
+	for i := range energies {
+		energies[i] -= min
+	}
+	ncoords := len(coords)
+	natoms := len(names)
+	steps := DispToStep(Disps(forces, false))
+	stepdat := make([]float64, 0)
+	for _, step := range steps {
+		stepdat = append(stepdat,
+			Step(make([]float64, ncoords), step...)...)
+	}
+	exps := Transpose(forces)
+	disps := mat.NewDense(len(stepdat)/ncoords, ncoords, stepdat)
+	coeffs, _ := anpass.Fit(disps, energies, exps)
+	fcs := anpass.MakeFCs(coeffs, exps)
+	Format9903(ncoords, fcs)
+	PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(dir, "fort.15"))
+	PrintFortFile(fc3, natoms, other3, filepath.Join(dir, "fort.30"))
+	PrintFortFile(fc4, natoms, other4, filepath.Join(dir, "fort.40"))
+	var buf bytes.Buffer
+	for i := range coords {
+		if i%3 == 0 && i > 0 {
+			fmt.Fprint(&buf, "\n")
+		}
+		fmt.Fprintf(&buf, " %.10f", coords[i]/ANGBOHR)
+	}
+	specin := filepath.Join(dir, "spectro.in")
+	spec, err := spectro.Load(specin)
+	if err != nil {
+		errExit(err, "loading spectro input")
+	}
+	spec.FormatGeom(names, buf.String())
+	spec.WriteInput(specin)
+	err = spec.DoSpectro(dir)
+	if err != nil {
+		errExit(err, "running spectro")
+	}
+	return summarize.SpectroFile(
+		filepath.Join(dir, "spectro2.out"))
+}
+
 func main() {
 	Global.StartCPU = GetCPU()
 	defer CatchPanic()
@@ -591,52 +635,13 @@ func main() {
 		Summarize(os.Stdout, res.ZPT, mpHarm, intderHarms, res.Harm,
 			res.Fund, res.Corr)
 	} else if CART {
-		energies := FloatsFromCountFloats(cenergies)
-		for i := range energies {
-			energies[i] -= min
-		}
-		steps := DispToStep(Disps(forces, false))
-		stepdat := make([]float64, 0)
-		for _, step := range steps {
-			stepdat = append(stepdat,
-				Step(make([]float64, ncoords), step...)...)
-		}
-		exps := Transpose(forces)
-		disps := mat.NewDense(len(stepdat)/ncoords, ncoords, stepdat)
-		coeffs, _ := anp.Fit(disps, energies, forces)
-		fcs := anp.MakeFCs(coeffs, forces)
-		Format9903(ncoords, fcs)
-		PrintFortFile(fc2, natoms, 6*natoms, "fort.15")
-		if Conf.Deriv > 2 {
-			PrintFortFile(fc3, natoms, other3, "fort.30")
-		}
-		if Conf.Deriv > 3 {
-			PrintFortFile(fc4, natoms, other4, "fort.40")
-			var buf bytes.Buffer
-			for i := range coords {
-				if i%3 == 0 && i > 0 {
-					fmt.Fprint(&buf, "\n")
-				}
-				fmt.Fprintf(&buf, " %.10f", coords[i]/ANGBOHR)
-			}
-			spec, err := spectro.Load("spectro.in")
-			if err != nil {
-				errExit(err, "loading spectro input")
-			}
-			spec.FormatGeom(names, buf.String())
-			spec.WriteInput("spectro.in")
-			err = spec.DoSpectro(".")
-			if err != nil {
-				errExit(err, "running spectro")
-			}
-			res := summarize.SpectroFile("spectro2.out")
-			// fill molpro and intder freqs slots with empty slices
-			nfreqs := len(res.Harm)
-			err = Summarize(os.Stdout, res.ZPT, make([]float64, nfreqs),
-				make([]float64, nfreqs), res.Harm, res.Fund, res.Corr)
-			if err != nil {
-				fmt.Println(err)
-			}
+		res := CartQFF(".", min, forces, names, coords, other3, other4)
+		// fill molpro and intder freqs slots with empty slices
+		nfreqs := len(res.Harm)
+		err := Summarize(os.Stdout, res.ZPT, make([]float64, nfreqs),
+			make([]float64, nfreqs), res.Harm, res.Fund, res.Corr)
+		if err != nil {
+			fmt.Println(err)
 		}
 	} else {
 		PrintFortFile(fc2, natoms, 6*natoms, "fort.15")

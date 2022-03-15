@@ -8,11 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ntBre/anpass"
 	"github.com/ntBre/chemutils/spectro"
 	"github.com/ntBre/chemutils/summarize"
 	symm "github.com/ntBre/chemutils/symmetry"
-	"gonum.org/v1/gonum/mat"
 )
 
 func TestSIC(t *testing.T) {
@@ -172,46 +170,10 @@ func TestCart(t *testing.T) {
 			prog, queue, "pts/inp", names, coords, mol,
 		)
 		min, _ := Drain(prog, queue, ncoords, 0, gen)
-		energies := FloatsFromCountFloats(cenergies)
-		for i := range energies {
-			energies[i] -= min
-		}
-		nforces := Transpose(forces)
-		steps := DispToStep(Disps(forces, false))
-		stepdat := make([]float64, 0)
-		for _, step := range steps {
-			stepdat = append(stepdat,
-				Step(make([]float64, ncoords), step...)...)
-		}
-		disps := mat.NewDense(len(stepdat)/ncoords, ncoords, stepdat)
-		coeffs, _ := anpass.Fit(disps, energies, nforces)
-		fcs := anpass.MakeFCs(coeffs, nforces)
-		Format9903(ncoords, fcs)
-		PrintFortFile(fc2, natoms, 6*natoms,
-			filepath.Join(prog.GetDir(), "fort.15"))
-		PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(),
-			"fort.30"))
-		PrintFortFile(fc4, natoms, other4, filepath.Join(prog.GetDir(),
-			"fort.40"))
-		var buf bytes.Buffer
-		for i := range coords {
-			if i%3 == 0 && i > 0 {
-				fmt.Fprint(&buf, "\n")
-			}
-			fmt.Fprintf(&buf, " %.10f", coords[i]/ANGBOHR)
-		}
-		specin := filepath.Join(prog.GetDir(), "spectro.in")
-		spec, err := spectro.Load(specin)
-		if err != nil {
-			errExit(err, "loading spectro input")
-		}
-		spec.FormatGeom(names, buf.String())
-		spec.WriteInput(specin)
-		err = spec.DoSpectro(prog.GetDir())
-		if err != nil {
-			errExit(err, "running spectro")
-		}
-		res := summarize.SpectroFile(filepath.Join(prog.GetDir(), "spectro2.out"))
+		res := CartQFF(
+			prog.GetDir(), min, forces, names, coords,
+			other3, other4,
+		)
 		if i, v, ok := compfloat(res.Harm, test.harm, 1e-1); !ok {
 			t.Errorf("%s harm: got\n%v, wanted\n%v\n"+
 				"%dth element differs by %f\n",
