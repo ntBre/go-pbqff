@@ -21,7 +21,6 @@ import (
 
 	"strconv"
 
-	"bytes"
 	"runtime/pprof"
 
 	rtdebug "runtime/debug"
@@ -348,7 +347,7 @@ func RunFreqs(intder *Intder, anp *Anpass) {
 	if err != nil {
 		errExit(err, "loading spectro input")
 	}
-	spec.FormatGeom(names, coords)
+	spec.FormatGeom(names, coords, false)
 	err = spec.WriteInput("spectro.in")
 	if err != nil {
 		panic(err)
@@ -482,19 +481,12 @@ func CartQFF(dir string, min float64, forces [][]int,
 	PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(dir, "fort.15"))
 	PrintFortFile(fc3, natoms, other3, filepath.Join(dir, "fort.30"))
 	PrintFortFile(fc4, natoms, other4, filepath.Join(dir, "fort.40"))
-	var buf bytes.Buffer
-	for i := range coords {
-		if i%3 == 0 && i > 0 {
-			fmt.Fprint(&buf, "\n")
-		}
-		fmt.Fprintf(&buf, " %.10f", coords[i]/ANGBOHR)
-	}
 	specin := filepath.Join(dir, "spectro.in")
 	spec, err := spectro.Load(specin)
 	if err != nil {
 		errExit(err, "loading spectro input")
 	}
-	spec.FormatGeom(names, buf.String())
+	spec.FormatGeom(names, coords, true)
 	spec.WriteInput(specin)
 	err = spec.DoSpectro(dir)
 	if err != nil {
@@ -621,7 +613,7 @@ func main() {
 		if err != nil {
 			errExit(err, "loading spectro input")
 		}
-		spec.FormatGeom(names, coords)
+		spec.FormatGeom(names, coords, false)
 		spec.WriteInput("freqs/spectro.in")
 		err = spec.DoSpectro("freqs/")
 		if err != nil {
@@ -650,18 +642,11 @@ func main() {
 		}
 		if Conf.Deriv > 3 {
 			PrintFortFile(fc4, natoms, other4, "fort.40")
-			var buf bytes.Buffer
-			for i := range coords {
-				if i%3 == 0 && i > 0 {
-					fmt.Fprint(&buf, "\n")
-				}
-				fmt.Fprintf(&buf, " %.10f", coords[i]/ANGBOHR)
-			}
 			spec, err := spectro.Load("spectro.in")
 			if err != nil {
 				errExit(err, "loading spectro input")
 			}
-			spec.FormatGeom(names, buf.String())
+			spec.FormatGeom(names, coords, false)
 			spec.WriteInput("spectro.in")
 			err = spec.DoSpectro(".")
 			if err != nil {

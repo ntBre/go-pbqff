@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -51,7 +50,7 @@ func TestSIC(t *testing.T) {
 	if err != nil {
 		errExit(err, "loading spectro input")
 	}
-	spec.FormatGeom(names, coords)
+	spec.FormatGeom(names, coords, false)
 	spec.WriteInput("tests/sic/freqs/spectro.in")
 	err = spec.DoSpectro("tests/sic/freqs/")
 	if err != nil {
@@ -227,19 +226,12 @@ func TestGrad(t *testing.T) {
 	PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(prog.GetDir(), "fort.15"))
 	PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(), "fort.30"))
 	PrintFortFile(fc4, natoms, other4, filepath.Join(prog.GetDir(), "fort.40"))
-	var buf bytes.Buffer
-	for i := range coords {
-		if i%3 == 0 && i > 0 {
-			fmt.Fprint(&buf, "\n")
-		}
-		fmt.Fprintf(&buf, " %.10f", coords[i]/ANGBOHR)
-	}
 	specin := filepath.Join(prog.GetDir(), "spectro.in")
 	spec, err := spectro.Load(specin)
 	if err != nil {
 		errExit(err, "loading spectro input")
 	}
-	spec.FormatGeom(names, buf.String())
+	spec.FormatGeom(names, coords, true)
 	spec.WriteInput(specin)
 	err = spec.DoSpectro(prog.GetDir())
 	if err != nil {
@@ -343,19 +335,12 @@ func TestResub(t *testing.T) {
 				PrintFortFile(fc2, natoms, 6*natoms, filepath.Join(prog.GetDir(), "fort.15"))
 				PrintFortFile(fc3, natoms, other3, filepath.Join(prog.GetDir(), "fort.30"))
 				PrintFortFile(fc4, natoms, other4, filepath.Join(prog.GetDir(), "fort.40"))
-				var buf bytes.Buffer
-				for i := range coords {
-					if i%3 == 0 && i > 0 {
-						fmt.Fprint(&buf, "\n")
-					}
-					fmt.Fprintf(&buf, " %.10f", coords[i]/ANGBOHR)
-				}
 				specin := filepath.Join(prog.GetDir(), "spectro.in")
 				spec, err := spectro.Load(specin)
 				if err != nil {
 					errExit(err, "loading spectro input")
 				}
-				spec.FormatGeom(names, buf.String())
+				spec.FormatGeom(names, coords, true)
 				spec.WriteInput(specin)
 				err = spec.DoSpectro(prog.GetDir())
 				if err != nil {

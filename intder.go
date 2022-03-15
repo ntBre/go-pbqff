@@ -492,7 +492,7 @@ func (i *Intder) WriteFreqs(filename string, names []string, lintri bool) {
 }
 
 // ReadGeom updates i.Geometry with the results of intder_geom
-func (i *Intder) ReadGeom(filename string) string {
+func (i *Intder) ReadGeom(filename string) []float64 {
 	const target = "NEW CARTESIAN GEOMETRY (BOHR)"
 	f, err := os.Open(filename)
 	defer f.Close()
@@ -520,7 +520,12 @@ func (i *Intder) ReadGeom(filename string) string {
 	geometry := buf.String()
 	i.Geometry = geometry
 	i.AddDummy(true)
-	return geometry
+	strcoords := strings.Fields(geometry)
+	coords := make([]float64, len(strcoords))
+	for i, s := range strcoords {
+		coords[i], _ = strconv.ParseFloat(s, 64)
+	}
+	return coords
 }
 
 // ReadOut reads a freqs/intder.out and returns the harmonic
@@ -652,10 +657,10 @@ func Tennis(dir string) {
 
 // DoIntder runs freqs intder
 func DoIntder(intder *Intder, atomNames []string, longLine,
-	dir string, lin bool) (string, []float64) {
+	dir string, lin bool) (coords []float64, harms []float64) {
 	intder.WriteGeom(filepath.Join(dir, "freqs/intder_geom.in"), longLine)
 	RunIntder(filepath.Join(dir, "freqs/intder_geom"))
-	coords := intder.ReadGeom(filepath.Join(dir, "freqs/intder_geom.out"))
+	coords = intder.ReadGeom(filepath.Join(dir, "freqs/intder_geom.out"))
 	// if triatomic and linear
 	intder.Read9903(filepath.Join(dir, "freqs/fort.9903"), len(atomNames) == 3 && lin)
 	intder.WriteFreqs(filepath.Join(dir, "freqs/intder.in"), atomNames, len(atomNames) == 3 && lin)
