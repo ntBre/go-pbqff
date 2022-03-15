@@ -603,8 +603,8 @@ func main() {
 		}
 		exps := Transpose(forces)
 		disps := mat.NewDense(len(stepdat)/ncoords, ncoords, stepdat)
-		coeffs, _ := anp.Fit(disps, energies, exps)
-		fcs := anp.MakeFCs(coeffs, exps)
+		coeffs, _ := anp.Fit(disps, energies, forces)
+		fcs := anp.MakeFCs(coeffs, forces)
 		Format9903(ncoords, fcs)
 		PrintFortFile(fc2, natoms, 6*natoms, "fort.15")
 		if Conf.Deriv > 2 {
