@@ -138,6 +138,9 @@ func TestMopacReadOut(t *testing.T) {
 }
 
 func TestMopacHandleOutput(t *testing.T) {
+	sic := SIC
+	defer func() { SIC = sic }()
+	SIC = false
 	tests := []struct {
 		infile string
 		want   string

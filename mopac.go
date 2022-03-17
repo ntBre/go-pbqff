@@ -24,7 +24,7 @@ func (m *Mopac) SetDir(dir string)   { m.Dir = dir }
 func (m *Mopac) GetGeom() string     { return m.Geom }
 func (m *Mopac) SetGeom(geom string) { m.Geom = geom }
 func (m *Mopac) AugmentHead() {
-	m.Head = "XYZ A0 1SCF " + m.Head
+	m.Head = "A0  " + m.Head
 }
 
 // Load a MOPAC input file from filename
@@ -179,7 +179,11 @@ func (m *Mopac) HandleOutput(filename string) (
 		coords   []float64
 		inatoms  bool
 		incoords bool
+		fac      float64 = 1
 	)
+	if SIC {
+		fac = ANGBOHR
+	}
 	for scanner.Scan() {
 		line = scanner.Text()
 		fields = strings.Fields(line)
@@ -197,7 +201,7 @@ func (m *Mopac) HandleOutput(filename string) (
 		case incoords:
 			for _, f := range fields {
 				v, _ := strconv.ParseFloat(f, 64)
-				coords = append(coords, v)
+				coords = append(coords, v/fac)
 			}
 		}
 	}
