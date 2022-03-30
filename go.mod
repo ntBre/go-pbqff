@@ -1,6 +1,6 @@
 module brent/pbqff
 
-go 1.17
+go 1.18
 
 require (
 	github.com/ntBre/anpass v0.0.0-20211013203935-8bd9043b79df
