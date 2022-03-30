@@ -8,6 +8,7 @@ require (
 )
 
 replace github.com/ntBre/anpass => /home/brent/Projects/anpass
-replace	github.com/ntBre/chemutils => /home/brent/Projects/chemutils
 
-require gonum.org/v1/gonum v0.9.3 // indirect
+replace github.com/ntBre/chemutils => /home/brent/Projects/chemutils
+
+require gonum.org/v1/gonum v0.9.3
