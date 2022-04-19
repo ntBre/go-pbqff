@@ -56,6 +56,8 @@ func (m *Mopac) WriteInput(filename string, proc Procedure) {
 		// also turn off XYZ since it needs to be a ZMAT for opt
 		head = strings.Replace(head, "XYZ", "", -1)
 	case freq:
+		// if AIGIN was needed for the optimization, delete it after
+		head = strings.Replace(head, "AIGIN", "", -1)
 		lines := strings.Split(
 			strings.TrimSpace(head),
 			"\n",
@@ -67,6 +69,7 @@ func (m *Mopac) WriteInput(filename string, proc Procedure) {
 		tmp := strings.Join(lines, "\n")
 		head = tmp + "\n"
 	default:
+		head = strings.Replace(head, "AIGIN", "", -1)
 		head = "1SCF XYZ " + head
 	}
 	f, err := os.Create(filename)
