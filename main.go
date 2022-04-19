@@ -489,12 +489,15 @@ func main() {
 		coords   []float64
 	)
 	if OPT {
-		if Conf.GeomType != "zmat" {
-			panic("optimization requires a zmat geometry")
-		}
-		err := prog.FormatZmat(Conf.Geometry)
-		if err != nil {
-			panic(err)
+		var err error
+		if Conf.GeomType == "zmat" {
+			err = prog.FormatZmat(Conf.Geometry)
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			Warn("you probably want to use a zmat for optimization")
+			prog.FormatCart(Conf.Geometry)
 		}
 		E0 = prog.Run(opt, Conf.Queue)
 		cart, zmat, err = prog.HandleOutput("opt/opt")
