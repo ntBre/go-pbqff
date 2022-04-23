@@ -166,3 +166,17 @@ H 0.8934572415 2.2429362063 0.0000000000
 		}
 	}
 }
+
+func TestMopacReadFreqs(t *testing.T) {
+	m := new(Mopac)
+	got := m.ReadFreqs("testfiles/mopac.freq.out")
+	want := []float64{
+		3225.14, 3206.55, 3156.25,
+		3153.76, 1641.27, 1438.93,
+		1393.34, 1228.47, 1024.32,
+		945.26, 908.58, 885.60,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, wanted %v\n", got, want)
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -283,7 +284,23 @@ func (m *Mopac) ReadOut(filename string) (
 	}
 	return
 }
-func (m *Mopac) ReadFreqs(string) []float64 {
-	Warn("ReadFreqs not implemented for MOPAC")
-	return nil
+
+func (m *Mopac) ReadFreqs(filename string) (ret []float64) {
+	f, err := os.Open(filename)
+	defer f.Close()
+	if err != nil {
+		return
+	}
+	scanner := bufio.NewScanner(f)
+	var line string
+	for scanner.Scan() {
+		line = scanner.Text()
+		if strings.Contains(line, "FREQUENCY") {
+			fields := strings.Fields(line)
+			v, _ := strconv.ParseFloat(fields[1], 64)
+			ret = append(ret, v)
+		}
+	}
+	sort.Sort(sort.Reverse(sort.Float64Slice(ret)))
+	return
 }
