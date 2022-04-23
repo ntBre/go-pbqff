@@ -65,7 +65,7 @@ func (m *Mopac) WriteInput(filename string, proc Procedure) {
 		if len(lines) != 3 {
 			panic("wrong number of lines in MOPAC header")
 		}
-		lines[0] += " FORCE"
+		lines[0] += " FORCE A0"
 		tmp := strings.Join(lines, "\n")
 		head = tmp + "\n"
 	default:
