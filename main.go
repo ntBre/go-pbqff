@@ -566,12 +566,20 @@ func main() {
 			// scenario
 			fmt.Println(energies)
 		}
+		ef, err := os.Create(filepath.Join(prog.GetDir(), "energy.dat"))
+		if err != nil {
+			// just dump the raw energies in a worst-case
+			// scenario
+			fmt.Println(energies)
+		}
 		// convert to relative energies
 		for i := range energies {
+			fmt.Fprintf(ef, "%20.12f\n", energies[i])
 			energies[i] -= min
 			fmt.Fprintf(f, "%20.12f\n", energies[i])
 		}
 		f.Close()
+		ef.Close()
 		longLine, lin := DoAnpass(anpass,
 			filepath.Join(prog.GetDir(), "freqs"), energies, intder)
 		coords, intderHarms := DoIntder(intder, names, longLine,
