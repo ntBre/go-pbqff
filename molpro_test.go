@@ -656,8 +656,7 @@ func TestDerivative(t *testing.T) {
 
 func TestPush(t *testing.T) {
 	dir := t.TempDir()
-	var pf, count int
-	count = 1
+	var pf int
 	calcs := []Calc{
 		{Name: "job1"},
 		{Name: "job2"},
@@ -672,8 +671,8 @@ func TestPush(t *testing.T) {
 	queue := TestQueue{
 		Tmpl: MolproPBSTmpl,
 	}
-	got := Push(queue, dir, pf, count, calcs[0:2])
-	got = append(got, Push(queue, dir, pf+1, count, calcs[2:])...)
+	got := Push(queue, dir, pf, calcs[0:2])
+	got = append(got, Push(queue, dir, pf+1, calcs[2:])...)
 	want := []Calc{
 		{
 			Name:     "job1",

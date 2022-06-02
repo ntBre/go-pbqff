@@ -114,7 +114,6 @@ func BuildPoints(p Program, q Queue, filename string, atomNames []string,
 	var (
 		start int
 		pf    int
-		count int
 		end   int
 	)
 	cs := Conf.ChunkSize
@@ -128,7 +127,6 @@ func BuildPoints(p Program, q Queue, filename string, atomNames []string,
 	return func() ([]Calc, bool) {
 		defer func() {
 			pf++
-			count++
 			start += cs
 			if end+cs > len(calcs) {
 				end = len(calcs)
@@ -137,10 +135,10 @@ func BuildPoints(p Program, q Queue, filename string, atomNames []string,
 			}
 		}()
 		if end == len(calcs) {
-			return Push(q, filepath.Join(dir, "inp"), pf, count,
+			return Push(q, filepath.Join(dir, "inp"), pf,
 				calcs[start:end]), false
 		}
-		return Push(q, filepath.Join(dir, "inp"), pf, count,
+		return Push(q, filepath.Join(dir, "inp"), pf,
 			calcs[start:end]), true
 	}
 }
@@ -159,7 +157,6 @@ func BuildCartPoints(p Program, q Queue, dir string, names []string,
 	var (
 		start int
 		pf    int
-		count int
 	)
 	kmax, lmax := ncoords, ncoords
 	switch Conf.Deriv {
@@ -180,7 +177,6 @@ func BuildCartPoints(p Program, q Queue, dir string, names []string,
 	return func() ([]Calc, bool) {
 		defer func() {
 			pf++
-			count++
 			start += cs
 		}()
 		calcs := make([]Calc, 0)
@@ -198,7 +194,7 @@ func BuildCartPoints(p Program, q Queue, dir string, names []string,
 						)
 						if len(calcs) >= Conf.ChunkSize {
 							jnit, knit, lnit = j, k, l+1
-							return Push(q, dir, pf, count, calcs), true
+							return Push(q, dir, pf, calcs), true
 						}
 					}
 					lnit = 0
@@ -207,7 +203,7 @@ func BuildCartPoints(p Program, q Queue, dir string, names []string,
 			}
 			jnit = 1
 		}
-		return Push(q, dir, pf, count, calcs), false
+		return Push(q, dir, pf, calcs), false
 	}
 }
 
@@ -220,7 +216,6 @@ func BuildGradPoints(p Program, q Queue, dir string, names []string,
 	var (
 		start int
 		pf    int
-		count int
 	)
 	jmax, kmax := ncoords, ncoords
 	switch Conf.Deriv {
@@ -241,7 +236,6 @@ func BuildGradPoints(p Program, q Queue, dir string, names []string,
 	return func() ([]Calc, bool) {
 		defer func() {
 			pf++
-			count++
 			start += cs
 		}()
 		calcs := make([]Calc, 0)
@@ -255,14 +249,14 @@ func BuildGradPoints(p Program, q Queue, dir string, names []string,
 					)
 					if len(calcs) >= Conf.ChunkSize {
 						jnit, knit = j, k+1
-						return Push(q, dir, pf, count, calcs), true
+						return Push(q, dir, pf, calcs), true
 					}
 				}
 				knit = 0
 			}
 			jnit = 0
 		}
-		return Push(q, dir, pf, count, calcs), false
+		return Push(q, dir, pf, calcs), false
 	}
 }
 

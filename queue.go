@@ -34,7 +34,7 @@ func SelectNode() (node, queue string) {
 }
 
 // Push sends calculations to the queue
-func Push(q Queue, dir string, pf, count int, calcs []Calc) []Calc {
+func Push(q Queue, dir string, pf int, calcs []Calc) []Calc {
 	subfile := fmt.Sprintf("%s/main%d.pbs", dir, pf)
 	jobs := make([]string, 0)
 	for c := range calcs {
@@ -43,34 +43,33 @@ func Push(q Queue, dir string, pf, count int, calcs []Calc) []Calc {
 		if !calcs[c].noRun {
 			Global.Submitted++
 			jobs = append(jobs, calcs[c].Name+".inp")
-		} else {
-			count++
 		}
 	}
-	node, queue := SelectNode()
-	// This should be using the PBS from Config
-	q.WritePBS(subfile,
-		&Job{
-			Name:     MakeName(Conf.Geometry) + "pts",
-			Filename: subfile,
-			Jobs:     jobs,
-			Host:     node,
-			Queue:    queue,
-			NumCPUs:  Conf.NumCPUs,
-			PBSMem:   Conf.PBSMem,
-		})
-	jobid := q.Submit(subfile)
-	if *debug {
-		fmt.Printf("submitted %s from %s\n", jobid, subfile)
-	}
-	Global.WatchedJobs = append(Global.WatchedJobs, jobid)
-	count = 1
-	pf++
-	// if end reached with no calcs, which can happen on continue
-	// from checkpoints
-	for c := range calcs {
-		calcs[c].JobID = jobid
-		calcs[c].SubFile = subfile
+	if len(jobs) > 0 {
+		node, queue := SelectNode()
+		// This should be using the PBS from Config
+		q.WritePBS(subfile,
+			&Job{
+				Name:     MakeName(Conf.Geometry) + "pts",
+				Filename: subfile,
+				Jobs:     jobs,
+				Host:     node,
+				Queue:    queue,
+				NumCPUs:  Conf.NumCPUs,
+				PBSMem:   Conf.PBSMem,
+			})
+		jobid := q.Submit(subfile)
+		if *debug {
+			fmt.Printf("submitted %s from %s\n", jobid, subfile)
+		}
+		Global.WatchedJobs = append(Global.WatchedJobs, jobid)
+		pf++
+		// if end reached with no calcs, which can happen on continue
+		// from checkpoints
+		for c := range calcs {
+			calcs[c].JobID = jobid
+			calcs[c].SubFile = subfile
+		}
 	}
 	return calcs
 }

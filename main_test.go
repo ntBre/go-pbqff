@@ -285,7 +285,7 @@ func TestDrain(t *testing.T) {
 		Tmpl: MolproPBSTmpl,
 	}
 	gen := func() ([]Calc, bool) {
-		return Push(queue, dir, 0, 0, calcs), false
+		return Push(queue, dir, 0,  calcs), false
 	}
 	Global.ErrMap = make(map[error]int)
 	min, time := Drain(prog, queue, ncoords, E0, gen)
