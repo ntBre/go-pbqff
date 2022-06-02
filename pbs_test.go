@@ -15,7 +15,7 @@ func TestWritePBS(t *testing.T) {
 		Queue:    "",
 		NumCPUs:  8,
 		PBSMem:   8,
-		Jobs: []string{"opt.inp"},
+		Jobs:     []string{"opt.inp"},
 	}
 	write := "testfiles/write/mp.pbs"
 	right := "testfiles/right/mp.pbs"
