@@ -224,8 +224,9 @@ func DoAnpass(anp *Anpass, dir string, energies []float64, intder *Intder) (
 	if err != nil {
 		panic(err)
 	}
-	// use the energies passed in instead of rereading them from the input
-	disps, _, exps, biases, _ := anpass.ReadInput(
+	// reread the energies from the input because `WriteAnpass` takes care
+	// of duplicating them when the molecule is linear
+	disps, energies, exps, biases, _ := anpass.ReadInput(
 		filepath.Join(dir, "anpass1.in"),
 	)
 	anpass.PrintBias(out, biases)
