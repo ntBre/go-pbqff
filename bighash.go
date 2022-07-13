@@ -109,6 +109,8 @@ func Normalize(mol symm.Molecule, names []string, coords []float64, step []int) 
 	case symm.Cs:
 		// σh
 		ret = append(ret, add(coords, doReflect(old, names, fstep, mol.Planes[0])))
+	case symm.C2:
+		ret = append(ret, add(coords, doC2(old, names, fstep, mol.Axes[0])))
 	case symm.C2v:
 		// σv, σv, C₂
 		ret = append(ret, add(coords, doReflect(old, names, fstep, mol.Planes[1])))
