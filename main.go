@@ -346,7 +346,8 @@ func RunFreqs(intder *Intder, anp *Anpass) {
 	if err != nil {
 		errExit(err, "loading spectro input")
 	}
-	spec.FormatGeom(names, coords)
+	newCoords := SplitCoords(coords)
+	spec.FormatGeom(names, newCoords, false)
 	err = spec.WriteInput("spectro.in")
 	if err != nil {
 		panic(err)
@@ -358,6 +359,15 @@ func RunFreqs(intder *Intder, anp *Anpass) {
 	res := summarize.SpectroFile("spectro2.out")
 	mpHarm := make([]float64, spec.Nfreqs)
 	Summarize(os.Stdout, res.ZPT, mpHarm, intderHarms, res.Harm, res.Fund, res.Corr)
+}
+
+func SplitCoords(coords string) []float64 {
+	fields := strings.Fields(coords)
+	newCoords := make([]float64, len(fields))
+	for i, c := range fields {
+		newCoords[i], _ = strconv.ParseFloat(c, 64)
+	}
+	return newCoords
 }
 
 func initialize(infile string) (prog Program, intder *Intder, anpass *Anpass) {
@@ -588,7 +598,7 @@ func main() {
 		if err != nil {
 			errExit(err, "loading spectro input")
 		}
-		spec.FormatGeom(names, coords)
+		spec.FormatGeom(names, SplitCoords(coords), false)
 		spec.WriteInput("freqs/spectro.in")
 		err = spec.DoSpectro("freqs/")
 		if err != nil {
@@ -619,7 +629,7 @@ func main() {
 			if err != nil {
 				errExit(err, "loading spectro input")
 			}
-			spec.FormatGeom(names, buf.String())
+			spec.FormatGeom(names, SplitCoords(buf.String()), false)
 			spec.WriteInput("spectro.in")
 			err = spec.DoSpectro(".")
 			if err != nil {

@@ -50,7 +50,7 @@ func TestSIC(t *testing.T) {
 	if err != nil {
 		errExit(err, "loading spectro input")
 	}
-	spec.FormatGeom(names, coords)
+	spec.FormatGeom(names, SplitCoords(coords), false)
 	spec.WriteInput("tests/sic/freqs/spectro.in")
 	err = spec.DoSpectro("tests/sic/freqs/")
 	if err != nil {
@@ -168,7 +168,7 @@ func TestCart(t *testing.T) {
 		if err != nil {
 			errExit(err, "loading spectro input")
 		}
-		spec.FormatGeom(names, buf.String())
+		spec.FormatGeom(names, SplitCoords(buf.String()), false)
 		spec.WriteInput(specin)
 		err = spec.DoSpectro(prog.GetDir())
 		if err != nil {
@@ -240,7 +240,7 @@ func TestGrad(t *testing.T) {
 	if err != nil {
 		errExit(err, "loading spectro input")
 	}
-	spec.FormatGeom(names, buf.String())
+	spec.FormatGeom(names, SplitCoords(buf.String()), false)
 	spec.WriteInput(specin)
 	err = spec.DoSpectro(prog.GetDir())
 	if err != nil {
@@ -350,7 +350,7 @@ func TestResub(t *testing.T) {
 				if err != nil {
 					errExit(err, "loading spectro input")
 				}
-				spec.FormatGeom(names, buf.String())
+				spec.FormatGeom(names, SplitCoords(buf.String()), false)
 				spec.WriteInput(specin)
 				err = spec.DoSpectro(prog.GetDir())
 				if err != nil {

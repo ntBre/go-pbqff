@@ -709,7 +709,7 @@ func TestPush(t *testing.T) {
 #PBS -l ncpus=1
 #PBS -l mem=8gb
 
-module load pbspro molpro
+module load openpbs molpro
 
 export WORKDIR=$PBS_O_WORKDIR
 export TMPDIR=/tmp/$USER/$PBS_JOBID
