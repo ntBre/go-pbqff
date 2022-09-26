@@ -2,7 +2,7 @@
 #PBS -N H2O-ref
 #PBS -S /bin/bash
 #PBS -j oe
-#PBS -o tests/cart/h2o/pts/inp/ref.inp.out
+#PBS -o ref.inp.out
 #PBS -W umask=022
 #PBS -l walltime=5000:00:00
 #PBS -l ncpus=1
@@ -18,7 +18,7 @@ mkdir -p $TMPDIR
 date
 hostname
 
-molpro -t 1 tests/cart/h2o/pts/inp/ref.inp --no-xml-output
+molpro -t 1 ref.inp --no-xml-output
 date
 
 rm -rf $TMPDIR

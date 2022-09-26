@@ -18,7 +18,7 @@ func TestSIC(t *testing.T) {
 		t.Skip()
 	}
 	*test = true
-	qsub = "qsub/qsub"
+	qsub, _ = filepath.Abs("qsub/qsub")
 	temp := Conf
 	SIC = true
 	*overwrite = true
@@ -82,7 +82,7 @@ func TestCart(t *testing.T) {
 		t.Skip()
 	}
 	*test = true
-	qsub = "qsub/qsub"
+	qsub, _ = filepath.Abs("qsub/qsub")
 	temp := Conf
 	tmpsym := *nosym
 	defer func() {
@@ -201,7 +201,7 @@ func TestGrad(t *testing.T) {
 		t.Skip()
 	}
 	*test = true
-	qsub = "qsub/qsub"
+	qsub, _ = filepath.Abs("qsub/qsub")
 	temp := Conf
 	Conf = ParseInfile("tests/grad/grad.in").ToConfig()
 	defer func() {
@@ -259,7 +259,7 @@ func TestResub(t *testing.T) {
 		t.Skip()
 	}
 	*test = true
-	qsub = "qsub/qsub"
+	qsub, _ = filepath.Abs("qsub/qsub")
 	temp := Conf
 	tmpsym := *nosym
 	tmpchk := *checkpoint

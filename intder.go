@@ -113,11 +113,11 @@ func Pprint(vals [][]int) {
 
 // Pattern extracts the pattern of coordinates from a string
 // and returns the pattern, along with the required dummy atoms
-//y|0 1 2
-//x|-----
-//0|0 1 2 [x][y] -> [3x+y]
-//1|3 4 5
-//2|6 7 8
+// y|0 1 2
+// x|-----
+// 0|0 1 2 [x][y] -> [3x+y]
+// 1|3 4 5
+// 2|6 7 8
 func Pattern(geom string, ndummy int, negate bool) ([][]int, []Dummy) {
 	lines := CleanSplit(geom, "\n")
 	pattern := make([][]int, 0, len(lines))

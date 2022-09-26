@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -61,6 +62,10 @@ func (p *PBS) NewMopac() {
 // WritePBS writes a pbs infile based on the queue type and
 // the templates above, with job information from job
 func (p *PBS) WritePBS(infile string, job *Job) {
+	job.Filename = filepath.Base(job.Filename)
+	for i, name := range job.Jobs {
+		job.Jobs[i] = filepath.Base(name)
+	}
 	f, err := os.Create(infile)
 	defer f.Close()
 	if err != nil {
@@ -76,15 +81,19 @@ func (p *PBS) Submit(filename string) (jobid string) {
 		maxRetries = 15
 		maxTime    = 1 << maxRetries
 	)
+	dir := filepath.Dir(filename)
+	base := filepath.Base(filename)
 	// -f option to run qsub in foreground
-	cmd := exec.Command(qsub, "-f", filename)
+	cmd := exec.Command(qsub, "-f", base)
 	cmd.Stderr = os.Stderr
+	cmd.Dir = dir
 	out, err := cmd.Output()
 	for i := maxRetries; i >= 0 && err != nil; i-- {
 		fmt.Printf("Submit: having trouble submitting %s with %v\n",
 			filename, err)
 		time.Sleep(time.Second * time.Duration(maxTime>>i))
-		cmd := exec.Command(qsub, "-f", filename)
+		cmd := exec.Command(qsub, "-f", base)
+		cmd.Dir = dir
 		cmd.Stderr = os.Stderr
 		out, err = cmd.Output()
 	}
