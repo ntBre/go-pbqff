@@ -2,6 +2,9 @@
 
 push-button quartic force fields
 
+*NOTE* This is the original version of pbqff and is no longer maintained. 
+Active development has moved to the Rust version at [[https://github.com/ntBre/rust-pbqff][rust-pbqff]].
+
 * Introduction
   This is a program for automating the generation of quartic force
   fields (QFFs) - fourth-order Taylor series expansions of the
